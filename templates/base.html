@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    {% block viewport_meta %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    {% endblock %}
+    <title>中澳专线智能价格表</title>
+    {% set share_desc_text %}{% block share_description %}链接中澳，以稳定高效科技化的
+    多式联运服务，赋能跨境贸易价值共生。{% endblock %}{% endset %}
+    {% set share_desc_text = share_desc_text | striptags | trim %}
+    {% set share_image_url = url_for('static', filename='css/xb.jpg', v='20260305', _external=True) %}
+    {% set share_image_url = share_image_url | replace('http://', 'https://') %}
+    <meta name="description" content="{{ share_desc_text }}">
+    <meta property="og:title" content="中澳专线智能价格表">
+    <meta property="og:description" content="{{ share_desc_text }}">
+    <meta property="og:image" content="{{ share_image_url }}">
+    <meta itemprop="name" content="中澳专线智能价格表">
+    <meta itemprop="description" content="{{ share_desc_text }}">
+    <meta itemprop="image" content="{{ share_image_url }}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <link rel="stylesheet" href="{{ static_with_version('css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="{{ url_for('front.index') }}" class="nav-brand">
+             
+                <img src="{{ static_with_version('images/10017676777.png') }}" alt="Logo" class="nav-logo">
+                <!-- <img src="{{ url_for('static', filename='css/xb.jpg') }}"  class="nav-logo-xb"> -->
+                <span class="nav-title">中海豹国际</span>
+            </a>
+            <div class="nav-actions">
+            {% if session.get('admin_logged_in') %}
+                {% if not request.path.startswith('/admin') %}
+                <a href="{{ url_for('admin.articles') }}" class="nav-admin-btn nav-backend-btn">进入后台</a>
+                {% endif %}
+                <a href="{{ url_for('admin.logout') }}" class="nav-admin-btn nav-logout-btn">退出登录</a>
+            {% else %}
+                <a href="{{ url_for('admin.login') }}" class="nav-admin-btn">登录后台</a>
+            {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    <!-- 主内容 -->
+    <div class="main-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <script src="{{ static_with_version('js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

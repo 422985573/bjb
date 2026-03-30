@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - 中海豹国际{% endblock %}
+
+{% block content %}
+<div class="home-container">
+    <!-- 左侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-card">
+            <div class="sidebar-header">分类目录</div>
+            <ul class="category-list">
+                <li class="{% if not current_category %}active{% endif %}">
+                    <a href="{{ url_for('front.index') }}">全部</a>
+                </li>
+                {% for category in categories %}
+                <li class="{% if current_category == category['id'] %}active{% endif %}">
+                    <a href="{{ url_for('front.category_articles', category_id=category['id']) }}">{{ category['name'] }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <!-- 右侧文章列表 -->
+    <div class="main-content">
+        <div class="article-list">
+            {% if articles %}
+                {% for article in articles %}
+                <div class="article-card">
+                    <a href="{{ url_for('front.article_detail', article_code=article.article_code) }}" class="article-card-title">
+                        {{ article.title }}
+                    </a>
+                    <div class="article-card-meta">
+                        <span>📁 分类：{{ article.category_name or '未分类' }}</span>
+                        <span>📅 发布时间：{{ article.created_at[:16] if article.created_at else '' }}</span>
+                    </div>
+                    <a href="{{ url_for('front.article_detail', article_code=article.article_code) }}" class="article-card-btn">
+                        查看详情 →
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-message">暂无文章</div>
+            {% endif %}
+            {% if total_pages is defined and total_pages > 1 %}
+            <div class="pagination">
+                {% if current_category is defined and current_category %}
+                {% if page > 1 %}<a href="{{ url_for('front.category_articles', category_id=current_category) }}?page={{ page - 1 }}" class="btn btn-small">上一页</a>{% else %}<span class="btn btn-small disabled">上一页</span>{% endif %}
+                <span class="pagination-info">第 {{ page }} / {{ total_pages }} 页</span>
+                {% if page < total_pages %}<a href="{{ url_for('front.category_articles', category_id=current_category) }}?page={{ page + 1 }}" class="btn btn-small">下一页</a>{% else %}<span class="btn btn-small disabled">下一页</span>{% endif %}
+                {% else %}
+                {% if page > 1 %}<a href="{{ url_for('front.index') }}?page={{ page - 1 }}" class="btn btn-small">上一页</a>{% else %}<span class="btn btn-small disabled">上一页</span>{% endif %}
+                <span class="pagination-info">第 {{ page }} / {{ total_pages }} 页</span>
+                {% if page < total_pages %}<a href="{{ url_for('front.index') }}?page={{ page + 1 }}" class="btn btn-small">下一页</a>{% else %}<span class="btn btn-small disabled">下一页</span>{% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

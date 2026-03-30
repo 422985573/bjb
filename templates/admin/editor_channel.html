@@ -1,0 +1,2532 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑大件/纸箱拒收邮编: {{ article['title'] }} - 报价网站{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ static_with_version('css/admin-editor.css') }}">
+<style>
+.editor-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    min-height: 100vh;
+    background: var(--bg-gray);
+}
+
+.editor-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: sticky;
+    top: 80px;
+    align-self: flex-start;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 优化滚动条样式 */
+.editor-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.editor-sidebar::-webkit-scrollbar-track {
+    background: var(--bg-gray);
+    border-radius: 3px;
+}
+
+.editor-sidebar::-webkit-scrollbar-thumb {
+    background: var(--text-light);
+    border-radius: 3px;
+}
+
+.editor-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--text-gray);
+}
+
+.editor-main {
+    flex: 1;
+    max-width: 1200px;
+}
+
+.module-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg-white);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.module-btn {
+    padding: 15px 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+}
+
+.module-btn:hover {
+    background: var(--primary-dark);
+    /* font-style: ; */
+    color:white;
+}
+
+.modules-container {
+    background: var(--bg-white);
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 500px;
+    box-shadow: var(--shadow);
+}
+
+.module-item {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 15px;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow);
+    position: relative;
+}
+
+.module-item:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+.module-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-light);
+    font-size: 12px;
+    margin-right: 10px;
+    cursor: grab;
+    user-select: none;
+}
+
+.module-drag-handle:active {
+    cursor: grabbing;
+}
+
+.module-drag-handle::before {
+    content: '☰';
+    font-size: 16px;
+    line-height: 1;
+}
+
+.module-item:hover .module-drag-handle {
+    color: var(--primary);
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+.module-title {
+    color: var(--primary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.module-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.module-actions button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-save {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-save:hover {
+    background: var(--primary-dark);
+}
+
+.btn-delete {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #dc2626;
+}
+
+/* 自动保存状态提示 */
+.auto-save-status {
+    font-size: 12px;
+    color: var(--text-light);
+    min-height: 18px;
+    transition: opacity 0.3s;
+}
+.auto-save-status.show {
+    color: var(--primary);
+}
+.auto-save-status.error {
+    color: #ef4444;
+}
+
+.module-body {
+    padding: 15px;
+}
+
+/* 备注区域 */
+.remark-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed var(--border);
+}
+
+.remark-section label {
+    display: block;
+    color: var(--text-gray);
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.remark-editor {
+    width: 100%;
+    min-height: 80px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dark);
+    padding: 12px;
+    font-size: 13px;
+    resize: vertical;
+}
+
+.remark-editor:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* 文本模块 */
+.text-editor {
+    width: 100%;
+    min-height: 150px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dark);
+    padding: 15px;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.text-editor:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* 图片模块 */
+.image-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.image-editor input[type="text"] {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dark);
+    padding: 10px;
+}
+
+.image-editor input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.image-preview {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+}
+
+.upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: var(--bg-gray);
+}
+
+.upload-area:hover {
+    border-color: var(--primary);
+    background: var(--bg-light);
+}
+
+.upload-area input[type="file"] {
+    display: none;
+}
+
+.upload-area .upload-text {
+    color: var(--text-gray);
+    font-size: 14px;
+}
+
+.upload-area .upload-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+    color: var(--text-light);
+}
+
+.upload-progress {
+    height: 4px;
+    background: var(--bg-light);
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+    display: none;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background: var(--primary);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.or-divider {
+    text-align: center;
+    color: var(--text-light);
+    margin: 10px 0;
+    font-size: 12px;
+}
+
+/* 选择已上传图片按钮 */
+.select-uploaded-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 10px;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.select-uploaded-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* 图片选择弹窗 */
+.image-selector-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-selector-modal.show {
+    display: flex;
+}
+
+.image-selector-content {
+    background: var(--bg-white);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.image-selector-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.image-selector-header h3 {
+    margin: 0;
+    color: var(--text-dark);
+    font-size: 18px;
+}
+
+.image-selector-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.image-selector-close:hover {
+    background: var(--bg-gray);
+    color: var(--text-dark);
+}
+
+.image-selector-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.image-item {
+    position: relative;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    aspect-ratio: 1;
+    background: var(--bg-gray);
+}
+
+.image-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.image-item.selected {
+    border-color: var(--primary);
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.image-item-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+    color: white;
+    padding: 8px;
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.image-item:hover .image-item-info {
+    opacity: 1;
+}
+
+.image-selector-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.image-selector-footer button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: var(--bg-gray);
+    color: var(--text-dark);
+}
+
+.btn-cancel:hover {
+    background: var(--text-light);
+}
+
+.btn-select {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-select:hover {
+    background: var(--primary-dark);
+}
+
+.image-selector-loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+.image-selector-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+/* 渠道模块编辑器 */
+.channel-editor {
+    color: var(--text-dark);
+}
+
+.channel-editor-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: var(--bg-gray);
+    border-radius: 8px;
+}
+
+.channel-editor-section h4 {
+    color: var(--primary);
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.channel-title-input {
+    width: 100%;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dark);
+    padding: 10px 15px;
+    font-size: 16px;
+}
+
+.channel-title-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.weight-editor {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.weight-input {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dark);
+    padding: 8px 12px;
+    width: 100px;
+}
+
+.weight-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.weight-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.weight-drag-handle {
+    cursor: grab;
+    color: var(--text-light);
+    padding: 4px 6px;
+    border-radius: 4px;
+    user-select: none;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.weight-drag-handle:hover {
+    color: var(--primary);
+    background: var(--bg-light);
+}
+
+.weight-drag-handle:active {
+    cursor: grabbing;
+}
+
+.weight-item.dragging {
+    opacity: 0.5;
+}
+
+.weight-item.drag-over {
+    outline: 2px dashed var(--primary);
+    outline-offset: 2px;
+}
+
+.weight-delete-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.weight-delete-btn:hover {
+    background: #dc2626;
+}
+
+.add-weight-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+.add-weight-btn:hover {
+    background: var(--primary-dark);
+}
+
+.channel-table-editor {
+    overflow-x: auto;
+}
+
+.channel-table-editor table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.channel-table-editor th,
+.channel-table-editor td {
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: center;
+}
+
+.channel-table-editor th {
+    background: var(--bg-gray);
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.channel-table-editor input {
+    background: transparent;
+    border: none;
+    color: var(--text-dark);
+    text-align: center;
+    width: 100%;
+    padding: 5px;
+}
+
+.channel-table-editor input:focus {
+    background: var(--bg-light);
+    outline: 1px solid var(--primary);
+}
+
+.add-row-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.add-row-btn:hover {
+    background: var(--primary-dark);
+}
+
+.delete-row-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.delete-row-btn:hover {
+    background: #dc2626;
+}
+
+.no-service-section {
+    margin-top: 15px;
+}
+
+.no-service-section input,
+.no-service-section textarea {
+    width: 100%;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dark);
+    padding: 10px;
+    margin-top: 5px;
+}
+
+.no-service-section input:focus,
+.no-service-section textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.no-service-section textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+.article-info {
+    background: var(--bg-white);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+}
+
+.article-info h2 {
+    color: var(--text-dark);
+    margin-bottom: 15px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.article-info form {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.article-info .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.article-info label {
+    color: var(--text-gray);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.article-info input,
+.article-info select {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dark);
+    padding: 10px 15px;
+}
+
+.article-info input:focus,
+.article-info select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.article-info input[name="title"] {
+    width: 300px;
+}
+
+.btn-update {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 25px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-update:hover {
+    background: var(--primary-dark);
+}
+
+.preview-link {
+    color: var(--primary);
+    text-decoration: none;
+    padding: 10px 15px;
+}
+
+.preview-link:hover {
+    color: var(--primary-dark);
+}
+
+/* 模块标题列表 */
+.module-list-sidebar {
+    background: var(--bg-white);
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: var(--shadow);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 优化模块列表滚动条样式 */
+.module-list-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.module-list-sidebar::-webkit-scrollbar-track {
+    background: var(--bg-gray);
+    border-radius: 3px;
+}
+
+.module-list-sidebar::-webkit-scrollbar-thumb {
+    background: var(--text-light);
+    border-radius: 3px;
+}
+
+.module-list-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--text-gray);
+}
+
+.module-list-sidebar h3 {
+    font-size: 14px;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.module-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: var(--bg-gray);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: move;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.module-list-item:hover {
+    background: var(--bg-light);
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.module-list-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.module-list-item.drag-over {
+    border-top: 3px solid var(--primary);
+    margin-top: 8px;
+}
+
+.module-list-item.active {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: var(--primary);
+}
+
+.module-list-item-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.module-list-item-title {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.module-list-item-title.empty {
+    color: var(--text-light);
+    font-style: italic;
+}
+
+.module-list-copy-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.module-list-copy-btn:hover {
+    background: var(--bg-light);
+    color: var(--primary);
+}
+
+.module-list-drag-handle {
+    color: var(--text-light);
+    font-size: 14px;
+    cursor: grab;
+    flex-shrink: 0;
+}
+
+.module-list-drag-handle:active {
+    cursor: grabbing;
+}
+
+.module-list-empty {
+    text-align: center;
+    padding: 30px 10px;
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+/* 模块标题输入框 */
+.module-title-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: var(--bg-white);
+    color: var(--text-dark);
+    margin-bottom: 10px;
+}
+
+.module-title-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.module-title-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-gray);
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+/* 文章操作侧边栏 */
+.article-actions-sidebar {
+    background: var(--bg-white);
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: var(--shadow);
+}
+
+.article-actions-sidebar h3 {
+    font-size: 14px;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <div class="editor-sidebar">
+        <div class="article-actions-sidebar">
+            <h3>文章操作</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button type="button" class="module-btn" onclick="saveAll()">💾 保存信息</button>
+                <div id="autoSaveStatus" class="auto-save-status" aria-live="polite"></div>
+                <a href="{{ url_for('front.article_detail', article_code=article['article_code']) }}" target="_blank" class="module-btn" style="display: block; text-align: center; text-decoration: none;">👁️ 预览文章</a>
+                <a href="{{ back_url or url_for('admin.articles') }}" class="module-btn" style="display: block; text-align: center; text-decoration: none;">← 返回列表</a>
+            </div>
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-light);">
+                编号: {{ article['article_code'] }}
+            </div>
+        </div>
+        
+        <div class="module-buttons">
+            <button class="module-btn" onclick="addModule('text')">📝 添加文本</button>
+            <button class="module-btn" onclick="addModule('image')">🖼️ 添加图片</button>
+            <button class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
+        </div>
+        
+        <div class="module-list-sidebar">
+            <h3>模块列表</h3>
+            <div id="moduleListContainer">
+                {% for module in modules %}
+                {% set content = module.content | from_json %}
+                <div class="module-list-item" data-module-id="{{ module.id }}" draggable="true" onclick="scrollToModule({{ module.id }})">
+                    <span class="module-list-item-icon">
+                        {% if module.type == 'text' %}📝{% endif %}
+                        {% if module.type == 'image' %}🖼️{% endif %}
+                        {% if module.type == 'channel' %}📊{% endif %}
+                    </span>
+                    <span class="module-list-item-title {% if not content or not content.title %}empty{% endif %}" 
+                          data-module-id="{{ module.id }}"
+                          title="{% if content and content.title %}{{ content.title }}{% else %}未命名模块{% endif %}">
+                        {% if content and content.title %}{{ content.title }}{% else %}未命名模块{% endif %}
+                    </span>
+                    <button class="module-list-copy-btn" title="复制模块" onclick="event.stopPropagation(); copyModule({{ module.id }})">📋</button>
+                    <span class="module-list-drag-handle" title="拖拽排序">☰</span>
+                </div>
+                {% endfor %}
+                {% if not modules %}
+                <div class="module-list-empty">暂无模块</div>
+                {% endif %}
+            </div>
+        </div>
+        
+       
+    </div>
+    
+    <div class="editor-main">
+        <div class="article-info">
+            <h2>文章信息</h2>
+            <form method="POST" id="articleInfoForm">
+                <div class="form-group">
+                    <label>标题</label>
+                    <input type="text" name="title" value="{{ article['title'] }}">
+                </div>
+                <div class="form-group">
+                    <label>分类</label>
+                    <input type="hidden" name="category_id" id="fixedCategoryId" value="{{ fixed_category_id }}">
+                    <span class="form-static">{{ fixed_category_name }}</span>
+                </div>
+            </form>
+        </div>
+        
+        <div class="modules-container" id="modulesContainer">
+            {% for module in modules %}
+            <div class="module-item" data-module-id="{{ module.id }}">
+                <div class="module-header">
+                    <span class="module-title">
+                        {% if module.type == 'text' %}📝 文本模块{% endif %}
+                        {% if module.type == 'image' %}🖼️ 图片模块{% endif %}
+                        {% if module.type == 'channel' %}📊 渠道模块{% endif %}
+                    </span>
+                    <div class="module-actions">
+                        <button class="btn-delete" onclick="deleteModule({{ module.id }})">删除</button>
+                    </div>
+                </div>
+                <div class="module-body">
+                    {% if module.type == 'text' %}
+                        {% set content = module.content | from_json %}
+                        <div class="module-title-section">
+                            <label class="module-title-label">模块标题</label>
+                            <input type="text" class="module-title-input" data-module-id="{{ module.id }}" 
+                                   placeholder="输入模块标题" value="{{ content.title if content and content.title else '' }}"
+                                   oninput="updateModuleTitle({{ module.id }}, this.value)">
+                        </div>
+                        <textarea class="text-editor" data-module-id="{{ module.id }}">{{ content.text if content else '' }}</textarea>
+                        <div class="remark-section">
+                            <label>📌 模块备注（显示在模块下方）</label>
+                            <textarea class="remark-editor">{{ content.remark if content else '' }}</textarea>
+                        </div>
+                    {% elif module.type == 'image' %}
+                        {% set content = module.content | from_json %}
+                        <div class="image-editor" data-module-id="{{ module.id }}">
+                            <div class="module-title-section">
+                                <label class="module-title-label">模块标题</label>
+                                <input type="text" class="module-title-input" data-module-id="{{ module.id }}" 
+                                       placeholder="输入模块标题" value="{{ content.title if content and content.title else '' }}"
+                                       oninput="updateModuleTitle({{ module.id }}, this.value)">
+                            </div>
+                            <div class="upload-area" onclick="this.querySelector('input[type=file]').click()">
+                                <div class="upload-icon">📤</div>
+                                <div class="upload-text">点击上传图片或拖拽图片到此处</div>
+                                <input type="file" accept="image/*" onchange="uploadImage(this)">
+                                <div class="upload-progress">
+                                    <div class="upload-progress-bar"></div>
+                                </div>
+                            </div>
+                            <button type="button" class="select-uploaded-btn" onclick="openImageSelector(this)">📁 从已上传图片中选择</button>
+                            <div class="or-divider">— 或输入图片URL —</div>
+                            <input type="text" placeholder="图片URL" class="image-url" value="{{ content.url if content else '' }}" onchange="updateImagePreview(this)">
+                            <input type="text" placeholder="图片描述（可选）" class="image-alt" value="{{ content.alt if content else '' }}">
+                            <input type="text" placeholder="图片标题（可选）" class="image-caption" value="{{ content.caption if content else '' }}">
+                            {% if content and content.url %}
+                            <img src="{{ content.url }}" class="image-preview">
+                            {% endif %}
+                            <div class="remark-section">
+                                <label>📌 模块备注（显示在模块下方）</label>
+                                <textarea class="remark-editor">{{ content.remark if content else '' }}</textarea>
+                            </div>
+                        </div>
+                    {% elif module.type == 'channel' %}
+                        {% set content = module.content | from_json %}
+                        <div class="channel-editor" data-module-id="{{ module.id }}">
+                            <div class="channel-editor-section">
+                                <h4>📋 渠道标题</h4>
+                                <input type="text" class="channel-title-input" data-module-id="{{ module.id }}" 
+                                       placeholder="如：海派 普通地址—不含税" 
+                                       value="{{ content.channelTitle if content and content.channelTitle else (content.title if content and content.title else '') }}"
+                                       oninput="updateModuleTitle({{ module.id }}, this.value)">
+                            </div>
+                            
+                            <div class="channel-editor-section">
+                                <h4>📊 价格表</h4>
+                                <div class="channel-table-editor" data-channel-simple="1" data-channel-postcode-only="1">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width:80px;">操作</th>
+                                                <th>邮编</th>
+                                                <th>渠道</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if content and content.states %}
+                                                {% for state in content.states %}
+                                                <tr>
+                                                    <td>
+                                                        <button class="delete-row-btn" onclick="deleteRow(this)">×</button>
+                                                        <button class="delete-row-btn" style="margin-left:4px;background:#4b9cff;" onclick="copyRow(this)">⧉</button>
+                                                    </td>
+                                                    <td><input type="text" class="postcode-range" value="{{ state.postcode_range if state.postcode_range else '0000,0001' }}"></td>
+                                                    <td><input type="text" class="channel" value="{{ state.channel }}"></td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                    <button class="add-row-btn" onclick="addTableRow(this)">+ 添加行</button>
+                                </div>
+                            </div>
+                            
+                            <div class="remark-section">
+                                <label>📌 模块备注（显示在模块下方，支持HTML）</label>
+                                <textarea class="remark-editor" style="min-height: 120px;">{{ content.remark if content else '' }}</textarea>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 图片选择弹窗 -->
+<div id="imageSelectorModal" class="image-selector-modal">
+    <div class="image-selector-content">
+        <div class="image-selector-header">
+            <h3>选择已上传的图片</h3>
+            <button class="image-selector-close" onclick="closeImageSelector()">&times;</button>
+        </div>
+        <div class="image-selector-body">
+            <div class="image-selector-loading" id="imageSelectorLoading">加载中...</div>
+            <div class="image-grid" id="imageGrid" style="display: none;"></div>
+            <div class="image-selector-empty" id="imageSelectorEmpty" style="display: none;">暂无已上传的图片</div>
+        </div>
+        <div class="image-selector-footer">
+            <button class="btn-cancel" onclick="closeImageSelector()">取消</button>
+            <button class="btn-select" onclick="selectImage()">选择</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const articleId = {{ article['id'] }};
+// 大件/纸箱专用编辑页：渠道表仅「邮编」列，默认行 0000,0001
+const isChannelSimple = true;
+let isSaving = false;           // 手动保存进行中时不再触发自动保存
+let autoSaveTimerId = null;     // 定时自动保存
+const AUTO_SAVE_INTERVAL_MS = 60000;  // 60 秒自动保存一次
+let lastSavedState = null;      // 上次保存时的状态（JSON 字符串），用于判断是否有修改
+
+// 获取当前页面状态（用于判断是否有修改，避免无效自动保存）
+function getCurrentState() {
+    let title = '';
+    let categoryId = '';
+    const form = document.getElementById('articleInfoForm');
+    if (form) {
+        const formData = new FormData(form);
+        title = formData.get('title') || '';
+        categoryId = formData.get('category_id') || '';
+    }
+    const modules = [];
+    document.querySelectorAll('.module-item').forEach(moduleItem => {
+        const moduleId = parseInt(moduleItem.dataset.moduleId);
+        if (!moduleId) return;
+        const moduleData = getModuleContentFromItem(moduleItem);
+        if (!moduleData) return;
+        modules.push({ id: moduleId, content: moduleData.content || {} });
+    });
+    return { title: title, category_id: categoryId, modules: modules };
+}
+
+// 左侧列表拖拽排序（保留）
+
+document.addEventListener('DOMContentLoaded', function() {
+    initUploadAreas();
+    initModuleListDrag();
+    updateActiveModule();
+    initWeightInputListeners();
+    if (typeof getCurrentState === 'function') {
+        lastSavedState = JSON.stringify(getCurrentState());  // 记录初始状态，无修改则不保存
+    }
+    startAutoSave();
+
+    const params = new URLSearchParams(window.location.search);
+    const newModuleIdFromUrl = parseInt(params.get('new_module_id') || '', 10);
+    const newModuleIdFromStore = parseInt(sessionStorage.getItem('adminEditorNewModuleId') || '', 10);
+    const targetModuleId = !Number.isNaN(newModuleIdFromUrl) ? newModuleIdFromUrl : newModuleIdFromStore;
+    if (!Number.isNaN(targetModuleId)) {
+        setTimeout(function() {
+            scrollToModule(targetModuleId);
+            sessionStorage.removeItem('adminEditorNewModuleId');
+            sessionStorage.removeItem('adminEditorScrollLast');
+        }, 180);
+    } else if (sessionStorage.getItem('adminEditorScrollLast') === '1') {
+        setTimeout(function() {
+            const allModules = document.querySelectorAll('.module-item');
+            const lastModule = allModules.length ? allModules[allModules.length - 1] : null;
+            if (!lastModule) return;
+            const moduleId = parseInt(lastModule.dataset.moduleId || '', 10);
+            if (!Number.isNaN(moduleId)) {
+                scrollToModule(moduleId);
+            } else {
+                lastModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            sessionStorage.removeItem('adminEditorNewModuleId');
+            sessionStorage.removeItem('adminEditorScrollLast');
+        }, 180);
+    }
+});
+
+// 一键保存：文章信息 + 所有模块（优先调用统一后端接口，失败时自动降级为逐模块保存）
+async function saveAll() {
+    const saveButton = document.querySelector('.article-actions-sidebar .module-btn');
+    const originalText = saveButton ? saveButton.textContent : '';
+    
+    isSaving = true;
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = '保存中...';
+    }
+    
+    try {
+        // 1. 收集文章基本信息（标题、分类）
+        let title = '';
+        let categoryId = '';
+        const form = document.getElementById('articleInfoForm');
+        if (form) {
+            const formData = new FormData(form);
+            title = formData.get('title') || '';
+            categoryId = formData.get('category_id') || '';
+        }
+        
+        // 2. 收集所有模块的数据
+        const moduleItems = document.querySelectorAll('.module-item');
+        const modules = [];
+        
+        moduleItems.forEach(moduleItem => {
+            const moduleId = parseInt(moduleItem.dataset.moduleId);
+            if (!moduleId) return;
+            
+            const moduleData = getModuleContentFromItem(moduleItem);
+            if (!moduleData) return;
+            
+            modules.push({
+                id: moduleId,
+                content: moduleData.content || {}
+            });
+        });
+        
+        // 3. 优先调用统一保存接口
+        let unifiedOk = false;
+        try {
+            const response = await fetch(`/api/article/${articleId}/save_all`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title,
+                    category_id: categoryId,
+                    modules: modules
+                })
+            });
+            
+            const result = await response.json().catch(() => null);
+            
+            if (response.ok && result && result.success) {
+                unifiedOk = true;
+            } else {
+                console.warn('统一接口返回失败，降级到逐模块保存');
+            }
+        } catch (e) {
+            console.warn('统一接口调用失败，降级到逐模块保存:', e);
+            unifiedOk = false;
+        }
+        
+        // 4. 如果统一接口不可用，则退回到旧的逐模块保存逻辑
+        if (!unifiedOk) {
+            // 4.1 先提交文章表单
+            if (form) {
+                const formData = new FormData(form);
+                const articleResponse = await fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!articleResponse.ok) {
+                    throw new Error('文章信息保存失败');
+                }
+            }
+            
+            // 4.2 逐个模块调用更新接口
+            const updatePromises = modules.map(async (m) => {
+                try {
+                    const response = await fetch(`/api/module/${m.id}/update`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: m.content })
+                    });
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error(`模块 ${m.id} 保存失败:`, errorText);
+                        throw new Error(`模块 ${m.id} 保存失败`);
+                    }
+                    return response;
+                } catch (error) {
+                    console.error(`模块 ${m.id} 保存出错:`, error);
+                    throw error;
+                }
+            });
+            
+            if (updatePromises.length > 0) {
+                await Promise.all(updatePromises);
+            }
+        }
+        
+        alert('文章信息和所有模块已保存！');
+    } catch (error) {
+        console.error('保存失败:', error);
+        alert('保存失败: ' + (error.message || '请重试'));
+    } finally {
+        isSaving = false;
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent = originalText || '💾 保存信息';
+        }
+    }
+}
+
+// 自动保存：静默调用与 saveAll 相同的接口，不弹窗、不禁用按钮
+async function autoSave() {
+    if (isSaving) return;
+    const statusEl = document.getElementById('autoSaveStatus');
+    const moduleItems = document.querySelectorAll('.module-item');
+    if (moduleItems.length === 0) return;
+    
+    let title = '';
+    let categoryId = '';
+    const form = document.getElementById('articleInfoForm');
+    if (form) {
+        const formData = new FormData(form);
+        title = formData.get('title') || '';
+        categoryId = formData.get('category_id') || '';
+    }
+    
+    const modules = [];
+    moduleItems.forEach(moduleItem => {
+        const moduleId = parseInt(moduleItem.dataset.moduleId);
+        if (!moduleId) return;
+        const moduleData = getModuleContentFromItem(moduleItem);
+        if (!moduleData) return;
+        modules.push({ id: moduleId, content: moduleData.content || {} });
+    });
+    
+    if (modules.length === 0) return;
+    
+    try {
+        const response = await fetch(`/api/article/${articleId}/save_all`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: title, category_id: categoryId, modules: modules })
+        });
+        const result = await response.json().catch(() => null);
+        if (response.ok && result && result.success) {
+            const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            if (statusEl) {
+                statusEl.textContent = '已自动保存 ' + time;
+                statusEl.className = 'auto-save-status show';
+                statusEl.style.display = '';
+                setTimeout(function() {
+                    statusEl.className = 'auto-save-status';
+                    statusEl.style.display = 'none';
+                    statusEl.textContent = '';
+                }, 3000);
+            }
+        } else {
+            let reason = '自动保存失败';
+            if (result && (result.message || result.error)) {
+                reason = '自动保存失败：' + (result.message || result.error);
+            } else if (!response.ok) {
+                reason = '自动保存失败：HTTP ' + response.status + (response.statusText ? ' ' + response.statusText : '');
+            } else if (result === null) {
+                reason = '自动保存失败：服务器返回异常（可能未登录或会话已过期）';
+            }
+            if (statusEl) {
+                statusEl.textContent = reason;
+                statusEl.className = 'auto-save-status error';
+                statusEl.style.display = '';
+                statusEl.title = reason;
+                setTimeout(function() { statusEl.style.display = 'none'; statusEl.textContent = ''; statusEl.title = ''; }, 5000);
+            }
+        }
+    } catch (e) {
+        const reason = '自动保存失败：' + (e && (e.message || e.toString()) ? (e.message || e.toString()) : '网络或请求异常');
+        if (statusEl) {
+            statusEl.textContent = reason;
+            statusEl.className = 'auto-save-status error';
+            statusEl.style.display = '';
+            statusEl.title = reason;
+            setTimeout(function() { statusEl.style.display = 'none'; statusEl.textContent = ''; statusEl.title = ''; }, 5000);
+        }
+    }
+}
+
+function startAutoSave() {
+    if (autoSaveTimerId) clearInterval(autoSaveTimerId);
+    autoSaveTimerId = setInterval(autoSave, AUTO_SAVE_INTERVAL_MS);
+}
+
+// 从模块元素中获取模块内容（供单个/全部保存复用）
+function getModuleContentFromItem(moduleItem) {
+    const moduleBody = moduleItem.querySelector('.module-body');
+    if (!moduleBody) {
+        return null;
+    }
+    
+    const moduleId = moduleItem.dataset.moduleId;
+    let content = {};
+    let title = '';
+    
+    // 文本模块
+    const textEditor = moduleBody.querySelector(`textarea.text-editor[data-module-id="${moduleId}"]`) || 
+                      moduleBody.querySelector('textarea.text-editor');
+    if (textEditor) {
+        const titleInput = moduleBody.querySelector(`input.module-title-input[data-module-id="${moduleId}"]`) || 
+                          moduleBody.querySelector('input.module-title-input');
+        const remarkEditor = moduleBody.querySelector('textarea.remark-editor');
+        
+        title = titleInput ? titleInput.value.trim() : '';
+        const textValue = textEditor ? textEditor.value : '';
+        const remarkValue = remarkEditor ? remarkEditor.value : '';
+        
+        content = { 
+            title: title,
+            text: textValue,
+            remark: remarkValue
+        };
+    } 
+    // 图片模块
+    else if (moduleBody.querySelector('.image-editor')) {
+        const imageEditor = moduleBody.querySelector(`.image-editor[data-module-id="${moduleId}"]`);
+        if (imageEditor) {
+            const titleInput = imageEditor.querySelector(`input.module-title-input[data-module-id="${moduleId}"]`);
+            const urlInput = imageEditor.querySelector('input.image-url');
+            const altInput = imageEditor.querySelector('input.image-alt');
+            const captionInput = imageEditor.querySelector('input.image-caption');
+            const remarkEditor = imageEditor.querySelector('textarea.remark-editor');
+            
+            title = titleInput ? titleInput.value.trim() : '';
+            const urlValue = urlInput ? urlInput.value.trim() : '';
+            const altValue = altInput ? altInput.value.trim() : '';
+            const captionValue = captionInput ? captionInput.value.trim() : '';
+            const remarkValue = remarkEditor ? remarkEditor.value : '';
+            
+            content = {
+                title: title,
+                url: urlValue,
+                alt: altValue,
+                caption: captionValue,
+                remark: remarkValue
+            };
+        }
+    } 
+    // 渠道模块
+    else if (moduleBody.querySelector('.channel-editor')) {
+        const titleInput = moduleBody.querySelector('.module-title-input');
+        title = titleInput ? titleInput.value.trim() : '';
+        
+        content = getChannelEditorData(moduleBody.querySelector('.channel-editor'));
+        if (!content.title && title) {
+            content.title = title;
+        }
+    } else {
+        content = { title: '' };
+    }
+    
+    return { content };
+}
+
+async function saveModuleOrder() {
+    const items = document.querySelectorAll('.module-item:not(.drag-placeholder)');
+    const orders = Array.from(items).map(item => parseInt(item.dataset.moduleId));
+    
+    try {
+        const response = await fetch('/api/modules/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orders })
+        });
+        
+        if (response.ok) {
+            // 可选：显示成功提示
+            console.log('模块顺序已保存');
+        }
+    } catch (error) {
+        console.error('保存模块顺序失败:', error);
+    }
+}
+
+// 保存当前页面的所有模块数据（不刷新页面）
+async function saveAllModulesSilently() {
+    try {
+        const moduleItems = document.querySelectorAll('.module-item');
+        const modules = [];
+        
+        moduleItems.forEach(moduleItem => {
+            const moduleId = parseInt(moduleItem.dataset.moduleId);
+            if (!moduleId) return;
+            
+            const moduleData = getModuleContentFromItem(moduleItem);
+            if (!moduleData) return;
+            
+            modules.push({
+                id: moduleId,
+                content: moduleData.content || {}
+            });
+        });
+        
+        if (modules.length === 0) return true;
+        
+        // 尝试使用统一接口
+        try {
+            const response = await fetch(`/api/article/${articleId}/save_all`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    modules: modules
+                })
+            });
+            
+            const result = await response.json().catch(() => null);
+            if (response.ok && result && result.success) {
+                return true;
+            }
+        } catch (e) {
+            // 统一接口失败，使用逐模块保存
+        }
+        
+        // 降级到逐模块保存
+        const updatePromises = modules.map(async (m) => {
+            const response = await fetch(`/api/module/${m.id}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: m.content })
+            });
+            return response.ok;
+        });
+        
+        await Promise.all(updatePromises);
+        return true;
+    } catch (error) {
+        console.error('静默保存失败:', error);
+        return false;
+    }
+}
+
+// 添加模块
+async function addModule(type) {
+    // 先保存当前页面的所有模块数据，避免刷新时丢失
+    await saveAllModulesSilently();
+    
+    let content = {};
+    
+    if (type === 'text') {
+        content = { title: '', text: '', remark: '' };
+    } else if (type === 'image') {
+        content = { title: '', url: '', alt: '', caption: '', remark: '' };
+    } else if (type === 'channel') {
+        if (isChannelSimple) {
+            // 大件/纸箱编辑页：仅邮编+渠道，无重量、到门时效，默认一行 0000,0001
+            content = {
+                title: '渠道',
+                weights: [],
+                states: [
+                    { name_cn: '', postcode_range: '0000,0001', area_type: '', prices: [], delivery_time: '', channel: '' }
+                ],
+                remark: ''
+            };
+        } else {
+            // 默认渠道模块模板（海派表格格式）
+            content = {
+                title: '海派 普通地址—不含税',
+                weights: ['21.01KG', '50KG', '100KG', '300KG', '500KG', '1000KG'],
+                states: [
+                    { name_cn: '悉尼', postcode_range: '2000~2999', prices: ['7.5', '7', '6.5', '6', '5.5', '5'], delivery_time: '开船后16-21工作日', channel: 'AU01-SYD' },
+                    { name_cn: '墨尔本', postcode_range: '3000~3999', prices: ['7.5', '7', '6.5', '6', '5.5', '5'], delivery_time: '开船后16-21工作日', channel: 'AU01-MEL' },
+                    { name_cn: '布里斯班', postcode_range: '4000~4999', prices: ['9.5', '9', '8.5', '8', '7', '6.5'], delivery_time: '开船后20-25工作日', channel: 'AU01-BNE' },
+                    { name_cn: '阿德莱德', postcode_range: '5000~5999', prices: ['12', '11.5', '9.5', '9', '8.5', '8'], delivery_time: '开船后20-25工作日', channel: 'AU01ADL' },
+                    { name_cn: '珀斯', postcode_range: '6000~6999', prices: ['14.5', '14', '12.5', '12', '11.5', '11'], delivery_time: '开船后20-25工作日', channel: 'AU01-PER' },
+                    { name_cn: '其他地区', postcode_range: '7000~7999', prices: ['19.5', '19.5', '18.5', '17.5', '16.5', '15.5'], delivery_time: '开船后20-25工作日', channel: 'AU01-OTHER' }
+                ],
+                remark: '<span style="color:#e94560;font-weight:bold;">无服务邮编：</span>0881、2640、2641、2898、2899、3690、3694、5605、6434、6445、6446、6447、6448、6452、6535、6536、6537、6631、6632、6635、6639、6701、6707、6710、6711、6712、6713、6716、6720、6726、6731、6733、6743、6758、6760、6762、6765、6798、6999'
+            };
+        }
+    }
+    
+    const response = await fetch('/api/module/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            article_id: articleId,
+            type: type,
+            content: content
+        })
+    });
+    
+    if (response.ok) {
+        const result = await response.json().catch(() => null);
+        const newModuleId = result && result.module_id ? result.module_id : '';
+        if (newModuleId) {
+            sessionStorage.setItem('adminEditorNewModuleId', String(newModuleId));
+        } else {
+            sessionStorage.setItem('adminEditorScrollLast', '1');
+        }
+        location.reload();
+    } else {
+        alert('添加模块失败');
+    }
+}
+
+// 保存模块
+async function saveModule(moduleId) {
+    const moduleItem = document.querySelector(`.module-item[data-module-id="${moduleId}"]`);
+    const { content } = getModuleContentFromItem(moduleItem);
+    
+    const response = await fetch(`/api/module/${moduleId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+    });
+    
+    if (response.ok) {
+        // 更新标题列表 - 使用保存后的标题
+        const finalTitle = content.title || '';
+        updateModuleTitleInList(moduleId, finalTitle);
+        alert('保存成功！');
+    } else {
+        alert('保存失败，请重试');
+    }
+}
+
+// 获取渠道编辑器数据（大件/纸箱仅邮编+渠道，无重量、到门时效）
+function getChannelEditorData(editor) {
+    const channelTitle = editor.querySelector('.channel-title-input').value.trim();
+    const tableEditor = editor.querySelector('.channel-table-editor');
+    const postcodeOnly = tableEditor && tableEditor.dataset.channelPostcodeOnly === '1';
+    const weights = postcodeOnly ? [] : Array.from(editor.querySelectorAll('.weight-input')).map(input => input.value);
+    const rows = editor.querySelectorAll('tbody tr');
+    const remark = editor.querySelector('.remark-editor').value;
+    const isSimple = tableEditor && tableEditor.dataset.channelSimple === '1';
+    
+    const states = [];
+    rows.forEach(row => {
+        const stateName = row.querySelector('.state-name')?.value || '';
+        const areaType = row.querySelector('.area-type')?.value || '';
+        const postcodeRange = row.querySelector('.postcode-range')?.value || '';
+        const prices = postcodeOnly ? [] : Array.from(row.querySelectorAll('.price')).map(input => input.value);
+        const deliveryTime = postcodeOnly ? '' : (row.querySelector('.delivery-time')?.value || '');
+        const channel = row.querySelector('.channel')?.value || '';
+        
+        if (isSimple ? postcodeRange : stateName) {
+            states.push({
+                name_cn: isSimple ? (stateName || '邮编') : stateName,
+                area_type: areaType,
+                postcode_range: postcodeRange,
+                prices: prices,
+                delivery_time: deliveryTime,
+                channel: channel
+            });
+        }
+    });
+    
+    return {
+        title: channelTitle,
+        channelTitle: channelTitle,
+        weights: weights,
+        states: states,
+        remark: remark
+    };
+}
+
+// 更新模块标题（实时更新标题列表）
+function updateModuleTitle(moduleId, title) {
+    const titleElement = document.querySelector(`.module-list-item-title[data-module-id="${moduleId}"]`);
+    if (titleElement) {
+        const trimmedTitle = title ? title.trim() : '';
+        if (trimmedTitle) {
+            titleElement.textContent = trimmedTitle;
+            titleElement.title = trimmedTitle; // 同步更新 tooltip
+            titleElement.classList.remove('empty');
+        } else {
+            titleElement.textContent = '未命名模块';
+            titleElement.title = '未命名模块'; // 同步更新 tooltip
+            titleElement.classList.add('empty');
+        }
+    }
+}
+
+// 更新标题列表中的标题（保存时调用）
+function updateModuleTitleInList(moduleId, title) {
+    updateModuleTitle(moduleId, title);
+}
+
+// 滚动到指定模块
+function scrollToModule(moduleId) {
+    const moduleItem = document.querySelector(`.module-item[data-module-id="${moduleId}"]`);
+    if (moduleItem) {
+        // 移除其他模块的active状态
+        document.querySelectorAll('.module-list-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // 添加当前模块的active状态
+        const listItem = document.querySelector(`.module-list-item[data-module-id="${moduleId}"]`);
+        if (listItem) {
+            listItem.classList.add('active');
+        }
+        
+        // 滚动到模块
+        moduleItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // 高亮模块
+        moduleItem.style.transition = 'box-shadow 0.3s';
+        moduleItem.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.3)';
+        setTimeout(() => {
+            moduleItem.style.boxShadow = '';
+        }, 2000);
+    }
+}
+
+// 初始化模块列表拖拽
+let listDraggedElement = null;
+let listPlaceholder = null;
+
+function initModuleListDrag() {
+    const container = document.getElementById('moduleListContainer');
+    
+    container.addEventListener('dragstart', handleListDragStart);
+    container.addEventListener('dragend', handleListDragEnd);
+    container.addEventListener('dragover', handleListDragOver);
+    container.addEventListener('drop', handleListDrop);
+    container.addEventListener('dragleave', handleListDragLeave);
+}
+
+function handleListDragStart(e) {
+    if (!e.target.closest('.module-list-item')) return;
+    
+    listDraggedElement = e.target.closest('.module-list-item');
+    listDraggedElement.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // 创建占位符
+    listPlaceholder = document.createElement('div');
+    listPlaceholder.className = 'module-list-item drag-placeholder';
+    listPlaceholder.style.height = listDraggedElement.offsetHeight + 'px';
+    listPlaceholder.style.marginBottom = '8px';
+    listPlaceholder.style.border = '2px dashed var(--primary)';
+    listPlaceholder.style.borderRadius = '6px';
+    listPlaceholder.style.background = 'rgba(37, 99, 235, 0.05)';
+    
+    listDraggedElement.parentNode.insertBefore(listPlaceholder, listDraggedElement.nextSibling);
+}
+
+function handleListDragEnd(e) {
+    if (!listDraggedElement) return;
+    
+    listDraggedElement.classList.remove('dragging');
+    
+    if (listPlaceholder && listPlaceholder.parentNode) {
+        listPlaceholder.parentNode.removeChild(listPlaceholder);
+    }
+    listPlaceholder = null;
+    
+    document.querySelectorAll('.module-list-item').forEach(item => {
+        item.classList.remove('drag-over');
+    });
+    
+    // 同步更新主内容区域的模块顺序
+    syncModuleOrderFromList();
+    listDraggedElement = null;
+}
+
+function handleListDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (!listDraggedElement) return;
+    
+    const container = document.getElementById('moduleListContainer');
+    const afterElement = getListDragAfterElement(container, e.clientY);
+    
+    container.querySelectorAll('.module-list-item').forEach(item => {
+        item.classList.remove('drag-over');
+    });
+    
+    if (listPlaceholder) {
+        if (afterElement == null) {
+            container.appendChild(listPlaceholder);
+        } else {
+            container.insertBefore(listPlaceholder, afterElement);
+        }
+        
+        if (afterElement && afterElement !== listDraggedElement) {
+            afterElement.classList.add('drag-over');
+        }
+    }
+}
+
+function handleListDrop(e) {
+    e.preventDefault();
+    if (!listDraggedElement || !listPlaceholder) return;
+    
+    if (listPlaceholder.nextSibling) {
+        listPlaceholder.parentNode.insertBefore(listDraggedElement, listPlaceholder.nextSibling);
+    } else {
+        listPlaceholder.parentNode.appendChild(listDraggedElement);
+    }
+}
+
+function handleListDragLeave(e) {
+    const container = document.getElementById('moduleListContainer');
+    if (!container.contains(e.relatedTarget)) {
+        container.querySelectorAll('.module-list-item').forEach(item => {
+            item.classList.remove('drag-over');
+        });
+    }
+}
+
+function getListDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.module-list-item:not(.dragging):not(.drag-placeholder)')];
+    
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// 从标题列表同步模块顺序到主内容区域
+function syncModuleOrderFromList() {
+    const listItems = document.querySelectorAll('#moduleListContainer .module-list-item:not(.drag-placeholder)');
+    const moduleIds = Array.from(listItems).map(item => parseInt(item.dataset.moduleId));
+    
+    const container = document.getElementById('modulesContainer');
+    const moduleItems = Array.from(container.querySelectorAll('.module-item'));
+    
+    // 按照列表顺序重新排列模块
+    moduleIds.forEach(moduleId => {
+        const moduleItem = moduleItems.find(item => parseInt(item.dataset.moduleId) === moduleId);
+        if (moduleItem) {
+            container.appendChild(moduleItem);
+        }
+    });
+    
+    // 保存顺序
+    saveModuleOrder();
+}
+
+// 更新当前激活的模块（滚动时）
+function updateActiveModule() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                const moduleId = parseInt(entry.target.dataset.moduleId);
+                document.querySelectorAll('.module-list-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                const listItem = document.querySelector(`.module-list-item[data-module-id="${moduleId}"]`);
+                if (listItem) {
+                    listItem.classList.add('active');
+                }
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    document.querySelectorAll('.module-item').forEach(item => {
+        observer.observe(item);
+    });
+}
+
+// 删除模块
+async function deleteModule(moduleId) {
+    if (!confirm('确定要删除这个模块吗？')) return;
+    
+    const response = await fetch(`/api/module/${moduleId}/delete`, {
+        method: 'POST'
+    });
+    
+    if (response.ok) {
+        // 移除主内容区域的模块
+        const moduleItem = document.querySelector(`.module-item[data-module-id="${moduleId}"]`);
+        if (moduleItem) {
+            moduleItem.remove();
+        }
+        
+        // 同步移除左侧列表中的模块项
+        const listItem = document.querySelector(`.module-list-item[data-module-id="${moduleId}"]`);
+        if (listItem) {
+            listItem.remove();
+        }
+        
+        // 如果列表为空，显示提示
+        const container = document.getElementById('moduleListContainer');
+        const remainingItems = container.querySelectorAll('.module-list-item');
+        if (remainingItems.length === 0) {
+            if (!container.querySelector('.module-list-empty')) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'module-list-empty';
+                emptyDiv.textContent = '暂无模块';
+                container.appendChild(emptyDiv);
+            }
+        }
+    } else {
+        alert('删除失败，请重试');
+    }
+}
+
+// 复制模块
+async function copyModule(moduleId) {
+    const moduleItem = document.querySelector(`.module-item[data-module-id="${moduleId}"]`);
+    if (!moduleItem) {
+        alert('找不到模块');
+        return;
+    }
+    
+    const moduleBody = moduleItem.querySelector('.module-body');
+    if (!moduleBody) {
+        alert('模块数据不完整');
+        return;
+    }
+    
+    // 确定模块类型
+    let moduleType = '';
+    if (moduleBody.querySelector('.text-editor')) {
+        moduleType = 'text';
+    } else if (moduleBody.querySelector('.image-editor')) {
+        moduleType = 'image';
+    } else if (moduleBody.querySelector('.channel-editor')) {
+        moduleType = 'channel';
+    } else {
+        alert('无法识别模块类型');
+        return;
+    }
+    
+    // 获取模块内容数据
+    let content = {};
+    const titleInput = moduleBody.querySelector('.module-title-input');
+    let title = '';
+    if (titleInput) {
+        title = titleInput.value.trim();
+    } else if (moduleBody.querySelector('.channel-editor')) {
+        const channelTitleInput = moduleBody.querySelector('.channel-title-input');
+        if (channelTitleInput) {
+            title = channelTitleInput.value.trim();
+        }
+    }
+    
+    if (moduleType === 'text') {
+        content = { 
+            title: title,
+            text: moduleBody.querySelector('.text-editor').value,
+            remark: moduleBody.querySelector('.remark-editor').value
+        };
+    } else if (moduleType === 'image') {
+        const imageEditor = moduleBody.querySelector('.image-editor');
+        content = {
+            title: title,
+            url: imageEditor.querySelector('.image-url').value,
+            alt: imageEditor.querySelector('.image-alt').value,
+            caption: imageEditor.querySelector('.image-caption').value,
+            remark: imageEditor.querySelector('.remark-editor').value
+        };
+    } else if (moduleType === 'channel') {
+        content = getChannelEditorData(moduleBody.querySelector('.channel-editor'));
+        if (!content.title && title) {
+            content.title = title;
+        }
+    }
+    
+    // 创建新模块
+    try {
+        const response = await fetch('/api/module/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                article_id: articleId,
+                type: moduleType,
+                content: content
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                // 获取当前模块在列表中的位置
+                const listItem = document.querySelector(`.module-list-item[data-module-id="${moduleId}"]`);
+                const container = document.getElementById('moduleListContainer');
+                const allItems = Array.from(container.querySelectorAll('.module-list-item'));
+                const currentIndex = allItems.indexOf(listItem);
+                
+                // 获取新模块的ID（需要从服务器返回）
+                // 如果API返回了新模块ID，可以动态插入，否则刷新页面
+                location.reload();
+            } else {
+                alert('复制模块失败: ' + (result.message || '未知错误'));
+            }
+        } else {
+            alert('复制模块失败，请重试');
+        }
+    } catch (error) {
+        console.error('复制模块出错:', error);
+        alert('复制模块出错: ' + error.message);
+    }
+}
+
+// 渠道表固定列数（大件/纸箱简化表为2：操作、邮编；否则4：操作、目的港、邮编、区域）
+function getChannelFixedColCount(editor) {
+    const tableEditor = editor.querySelector('.channel-table-editor');
+    return (tableEditor && tableEditor.dataset.channelSimple === '1') ? 2 : 4;
+}
+
+// 更新重量列标题
+function updateWeightColumnHeader(input) {
+    const editor = input.closest('.channel-editor');
+    const weightEditor = editor.querySelector('.weight-editor');
+    const allWeightItems = Array.from(weightEditor.querySelectorAll('.weight-item'));
+    const currentWeightItem = input.closest('.weight-item');
+    const index = allWeightItems.indexOf(currentWeightItem);
+    const fixedCols = getChannelFixedColCount(editor);
+    const table = editor.querySelector('table');
+    const headerRow = table.querySelector('thead tr');
+    const headerCells = headerRow.querySelectorAll('th');
+    if (headerCells[index + fixedCols]) {
+        const value = input.value.trim();
+        headerCells[index + fixedCols].textContent = value || '新重量';
+    }
+}
+
+// 初始化重量输入框事件监听器
+function initWeightInputListeners() {
+    document.querySelectorAll('.weight-input').forEach(input => {
+        input.addEventListener('input', function() {
+            updateWeightColumnHeader(this);
+        });
+    });
+}
+
+// 添加重量列
+function addWeightColumn(btn) {
+    const container = btn.parentElement;
+    
+    // 创建重量项（含拖拽手柄，与重量列设置顺序同步）
+    const weightItem = document.createElement('div');
+    weightItem.className = 'weight-item';
+    weightItem.setAttribute('draggable', 'false');
+    weightItem.ondragover = weightDragOver;
+    weightItem.ondragleave = weightDragLeave;
+    weightItem.ondrop = weightDrop;
+    weightItem.innerHTML = `
+        <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
+        <input type="text" class="weight-input" placeholder="重量" value="">
+        <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
+    `;
+    container.insertBefore(weightItem, btn);
+    
+    // 同时在表格中添加列
+    const editor = btn.closest('.channel-editor');
+    const table = editor.querySelector('table');
+    
+    // 添加表头
+    const headerRow = table.querySelector('thead tr');
+    const th = document.createElement('th');
+    th.textContent = '新重量';
+    th.className = 'weight-col';
+    headerRow.insertBefore(th, headerRow.querySelector('th:nth-last-child(2)'));
+    
+    // 添加数据列
+    table.querySelectorAll('tbody tr').forEach(row => {
+        const td = document.createElement('td');
+        td.innerHTML = '<input type="text" class="price" value="">';
+        const deliveryTd = row.querySelector('.delivery-time').closest('td');
+        row.insertBefore(td, deliveryTd);
+    });
+    
+    // 绑定新添加的重量输入框的事件监听器
+    const newInput = weightItem.querySelector('.weight-input');
+    newInput.addEventListener('input', function() {
+        updateWeightColumnHeader(this);
+    });
+}
+
+// 重量列拖拽排序：拖动手柄时记录源索引
+function weightDragStart(event) {
+    const handle = event.target;
+    if (!handle.classList.contains('weight-drag-handle')) return;
+    const weightItem = handle.closest('.weight-item');
+    const editor = weightItem.closest('.channel-editor');
+    const weightEditor = editor.querySelector('.weight-editor');
+    const items = Array.from(weightEditor.querySelectorAll('.weight-item'));
+    const fromIndex = items.indexOf(weightItem);
+    event.dataTransfer.setData('text/plain', String(fromIndex));
+    event.dataTransfer.effectAllowed = 'move';
+    weightItem.classList.add('dragging');
+    event.target.addEventListener('dragend', function dragEnd() {
+        weightItem.classList.remove('dragging');
+        event.target.removeEventListener('dragend', dragEnd);
+    }, { once: true });
+}
+
+// 允许放置
+function weightDragOver(event) {
+    if (!event.dataTransfer.types.includes('text/plain')) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const item = event.currentTarget;
+    if (item.classList.contains('weight-item')) item.classList.add('drag-over');
+}
+
+// 离开时移除高亮
+function weightDragLeave(event) {
+    const item = event.currentTarget;
+    if (item.classList.contains('weight-item')) item.classList.remove('drag-over');
+}
+
+// 放置：调整重量项顺序并同步价格表列顺序
+function weightDrop(event) {
+    event.preventDefault();
+    const targetItem = event.currentTarget;
+    targetItem.classList.remove('drag-over');
+    const fromIndex = parseInt(event.dataTransfer.getData('text/plain'), 10);
+    if (isNaN(fromIndex)) return;
+    const editor = targetItem.closest('.channel-editor');
+    const weightEditor = editor.querySelector('.weight-editor');
+    const weightItems = Array.from(weightEditor.querySelectorAll('.weight-item'));
+    const toIndex = weightItems.indexOf(targetItem);
+    if (fromIndex === toIndex) return;
+    const sourceItem = weightItems[fromIndex];
+    if (!sourceItem) return;
+    // 1. 调整重量列设置顺序
+    sourceItem.remove();
+    const afterItems = Array.from(weightEditor.querySelectorAll('.weight-item'));
+    const insertBeforeEl = fromIndex < toIndex
+        ? (afterItems[toIndex - 1] ? afterItems[toIndex - 1].nextSibling : null)
+        : (afterItems[toIndex] || null);
+    if (insertBeforeEl) weightEditor.insertBefore(sourceItem, insertBeforeEl);
+    else weightEditor.appendChild(sourceItem);
+    // 2. 同步价格表表头列顺序（固定列+重量列+到门时效、渠道）
+    const table = editor.querySelector('.channel-table-editor table');
+    if (!table) return;
+    const weightColStart = getChannelFixedColCount(editor);
+    const headerRow = table.querySelector('thead tr');
+    const headerCells = Array.from(headerRow.querySelectorAll('th'));
+    const fromCol = weightColStart + fromIndex;
+    // 插入目标：移除 fromCol 后，要插到“最终位置 toIndex”须插在 newHeaderCells[weightColStart+toIndex] 前（该下标在移除后仍正确）
+    const toCol = weightColStart + toIndex;
+    if (!headerCells[fromCol]) return;
+    const extractedTh = headerCells[fromCol];
+    extractedTh.remove();
+    const newHeaderCells = Array.from(headerRow.querySelectorAll('th'));
+    const insertBeforeTh = newHeaderCells[toCol] || null;
+    if (insertBeforeTh) headerRow.insertBefore(extractedTh, insertBeforeTh);
+    else headerRow.appendChild(extractedTh);
+    // 3. 同步每行价格列顺序
+    table.querySelectorAll('tbody tr').forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        if (!cells[fromCol]) return;
+        const extractedTd = cells[fromCol];
+        extractedTd.remove();
+        const newCells = Array.from(row.querySelectorAll('td'));
+        const insertBeforeTd = newCells[toCol] || null;
+        if (insertBeforeTd) row.insertBefore(extractedTd, insertBeforeTd);
+        else row.appendChild(extractedTd);
+    });
+}
+
+// 删除重量列
+function removeWeightColumn(btn) {
+    const weightItem = btn.closest('.weight-item');
+    const editor = btn.closest('.channel-editor');
+    const weightEditor = editor.querySelector('.weight-editor');
+    const allWeightItems = Array.from(weightEditor.querySelectorAll('.weight-item'));
+    const index = allWeightItems.indexOf(weightItem);
+    
+    // 至少保留一列
+    if (allWeightItems.length <= 1) {
+        alert('至少保留一个重量列');
+        return;
+    }
+    
+    // 删除重量输入框
+    weightItem.remove();
+    
+    const table = editor.querySelector('table');
+    const fixedCols = getChannelFixedColCount(editor);
+    const headerRow = table.querySelector('thead tr');
+    const headerCells = headerRow.querySelectorAll('th');
+    if (headerCells[index + fixedCols]) {
+        headerCells[index + fixedCols].remove();
+    }
+    table.querySelectorAll('tbody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells[index + fixedCols]) {
+            cells[index + fixedCols].remove();
+        }
+    });
+}
+
+// 添加表格行（大件/纸箱仅邮编+渠道时只加 操作、邮编、渠道）
+function addTableRow(btn) {
+    const tableEditor = btn.closest('.channel-table-editor');
+    const editor = btn.closest('.channel-editor');
+    const postcodeOnly = tableEditor && tableEditor.dataset.channelPostcodeOnly === '1';
+    const isSimple = tableEditor && tableEditor.dataset.channelSimple === '1';
+    const weights = Array.from(editor.querySelectorAll('.weight-input')).map(input => input.value);
+    const tbody = editor.querySelector('tbody');
+    
+    const tr = document.createElement('tr');
+    if (postcodeOnly) {
+        tr.innerHTML = `
+        <td>
+            <button class="delete-row-btn" onclick="deleteRow(this)">×</button>
+            <button class="delete-row-btn" style="margin-left:4px;background:#4b9cff;" onclick="copyRow(this)">⧉</button>
+        </td>
+        <td><input type="text" class="postcode-range" value="0000,0001"></td>
+        <td><input type="text" class="channel" value=""></td>
+    `;
+    } else if (isSimple) {
+        tr.innerHTML = `
+        <td>
+            <button class="delete-row-btn" onclick="deleteRow(this)">×</button>
+            <button class="delete-row-btn" style="margin-left:4px;background:#4b9cff;" onclick="copyRow(this)">⧉</button>
+        </td>
+        <td><input type="text" class="postcode-range" value="0000,0001"></td>
+        ${weights.map(() => '<td><input type="text" class="price" value=""></td>').join('')}
+        <td><input type="text" class="delivery-time" value=""></td>
+        <td><input type="text" class="channel" value=""></td>
+    `;
+    } else {
+        tr.innerHTML = `
+        <td>
+            <button class="delete-row-btn" onclick="deleteRow(this)">×</button>
+            <button class="delete-row-btn" style="margin-left:4px;background:#4b9cff;" onclick="copyRow(this)">⧉</button>
+        </td>
+        <td><input type="text" class="state-name" value=""></td>
+        <td><input type="text" class="postcode-range" value=""></td>
+        <td><input type="text" class="area-type" placeholder="如：市区" value=""></td>
+        ${weights.map(() => '<td><input type="text" class="price" value=""></td>').join('')}
+        <td><input type="text" class="delivery-time" value=""></td>
+        <td><input type="text" class="channel" value=""></td>
+    `;
+    }
+    tbody.appendChild(tr);
+}
+
+// 删除行
+function deleteRow(btn) {
+    btn.closest('tr').remove();
+}
+
+// 复制当前行到下方
+function copyRow(btn) {
+    const row = btn.closest('tr');
+    const tbody = row.parentElement;
+    const clone = row.cloneNode(true);
+    // 重新绑定按钮上的事件（因为 cloneNode 不复制 inline 绑定以外的逻辑，这里主要是保证语义清晰）
+    const buttons = clone.querySelectorAll('button');
+    buttons.forEach(b => {
+        if (b.textContent === '×') {
+            b.setAttribute('onclick', 'deleteRow(this)');
+        } else {
+            b.setAttribute('onclick', 'copyRow(this)');
+        }
+    });
+    tbody.insertBefore(clone, row.nextSibling);
+}
+
+// 更新图片预览
+function updateImagePreview(input) {
+    const container = input.closest('.image-editor');
+    let preview = container.querySelector('.image-preview');
+    
+    if (input.value) {
+        if (!preview) {
+            preview = document.createElement('img');
+            preview.className = 'image-preview';
+            const remarkSection = container.querySelector('.remark-section');
+            container.insertBefore(preview, remarkSection);
+        }
+        preview.src = input.value;
+    } else if (preview) {
+        preview.remove();
+    }
+}
+
+// 上传图片
+async function uploadImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const container = input.closest('.image-editor');
+    const progressBar = container.querySelector('.upload-progress');
+    const progressInner = container.querySelector('.upload-progress-bar');
+    const urlInput = container.querySelector('.image-url');
+    
+    progressBar.style.display = 'block';
+    progressInner.style.width = '0%';
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = (e.loaded / e.total) * 100;
+                progressInner.style.width = percent + '%';
+            }
+        };
+        
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                if (response.success) {
+                    urlInput.value = response.url;
+                    updateImagePreview(urlInput);
+                    progressInner.style.width = '100%';
+                    setTimeout(() => {
+                        progressBar.style.display = 'none';
+                    }, 500);
+                } else {
+                    alert('上传失败: ' + response.message);
+                    progressBar.style.display = 'none';
+                }
+            } else {
+                alert('上传失败');
+                progressBar.style.display = 'none';
+            }
+        };
+        
+        xhr.onerror = function() {
+            alert('上传出错');
+            progressBar.style.display = 'none';
+        };
+        
+        xhr.open('POST', '/api/upload');
+        xhr.send(formData);
+        
+    } catch (error) {
+        alert('上传出错: ' + error.message);
+        progressBar.style.display = 'none';
+    }
+}
+
+// 图片选择器相关变量
+let currentImageEditor = null;
+let selectedImageUrl = null;
+
+// 打开图片选择器
+async function openImageSelector(btn) {
+    currentImageEditor = btn.closest('.image-editor');
+    selectedImageUrl = null;
+    
+    const modal = document.getElementById('imageSelectorModal');
+    const loading = document.getElementById('imageSelectorLoading');
+    const grid = document.getElementById('imageGrid');
+    const empty = document.getElementById('imageSelectorEmpty');
+    
+    modal.classList.add('show');
+    loading.style.display = 'block';
+    grid.style.display = 'none';
+    empty.style.display = 'none';
+    grid.innerHTML = '';
+    
+    try {
+        const response = await fetch('/api/uploaded-images');
+        const result = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (result.success && result.images && result.images.length > 0) {
+            grid.style.display = 'grid';
+            
+            result.images.forEach(image => {
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-item';
+                imageItem.dataset.url = image.url;
+                imageItem.onclick = function() {
+                    // 移除其他选中状态
+                    document.querySelectorAll('.image-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    // 添加当前选中状态
+                    this.classList.add('selected');
+                    selectedImageUrl = image.url;
+                };
+                
+                const img = document.createElement('img');
+                img.src = image.url;
+                img.alt = image.filename;
+                img.onerror = function() {
+                    this.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">图片加载失败</text></svg>';
+                };
+                
+                const info = document.createElement('div');
+                info.className = 'image-item-info';
+                const sizeKB = (image.size / 1024).toFixed(1);
+                info.textContent = `${image.filename} (${sizeKB}KB)`;
+                
+                imageItem.appendChild(img);
+                imageItem.appendChild(info);
+                grid.appendChild(imageItem);
+            });
+        } else {
+            empty.style.display = 'block';
+        }
+    } catch (error) {
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+        empty.textContent = '加载失败: ' + error.message;
+    }
+}
+
+// 关闭图片选择器
+function closeImageSelector() {
+    const modal = document.getElementById('imageSelectorModal');
+    modal.classList.remove('show');
+    currentImageEditor = null;
+    selectedImageUrl = null;
+}
+
+// 选择图片
+function selectImage() {
+    if (!selectedImageUrl || !currentImageEditor) {
+        alert('请先选择一张图片');
+        return;
+    }
+    
+    const urlInput = currentImageEditor.querySelector('.image-url');
+    if (urlInput) {
+        urlInput.value = selectedImageUrl;
+        updateImagePreview(urlInput);
+    }
+    
+    closeImageSelector();
+}
+
+// 点击弹窗外部关闭
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('imageSelectorModal');
+    if (e.target === modal) {
+        closeImageSelector();
+    }
+});
+
+// 初始化上传区域拖拽
+function initUploadAreas() {
+    document.querySelectorAll('.upload-area').forEach(area => {
+        area.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.borderColor = '#00d9ff';
+            this.style.background = '#0f3460';
+        });
+        
+        area.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.style.borderColor = '#667eea';
+            this.style.background = '#1a1a2e';
+        });
+        
+        area.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.borderColor = '#667eea';
+            this.style.background = '#1a1a2e';
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const input = this.querySelector('input[type=file]');
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                uploadImage(input);
+            }
+        });
+    });
+}
+</script>
+{% endblock %}

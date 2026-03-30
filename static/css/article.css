@@ -1,0 +1,704 @@
+.module-remark {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.6;
+}
+/* 图片模块备注左对齐 */
+.module-image .module-remark {
+    text-align: left;
+}
+/* 合并单元格高亮样式 */
+.channel-table tbody td.merged-cell-highlight {
+    background: #fef3c7 !important;
+    /* 仅保留背景高亮，避免横向相邻单元格之间出现黄色竖线 */
+    border-color: transparent !important;
+    box-sizing: border-box;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: middle !important;
+}
+/* 渠道表格：默认单元格水平垂直居中 */
+.channel-table th,
+.channel-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+/* 行hover样式 */
+.channel-table tbody tr.row-hover {
+    background: #e0f2fe !important;
+}
+/* 合并单元格hover样式 */
+.channel-table tbody td.merged-cell-hover {
+    background: #e0f2fe !important;
+}
+/* 搜索高亮优先：命中高亮后，hover 不再改色 */
+.channel-table tbody tr.highlight.row-hover {
+    background: #fef3c7 !important;
+}
+.channel-table tbody td.merged-cell-highlight.merged-cell-hover {
+    background: #fef3c7 !important;
+}
+/* 确保表头文字横向显示 */
+.channel-table th {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    white-space: normal !important;
+}
+/* 动态列基础规则：使用语义 class，不依赖列序号 */
+.channel-table th.col-dynamic:not(.col-remark):not(.col-standard),
+.channel-table td.col-dynamic:not(.col-remark):not(.col-standard) {
+    white-space: nowrap !important;
+    min-width: 75px !important;
+    padding: 12px 6px !important;
+    font-size: 12px !important;
+    text-align: center !important;
+}
+/* 搜索模式下隐藏的模块和行 */
+.module-channel.hidden-by-search {
+    display: none !important;
+}
+.channel-table tbody tr.hidden-by-search {
+    display: none !important;
+}
+/* 搜索模式下隐藏渠道模块的单个邮编查询框 */
+.module-channel.search-mode .postcode-query-box {
+    display: none !important;
+}
+/* 定义高度变量 */
+:root {
+    --nav-height: 60px;
+    --channel-title-height: 54px; /* padding(14px*2) + font-size(16px) + line-height ≈ 54px */
+    --floating-right-edge: max(calc((100vw - var(--container-max)) / 2), 0px);
+    --main-wrapper-inner-right: calc(var(--floating-right-edge) + max(20px, env(safe-area-inset-right)));
+    --channel-nav-collapsed-width: 62px;
+    --back-to-top-size: 72px;
+    --floating-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --floating-bottom-gap: 32px;
+    --floating-nav-offset-above-top: 60px;
+}
+/* 渠道标题置顶 - 竖向固定，避免挡住导航栏 */
+.channel-title {
+    position: sticky;
+    top: var(--nav-height); /* 导航栏高度 */
+    z-index: 99; /* 低于导航栏的z-index: 100 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+/* 确保所有父元素不会阻止 sticky，且不裁表格 */
+.article-content,
+.module-channel {
+    overflow: visible !important;
+}
+/* 文章内容区不随内部宽内容撑开，保证表格在 wrapper 内横向滚动 */
+.article-content {
+    max-width: 100% !important;
+}
+.module-channel {
+    scroll-margin-top: calc(var(--nav-height) + 70px);
+}
+/* 渠道目录：可折叠列表，点击可快速定位渠道 */
+/* 与主内容区右边缘对齐（大屏自动留白，小屏贴屏幕右侧） */
+/* ─── Channel Directory Sidebar (White Card Design) ─── */
+.channel-nav-panel {
+    position: fixed;
+    right: var(--main-wrapper-inner-right);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #ffffff;
+    border-top: 4px solid #2563eb;
+    border-left: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: none;
+    border-radius: 16px 0 0 16px;
+    box-shadow: -4px 6px 26px rgba(37, 99, 235, 0.16), -2px 0 14px rgba(15, 23, 42, 0.08);
+    z-index: 101;
+    overflow: hidden;
+    backdrop-filter: blur(2px);
+    transition: width 0.24s ease, box-shadow 0.24s ease, transform 0.24s ease;
+}
+.channel-nav-panel:hover {
+    transform: translateY(-50%) translateX(-2px);
+    box-shadow: -6px 10px 30px rgba(37, 99, 235, 0.2), -2px 0 14px rgba(15, 23, 42, 0.1);
+}
+.channel-nav-panel[open] {
+    box-shadow: -8px 12px 34px rgba(37, 99, 235, 0.22), -3px 0 16px rgba(15, 23, 42, 0.12);
+}
+.channel-nav-panel summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    color: #1e293b;
+    transition: background 0.2s ease;
+}
+.channel-nav-panel summary:hover { background: rgba(239, 246, 255, 0.72); }
+.channel-nav-panel summary::-webkit-details-marker { display: none; }
+.channel-nav-panel summary::after { display: none; }
+/* Sub-elements inside summary */
+.cnp-icon {
+    font-size: 15px;
+    color: #2563eb;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.cnp-title {
+    font-weight: 700;
+    font-size: 16px;
+    color: #1e293b;
+    letter-spacing: 2px;
+    flex-grow: 1;
+}
+.cnp-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.cnp-search-code {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.cnp-search-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.cnp-search-wrap[hidden],
+.cnp-search-code[hidden],
+.cnp-search-clear[hidden] {
+    display: none !important;
+}
+.cnp-search-clear {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid #fca5a5;
+    background: #fff1f2;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+}
+.cnp-search-clear:hover {
+    background: #ffe4e6;
+    color: #b91c1c;
+}
+.cnp-search-code:empty {
+    display: none !important;
+}
+.channel-nav-panel:not([open]) .cnp-search-wrap {
+    display: none !important;
+}
+.cnp-arrow {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.3s ease, box-shadow 0.2s ease;
+    /* nudge glyph to look centered */
+    padding-left: 1px;
+}
+.channel-nav-panel summary:hover .cnp-arrow {
+    background: #dbeafe;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+/* ── Collapsed state ── */
+.channel-nav-panel:not([open]) {
+    width: var(--channel-nav-collapsed-width);
+    border-radius: 14px 0 0 14px;
+}
+.channel-nav-panel:not([open]) summary {
+    flex-direction: column;
+    padding: 12px 10px 14px;
+    gap: 10px;
+    align-items: center;
+}
+.channel-nav-panel:not([open]) .cnp-title {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 17px;
+    flex-grow: 0;
+    letter-spacing: 3px;
+}
+.channel-nav-panel:not([open]) .cnp-hint {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #b0bec5;
+}
+/* ── Expanded state ── */
+.channel-nav-panel[open] {
+    width: min(360px, calc(100vw - 20px));
+}
+.channel-nav-panel[open] summary {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.channel-nav-panel[open] .cnp-hint {
+    display: none;
+}
+.channel-nav-panel[open] .cnp-arrow {
+    transform: rotate(180deg) scale(1.04);
+}
+/* Panel body */
+.channel-nav-panel-body {
+    max-height: min(65vh, 460px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px 12px 14px;
+}
+.channel-nav-panel[open] .channel-nav-panel-body {
+    animation: cnpPanelIn 0.2s ease-out;
+}
+@keyframes cnpPanelIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+.channel-nav-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.channel-nav-list > li.hidden-in-nav {
+    display: none;
+}
+.channel-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease, color 0.15s ease;
+}
+.channel-nav-link::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #93c5fd;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.channel-nav-link:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    transform: translateX(-2px);
+}
+.channel-nav-link.hidden-in-nav {
+    display: none;
+}
+.channel-nav-link.active {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+.channel-nav-link.active::before {
+    background: #2563eb;
+}
+.channel-nav-link:active {
+    transform: translateX(-1px);
+}
+/* 表格容器：限制宽度 + 横向滚动，兼容各端（顶部搜索时表格不被裁） */
+.channel-table-wrapper {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    box-sizing: border-box !important;
+}
+/* 表格按列宽展开，不压缩，保证横向滚动时所有列可见 */
+.channel-table {
+    width: max-content !important;
+    min-width: 100% !important;
+}
+/* 克隆的表头容器 - 用于固定显示，宽度与渠道标题一致，支持横向滚动与表格 body 同步 */
+.sticky-header-container {
+    position: fixed;
+    top: 0;
+    left: 0; /* 微型浏览器下与 JS 设置的 left 配合，避免未赋值时错位 */
+    z-index: 98;
+    background: var(--primary);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: none;
+    overflow-x: auto; /* 允许横向滚动，与表格 wrapper 的 scrollLeft 同步 */
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* 微型浏览器/WebView：独立合成层，避免 fixed 失效或闪烁 */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+}
+.sticky-header-container.active {
+    display: block;
+}
+.sticky-header-container table {
+    width: 100%;
+    margin: 0;
+}
+
+/* 表格表头样式 */
+.channel-table thead {
+    position: relative;
+    z-index: 98;
+    background: var(--primary);
+}
+/* 确保表头单元格也有背景色 */
+.channel-table thead th {
+    background: var(--primary) !important;
+}
+/* 备注列：固定宽度 + 强制换行 + 禁止溢出，适用于所有含「备注」的表头列 */
+.channel-table th.col-dynamic.col-remark,
+.channel-table td.col-dynamic.col-remark,
+.channel-table th.remark-header,
+.channel-table td.remark-cell {
+    width: 120px !important;
+    max-width: 120px !important;
+    min-width: 120px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+    box-sizing: border-box;
+    padding: 8px 6px !important;
+    line-height: 1.4;
+    text-align: center;
+    vertical-align: middle !important;
+}
+/* 备注列合并单元格样式 */
+.channel-table td.col-dynamic.col-remark[rowspan],
+.channel-table td.remark-cell[rowspan] {
+    width: 120px !important;
+    max-width: 120px !important;
+    min-width: 120px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+    box-sizing: border-box;
+    padding: 8px 6px !important;
+    line-height: 1.4;
+    text-align: left !important;
+    vertical-align: top;
+}
+.channel-table td.col-dynamic.col-remark.merged-cell-highlight,
+.channel-table td.remark-cell.merged-cell-highlight {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-all !important;
+}
+/* “澳洲小包限定标准”列：限制宽度并换行，避免整表被拉太长 */
+.channel-table th.col-dynamic.col-standard,
+.channel-table td.col-dynamic.col-standard,
+.channel-table th.standard-header,
+.channel-table td.standard-cell {
+    width: 320px !important;
+    max-width: 320px !important;
+    min-width: 260px !important;
+    white-space: pre-line !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.5;
+    text-align: center;
+    vertical-align: middle !important;
+}
+.channel-table td.col-dynamic.col-standard[rowspan],
+.channel-table td.col-dynamic.col-standard.merged-cell-highlight,
+.channel-table td.standard-cell[rowspan],
+.channel-table td.standard-cell.merged-cell-highlight {
+white-space: pre-line !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+/* 邮编列、渠道列：兼容非纯邮编/渠道代码的长描述文字，多行换行 */
+.channel-table td.postcode-cell,
+.channel-table td.postcode-cell.merged-cell-highlight {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 146px;
+    line-height: 1.5;
+    vertical-align: middle !important;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+}
+.channel-table td.channel-cell,
+.channel-table td.channel-cell.merged-cell-highlight {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 140px;
+    line-height: 1.5;
+    vertical-align: middle !important;
+}
+/* 合并单元格（rowspan）：统一上下居中 */
+.channel-table tbody td[rowspan] {
+    vertical-align: middle !important;
+}
+.postcode-popover {
+    position: fixed;
+    z-index: 10020;
+    max-width: min(92vw, 560px);
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(224, 242, 254, 0.35);
+    background: #2463ebf2;
+    color: #e0f2fe;
+    font-size: 14px;
+    line-height: 1.65;
+    letter-spacing: 0.1px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.32);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.postcode-cell-active {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+/* 渠道标题横杠前面的文本高亮样式 */
+.channel-title .channel-name-highlight {
+    color: #FFD700; /* 金黄色，在蓝色背景上更醒目 */
+    font-weight: 800;
+    
+}
+/* 文章详情内图片可点击全屏，移动端显示为可点击 */
+.module-image img {
+    cursor: pointer;
+    max-width: 100%;
+    height: auto;
+}
+/* 图片全屏灯箱：黑色遮罩 + 可缩放图片 */
+.image-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0,0,0,0.95);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    overflow: hidden;
+}
+.image-lightbox.active {
+    display: flex;
+}
+.image-lightbox-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10002;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.image-lightbox-close:hover {
+    background: rgba(255,255,255,0.35);
+}
+.image-lightbox-inner {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+}
+.image-lightbox-img-wrap {
+    position: relative;
+    display: inline-block;
+    transform-origin: 0 0;
+    touch-action: none;
+    /* 双指缩放时启用 GPU 加速，提升流畅度 */
+    will-change: transform;
+    backface-visibility: hidden;
+}
+.image-lightbox-inner img {
+    max-width: none;
+    max-height: none;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+    display: block;
+}
+/* 右下角一键返回顶部 */
+.back-to-top {
+    position: fixed;
+    right: calc(var(--main-wrapper-inner-right) - (var(--back-to-top-size) - var(--channel-nav-collapsed-width)) / 2);
+    bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom));
+    width: var(--back-to-top-size);
+    height: var(--back-to-top-size);
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #3b82f6;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.14);
+    cursor: pointer;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0;
+    font-size: 28px;
+    font-weight: 900;
+    font-family: "Arial Black", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1;
+    transition: opacity 0.2s, transform 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.back-to-top:hover {
+    background: #eef2f7;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+    transform: translateY(-2px);
+}
+.back-to-top:active {
+    transform: translateY(0);
+}
+/* 多端适配：小屏加大触控、留边 */
+@media (max-width: 768px) {
+    :root {
+        --channel-nav-collapsed-width: 58px;
+        --back-to-top-size: 64px;
+        --floating-bottom-gap: 24px;
+        --floating-nav-offset-above-top: 68px;
+    }
+    /* 保持表头在文档流中位置正确；固定效果由 JS 克隆表头实现 */
+    .channel-table thead {
+        display: table-header-group;
+    }
+    .channel-table thead th {
+        background: var(--primary) !important;
+    }
+    .channel-nav-link {
+        font-size: 13px;
+        padding: 9px 12px;
+    }
+    .postcode-popover {
+        max-width: calc(100vw - 14px);
+        font-size: 13px;
+        line-height: 1.55;
+    }
+    .back-to-top {
+        right: max(8px, env(safe-area-inset-right));
+        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom));
+        width: var(--back-to-top-size);
+        height: var(--back-to-top-size);
+        font-size: 34px;
+        padding-left: 0;
+    }
+    .channel-nav-panel {
+        right: max(8px, env(safe-area-inset-right));
+        left: auto;
+        top: auto;
+        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + var(--floating-nav-offset-above-top));
+        transform: none;
+        border-radius: 14px 0 0 14px;
+        max-width: calc(100vw - 16px);
+    }
+    .channel-nav-panel:hover {
+        transform: none;
+    }
+    .channel-nav-panel[open] {
+        right: max(8px, env(safe-area-inset-right));
+        left: auto;
+        width: min(320px, calc(100vw - 16px));
+    }
+    .channel-nav-panel-body {
+        max-height: 55vh;
+    }
+    .cnp-search-code {
+        max-width: 88px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .cnp-search-clear {
+        top: -6px;
+        right: -6px;
+        width: 15px;
+        height: 15px;
+        font-size: 11px;
+    }
+}
+@media (max-width: 480px) {
+    :root {
+        --channel-nav-collapsed-width: 54px;
+        --back-to-top-size: 56px;
+        --floating-bottom-gap: 20px;
+        --floating-nav-offset-above-top: 60px;
+    }
+    .back-to-top {
+        right: max(8px, env(safe-area-inset-right));
+        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom));
+        width: var(--back-to-top-size);
+        height: var(--back-to-top-size);
+        font-size: 30px;
+        padding-left: 0;
+    }
+    .channel-nav-panel {
+        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + var(--floating-nav-offset-above-top));
+    }
+}

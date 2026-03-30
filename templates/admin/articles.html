@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}文章管理 - 报价网站{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>文章管理</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('admin.article_create') }}" class="btn btn-primary">新建文章</a>
+        </div>
+    </div>
+    <div class="admin-nav-channels">
+        <a href="{{ url_for('admin.articles') }}" class="active">文章管理</a>
+        <a href="{{ url_for('admin.channel_postcodes') }}">大件/纸箱无服务邮编</a>
+    </div>
+    
+    <div class="admin-content">
+        <div class="section">
+            <h2>分类管理</h2>
+            <div class="category-manager">
+                <div class="category-list-admin">
+                    {% for category in categories %}
+                    <div class="category-item-admin" data-category-id="{{ category['id'] }}">
+                        <span class="category-name">{{ category['name'] }}</span>
+                        <input type="text" class="category-edit-input" value="{{ category['name'] }}" style="display:none;">
+                        <button type="button" class="btn btn-small btn-edit-cat" data-id="{{ category['id'] }}" data-name="{{ category['name'] }}">编辑</button>
+                        <button class="btn-icon btn-delete" onclick="deleteCategory({{ category['id'] }})">✕</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="add-category-form">
+                    <input type="text" id="newCategoryName" placeholder="新分类名称">
+                    <button class="btn btn-small" onclick="addCategory()">添加分类</button>
+                </div>
+            </div>
+        </div>
+        <div class="section section-toolbar">
+            <label>筛选分类：</label>
+            <select id="filterCategory" onchange="applyFilter()">
+                <option value="">全部</option>
+                {% for c in categories %}
+                <option value="{{ c['id'] }}" {% if category_filter == c['id'] %}selected{% endif %}>{{ c['name'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="section">
+            <h2>文章列表</h2>
+            <div class="article-table-wrapper">
+                <table class="article-table">
+                    <thead>
+                        <tr>
+                            <th>编号</th>
+                            <th>标题</th>
+                            <th>分类</th>
+                            <th>创建时间</th>
+                            <th>修改时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for article in articles %}
+                        <tr>
+                            <td>{{ article['article_code'] or article['id'] }}</td>
+                            <td>
+                                <a href="{{ url_for('front.article_detail', article_code=article['article_code']) }}" target="_blank">
+                                    {{ article['title'] }}
+                                </a>
+                            </td>
+                            <td>{{ article.get('category_name') or '未分类' }}</td>
+                            <td>{{ article['created_at'][:16] if article.get('created_at') else '' }}</td>
+                            <td>{{ article['updated_at'][:16] if article.get('updated_at') else '' }}</td>
+                            <td class="actions">
+                                <a href="{{ url_for('admin.article_edit', article_id=article['id']) }}" class="btn btn-small">编辑</a>
+                                <a href="{{ url_for('admin.article_copy', article_id=article['id']) }}" class="btn btn-small btn-secondary">复制</a>
+                                <button class="btn btn-small btn-danger" onclick="confirmDelete({{ article['id'] }})">删除</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                {% if not articles %}
+                <div class="empty-message">暂无文章，点击上方"新建文章"开始创建</div>
+                {% endif %}
+            </div>
+            {% if total_pages > 1 %}
+            <div class="pagination">
+                {% if page > 1 %}<a href="?page={{ page - 1 }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}" class="btn btn-small">上一页</a>{% else %}<span class="btn btn-small disabled">上一页</span>{% endif %}
+                <span class="pagination-info">第 {{ page }} / {{ total_pages }} 页，共 {{ total }} 条</span>
+                {% if page < total_pages %}<a href="?page={{ page + 1 }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}" class="btn btn-small">下一页</a>{% else %}<span class="btn btn-small disabled">下一页</span>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(articleId) {
+    if (confirm('确定要删除这篇文章吗？此操作不可恢复。')) {
+        window.location.href = `/admin/article/${articleId}/delete`;
+    }
+}
+function applyFilter() {
+    const id = document.getElementById('filterCategory').value;
+    const url = new URL(location.href);
+    url.searchParams.delete('page');
+    if (id) url.searchParams.set('category_id', id);
+    else url.searchParams.delete('category_id');
+    location.href = url.toString();
+}
+document.querySelectorAll('.btn-edit-cat').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = parseInt(this.dataset.id, 10);
+        var currentName = this.dataset.name || '';
+        editCategory(id, currentName, this);
+    });
+});
+function editCategory(id, currentName, btnEl) {
+    const item = btnEl.closest('.category-item-admin');
+    const nameSpan = item.querySelector('.category-name');
+    const input = item.querySelector('.category-edit-input');
+    const btn = item.querySelector('.btn-edit-cat');
+    if (input.style.display === 'none') {
+        input.value = currentName;
+        input.style.display = 'inline-block';
+        nameSpan.style.display = 'none';
+        btn.textContent = '保存';
+        input.focus();
+    } else {
+        const name = input.value.trim();
+        if (!name) { alert('名称不能为空'); return; }
+        fetch('/api/category/' + id + '/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.success) {
+                nameSpan.textContent = name;
+                input.style.display = 'none';
+                nameSpan.style.display = 'inline';
+                btn.textContent = '编辑';
+                btn.dataset.name = name;
+                var opt = document.querySelector('#filterCategory option[value="' + id + '"]');
+                if (opt) opt.textContent = name;
+                location.reload();
+            } else { alert(data.message || '保存失败'); }
+        }).catch(function() { alert('请求失败'); });
+    }
+}
+async function addCategory() {
+    const name = document.getElementById('newCategoryName').value.trim();
+    if (!name) { alert('请输入分类名称'); return; }
+    try {
+        const response = await fetch('/api/category/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name })
+        });
+        if (response.ok) location.reload();
+        else { var d = await response.json(); alert(d.message || '添加失败'); }
+    } catch (e) { alert('添加失败'); }
+}
+async function deleteCategory(categoryId) {
+    if (!confirm('确定要删除这个分类吗？')) return;
+    try {
+        const response = await fetch('/api/category/' + categoryId + '/delete', { method: 'POST' });
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.success !== false) location.reload();
+        else alert(data.message || '删除失败');
+    } catch (e) { alert('删除失败'); }
+}
+</script>
+{% endblock %}
+

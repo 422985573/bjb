@@ -1,0 +1,40 @@
+# 环境变量
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 虚拟环境
+venv/
+bjb_venv/
+.venv/
+
+# 数据库
+*.db
+
+# 日志
+logs/
+*.log
+
+# 上传文件
+uploads/*
+!uploads/.gitkeep
+
+# 测试缓存
+.pytest_cache/
+
+# 系统文件
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/
+.cursor/
+
+uploads/
+# 运行文件
+*.pid
+gunicorn.pid
