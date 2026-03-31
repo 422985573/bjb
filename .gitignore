@@ -34,6 +34,9 @@ uploads/*
 .idea/
 .cursor/
 
+.playwright-cli/
+.gitignore
+
 uploads/
 # 运行文件
 *.pid

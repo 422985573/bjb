@@ -2131,6 +2131,20 @@ function addWeightColumn(btn) {
     newInput.addEventListener('input', function() {
         updateWeightColumnHeader(this);
     });
+    const focusNewWeightInput = function(retriesLeft) {
+        weightItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        btn.blur();
+        newInput.focus();
+        newInput.select();
+        if (document.activeElement !== newInput && retriesLeft > 0) {
+            window.setTimeout(function() {
+                focusNewWeightInput(retriesLeft - 1);
+            }, 50);
+        }
+    };
+    window.setTimeout(function() {
+        focusNewWeightInput(3);
+    }, 0);
 }
 
 // 重量列拖拽排序：拖动手柄时记录源索引
