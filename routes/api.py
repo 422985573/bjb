@@ -36,6 +36,13 @@ def _safe_get_reject_postcodes_by_channel():
         return None, 'LOCAL_POSTCODE_DATA_UNAVAILABLE'
 
 
+def _serialize_channel_postcodes(by_channel):
+    return {
+        channel: sorted(str(code) for code in codes)
+        for channel, codes in (by_channel or {}).items()
+    }
+
+
 def _is_valid_distance_api_success(data):
     if not isinstance(data, dict):
         return False
@@ -62,6 +69,30 @@ def _is_explicit_no_service_payload(data):
     if 'distance' not in payload_data:
         return False
     return payload_data.get('distance') is None
+
+
+@api_bp.route('/postcode-channel-status', methods=['GET'])
+def postcode_channel_status():
+    """公开返回各渠道拒收邮编状态，供前端或健康检查使用。"""
+    by_channel, err = _safe_get_reject_postcodes_by_channel()
+    if err:
+        return jsonify({
+            'success': False,
+            'message': '渠道邮编数据暂不可用',
+            'data': {
+                '大件': [],
+                '纸箱': [],
+            }
+        }), 503
+
+    normalized = {
+        '大件': by_channel.get('大件', set()),
+        '纸箱': by_channel.get('纸箱', set()),
+    }
+    return jsonify({
+        'success': True,
+        'data': _serialize_channel_postcodes(normalized),
+    })
 
 
 @api_bp.route('/upload', methods=['POST'])
