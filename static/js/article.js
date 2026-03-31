@@ -167,6 +167,10 @@ function syncNavHeightVar() {
     document.documentElement.style.setProperty('--nav-height', navHeight + 'px');
 }
 
+function shouldUseClonedStickyHeaders() {
+    return true;
+}
+
 function initArticlePage() {
     syncNavHeightVar();
     highlightChannelNames();
@@ -365,6 +369,9 @@ function setupChannelNavigator() {
             if (typeof window.globalSearchPostcode === 'function') {
                 window.globalSearchPostcode();
             }
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                panel.removeAttribute('open');
+            }
             syncNavSearchCode();
         });
     }
@@ -399,20 +406,13 @@ function setupChannelNavigator() {
             btn.classList.add('active');
             const titleTarget = module.querySelector('.channel-title') || module;
             const tableEl = module.querySelector('.channel-table');
-            const getFirstVisibleDataRow = function() {
-                const rows = Array.from(module.querySelectorAll('.channel-table tbody tr'));
-                return rows.find(function(row) {
-                    if (row.classList.contains('hidden-by-search')) return false;
-                    return row.offsetParent !== null;
-                }) || null;
-            };
             const getTargetTop = function() {
-                // 优先锚定“真实数据起点”（首行），避免只定位到吸顶标题而看不到数据
-                const anchorEl = getFirstVisibleDataRow() || tableEl || titleTarget || module;
+                // 目录跳转优先对齐到表头，确保移动端能同时看到渠道标题和价格表标题行
+                const tableHeadEl = tableEl && tableEl.tHead ? tableEl.tHead : null;
+                const anchorEl = tableHeadEl || tableEl || titleTarget || module;
                 const anchorAbsoluteTop = anchorEl.getBoundingClientRect().top + window.pageYOffset;
                 const navHeight = getCurrentNavHeight();
                 const titleHeight = titleTarget ? titleTarget.offsetHeight : 0;
-                // 注意：目录跳转期间 sticky 克隆表头被抑制，这里不再扣表头高度，避免上滑过冲
                 const visualOffset = navHeight + titleHeight + SCROLL_NUDGE_PX;
                 return Math.max(0, anchorAbsoluteTop - visualOffset);
             };
@@ -623,10 +623,27 @@ function setupImageLightbox() {
     const closeBtn = document.getElementById('imageLightboxClose');
     if (!lightbox || !lightboxImg || !lightboxWrap) return;
 
+    const MIN_SCALE = 1;
+    const MAX_SCALE = 5;
     let scale = 1, translateX = 0, translateY = 0;
-    let lastDist = 0, lastCenterX = 0, lastCenterY = 0;
+    let lastDist = 0;
     let startSingleX = 0, startSingleY = 0, startTx = 0, startTy = 0;
     let rafId = null;
+
+    function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+
+    function clampTranslation(nextScale, nextTranslateX, nextTranslateY) {
+        const contentWidth = lightboxWrap.offsetWidth * nextScale;
+        const contentHeight = lightboxWrap.offsetHeight * nextScale;
+        const maxOffsetX = Math.max(0, (contentWidth - window.innerWidth) / 2);
+        const maxOffsetY = Math.max(0, (contentHeight - window.innerHeight) / 2);
+        return {
+            x: clamp(nextTranslateX, -maxOffsetX, maxOffsetX),
+            y: clamp(nextTranslateY, -maxOffsetY, maxOffsetY)
+        };
+    }
 
     function applyTransform() {
         if (rafId !== null) return;
@@ -637,13 +654,13 @@ function setupImageLightbox() {
     }
 
     function resetTransform() {
-        scale = 1;
+        scale = MIN_SCALE;
         translateX = 0;
         translateY = 0;
         lastDist = 0;
         if (rafId !== null) cancelAnimationFrame(rafId);
         rafId = null;
-        lightboxWrap.style.transform = 'translate(0,0) scale(1)';
+        lightboxWrap.style.transform = 'translate(0,0) scale(' + MIN_SCALE + ')';
     }
 
     function openLightbox(src, alt) {
@@ -677,8 +694,6 @@ function setupImageLightbox() {
         if (e.touches.length === 2) {
             const d = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
             lastDist = d;
-            lastCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            lastCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         } else if (e.touches.length === 1) {
             startSingleX = e.touches[0].clientX;
             startSingleY = e.touches[0].clientY;
@@ -696,18 +711,28 @@ function setupImageLightbox() {
             const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             const scaleFactor = d / lastDist;
             lastDist = d;
-            const newScale = Math.max(0.5, Math.min(5, scale * scaleFactor));
-            /* 以双指中心为缩放原点：保持双指中心对应的图片点不变 */
-            translateX = cx - (cx - translateX) * (newScale / scale);
-            translateY = cy - (cy - translateY) * (newScale / scale);
+            const currentRect = lightboxWrap.getBoundingClientRect();
+            const currentScale = scale || MIN_SCALE;
+            const pointXInImage = (cx - currentRect.left) / currentScale;
+            const pointYInImage = (cy - currentRect.top) / currentScale;
+            const baseLeft = currentRect.left - translateX;
+            const baseTop = currentRect.top - translateY;
+            const newScale = clamp(scale * scaleFactor, MIN_SCALE, MAX_SCALE);
+            const nextTranslateX = cx - baseLeft - pointXInImage * newScale;
+            const nextTranslateY = cy - baseTop - pointYInImage * newScale;
+            const clamped = clampTranslation(newScale, nextTranslateX, nextTranslateY);
+            translateX = clamped.x;
+            translateY = clamped.y;
             scale = newScale;
-            lastCenterX = cx;
-            lastCenterY = cy;
             applyTransform();
         } else if (e.touches.length === 1) {
             e.preventDefault();
-            translateX = startTx + (e.touches[0].clientX - startSingleX);
-            translateY = startTy + (e.touches[0].clientY - startSingleY);
+            if (scale <= MIN_SCALE) return;
+            const nextTranslateX = startTx + (e.touches[0].clientX - startSingleX);
+            const nextTranslateY = startTy + (e.touches[0].clientY - startSingleY);
+            const clamped = clampTranslation(scale, nextTranslateX, nextTranslateY);
+            translateX = clamped.x;
+            translateY = clamped.y;
             applyTransform();
         }
     }, { passive: false });
@@ -722,6 +747,14 @@ function setupImageLightbox() {
         } else if (e.touches.length === 0) {
             lastDist = 0;
         }
+        if (scale <= MIN_SCALE) {
+            resetTransform();
+            return;
+        }
+        const clamped = clampTranslation(scale, translateX, translateY);
+        translateX = clamped.x;
+        translateY = clamped.y;
+        applyTransform();
     }, { passive: true });
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
@@ -771,6 +804,10 @@ function destroyStickyTableHeaders() {
 // 动态设置表头的置顶位置，使其紧贴在渠道标题下方
 function setupStickyTableHeaders() {
     destroyStickyTableHeaders();
+    if (!shouldUseClonedStickyHeaders()) {
+        LAST_STICKY_REFRESH = function() {};
+        return;
+    }
 
     const channelModules = Array.from(document.querySelectorAll('.module-channel'));
     const runtime = {
@@ -802,18 +839,17 @@ function setupStickyTableHeaders() {
             const module = record.module;
             const title = record.channelTitle;
             const table = record.table;
-            if (!module || !title || !table || !table.tHead) continue;
+            const wrapper = record.wrapper;
+            if (!module || !title || !table || !table.tHead || !wrapper) continue;
 
             const moduleRect = module.getBoundingClientRect();
             const titleRect = title.getBoundingClientRect();
+            const wrapperRect = wrapper.getBoundingClientRect();
             const stickyTop = navHeight + title.offsetHeight;
-            const isTitleStuck = titleRect.top <= navHeight + 10;
             const isModuleInView = moduleRect.bottom > navHeight && moduleRect.top < window.innerHeight;
-            if (!isTitleStuck || !isModuleInView) continue;
-
-            const tableHeadRect = table.tHead.getBoundingClientRect();
-            const shouldShowSticky = tableHeadRect.top < stickyTop;
-            if (!shouldShowSticky) continue;
+            const isTitleVisibleForSticky = titleRect.bottom > navHeight;
+            const isWithinTableRegion = wrapperRect.top <= stickyTop && wrapperRect.bottom > stickyTop;
+            if (!isModuleInView || !isTitleVisibleForSticky || !isWithinTableRegion) continue;
 
             const titleOffset = titleRect.top - anchorTop;
             if (titleOffset <= 0) {

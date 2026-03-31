@@ -5,6 +5,13 @@
     box-sizing: border-box;
 }
 
+html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+}
+
 :root {
     --primary: #2563eb;
     --primary-dark: #1d4ed8;
@@ -28,6 +35,10 @@ body {
     color: var(--text-dark);
     line-height: 1.6;
     font-size: 14px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 a {
@@ -44,9 +55,10 @@ a:hover {
     background: var(--bg-white);
     border-bottom: 1px solid var(--border);
     padding: 0 20px;
+    padding-top: env(safe-area-inset-top);
     padding-left: max(20px, env(safe-area-inset-left));
     padding-right: max(20px, env(safe-area-inset-right));
-    height: 60px;
+    min-height: calc(60px + env(safe-area-inset-top));
     position: sticky;
     top: 0;
     z-index: 100;
@@ -55,11 +67,12 @@ a:hover {
 .nav-container {
     max-width: var(--container-max);
     margin: 0 auto;
-    height: 100%;
+    min-height: 60px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 20px 0 10px;
+    min-width: 0;
 }
 
 .nav-brand {
@@ -67,6 +80,7 @@ a:hover {
     align-items: center;
     gap: 10px;
     color: var(--text-dark);
+    min-width: 0;
 }
 
 .nav-logo {
@@ -86,6 +100,7 @@ a:hover {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary);
+    min-width: 0;
 }
 
 .nav-admin-btn {
@@ -109,6 +124,8 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 /* 已登录时显示的进入后台按钮 */
@@ -144,12 +161,17 @@ a:hover {
 .home-container {
     display: flex;
     gap: 20px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 /* 左侧边栏 */
 .sidebar {
     width: 280px;
     flex-shrink: 0;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .sidebar-card {
@@ -209,6 +231,9 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .article-card {
@@ -217,6 +242,10 @@ a:hover {
     box-shadow: var(--shadow);
     padding: 24px;
     transition: box-shadow 0.2s;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .article-card:hover {
@@ -365,6 +394,7 @@ a:hover {
 .search-box {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     background: rgba(255, 255, 255, 0.98);
     padding: 10px 11px;
@@ -404,10 +434,10 @@ a:hover {
 }
 
 .search-box input {
-    flex: 1;
+    flex: 1 1 160px;
     border: none;
     outline: none;
-    font-size: 15px;
+    font-size: 16px;
     min-width: 0;
 }
 
@@ -447,9 +477,14 @@ a:hover {
 }
 
 .search-result {
-    font-size: 13px;
+    flex: 1 0 100%;
+    padding-left: 60px;
+    margin-top: 2px;
+    font-size: 14px;
     font-weight: 500;
-    white-space: nowrap;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .search-result.success {
@@ -719,7 +754,7 @@ a:hover {
     padding: 14px 16px;
     border: 1px solid var(--border);
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 16px;
 }
 
 .login-form input:focus {
@@ -1000,7 +1035,7 @@ a:hover {
     padding: 12px 14px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .article-form input:focus,
@@ -1033,16 +1068,45 @@ a:hover {
 @media (max-width: 768px) {
     .main-nav {
         padding: 0 15px;
-        height: 56px;
+        padding-top: env(safe-area-inset-top);
+        min-height: calc(56px + env(safe-area-inset-top));
     }
     
     .nav-logo {
-        height: 32px;
-        width: 32px;
+        height: 30px;
+        width: 30px;
     }
     
     .nav-title {
-        font-size: 14px;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .nav-container {
+        padding: 0;
+        gap: 10px;
+        min-height: 56px;
+    }
+
+    .nav-brand {
+        flex: 1 1 auto;
+    }
+
+    .nav-actions {
+        gap: 6px;
+    }
+
+    .nav-admin-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 11px;
+        border-radius: 9px;
+        white-space: nowrap;
     }
     
     .main-wrapper {
@@ -1135,8 +1199,44 @@ a:hover {
 }
 
 @media (max-width: 480px) {
+    .main-nav {
+        min-height: calc(56px + env(safe-area-inset-top));
+    }
+
+    .nav-container {
+        padding: 0;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .nav-actions {
+        justify-content: flex-end;
+        gap: 6px;
+        flex: 0 0 auto;
+        width: auto;
+    }
+
     .nav-title {
         font-size: 12px;
+    }
+
+    .nav-logo {
+        height: 28px;
+        width: 28px;
+    }
+
+    .nav-brand {
+        gap: 8px;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .nav-admin-btn {
+        min-height: 30px;
+        padding: 0 8px;
+        font-size: 10px;
+        border-radius: 8px;
     }
     
     .article-card-meta {
@@ -1158,7 +1258,7 @@ a:hover {
     }
     
     .search-box input {
-        font-size: 14px;
+        font-size: 16px;
     }
 }
 
@@ -1169,9 +1269,10 @@ a:hover {
     }
     
     .main-nav {
+        padding-top: env(safe-area-inset-top);
         padding-left: max(12px, env(safe-area-inset-left));
         padding-right: max(12px, env(safe-area-inset-right));
-        height: 52px;
+        min-height: calc(52px + env(safe-area-inset-top));
     }
     
     .nav-logo {
@@ -1180,12 +1281,19 @@ a:hover {
     }
     
     .nav-title {
-        font-size: 13px;
-    }
-    
-    .nav-admin-btn {
-        padding: 6px 12px;
         font-size: 12px;
+    }
+
+    .nav-container {
+        padding: 0;
+        min-height: 52px;
+    }
+
+    .nav-admin-btn {
+        min-height: 28px;
+        padding: 0 8px;
+        font-size: 10px;
+        border-radius: 8px;
     }
     
     .main-wrapper {
@@ -1216,7 +1324,7 @@ a:hover {
     }
     
     .search-box input {
-        font-size: 13px;
+        font-size: 16px;
     }
     
     .article-card {

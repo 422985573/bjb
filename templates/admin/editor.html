@@ -570,7 +570,7 @@
     border-radius: 12px;
     background: linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -581,6 +581,7 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+    padding-top: 4px;
 }
 
 .price-adjust-select-all {
@@ -601,6 +602,7 @@
 
 .price-adjust-weight-list {
     display: inline-flex;
+    align-items: center;
     flex-wrap: nowrap;
     gap: 8px;
     flex: 1 1 auto;
@@ -665,6 +667,7 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    padding-top: 4px;
 }
 
 .price-adjust-input-box {
@@ -677,32 +680,20 @@
     border: 1px solid #d6e2f1;
     border-radius: 10px;
     box-sizing: border-box;
-    width: 150px;
-    min-width: 150px;
+    width: 200px;
+    min-width: 180px;
 }
 
 .price-adjust-input-box input {
     flex: 1;
+    width: 100%;
+    min-width: 0;
     border: none;
     background: transparent;
     color: var(--text-dark);
     font-size: 14px;
     font-weight: 600;
     outline: none;
-}
-
-.price-adjust-input-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 46px;
-    height: 24px;
-    padding: 0 8px;
-    border-radius: 999px;
-    background: #eff6ff;
-    color: var(--primary);
-    font-size: 11px;
-    font-weight: 700;
 }
 
 .price-adjust-preview-empty {
@@ -1406,8 +1397,7 @@
                                     </div>
                                     <div class="price-adjust-form">
                                         <div class="price-adjust-input-box">
-                                            <input type="text" class="price-adjust-value-input" placeholder="10% / -10% / 10 / -10">
-                                            <span class="price-adjust-input-tag">调整</span>
+                                            <input type="text" class="price-adjust-value-input" placeholder="例：+10% 或 -10">
                                         </div>
                                         <button type="button" class="price-adjust-save-btn" onclick="savePriceAdjustData(this)">保存</button>
                                     </div>
@@ -2449,6 +2439,20 @@ function addWeightColumn(btn) {
         updateWeightColumnHeader(this);
     });
     syncInlinePriceAdjustPanel(editor);
+    const focusNewWeightInput = function(retriesLeft) {
+        weightItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        btn.blur();
+        newInput.focus();
+        newInput.select();
+        if (document.activeElement !== newInput && retriesLeft > 0) {
+            window.setTimeout(function() {
+                focusNewWeightInput(retriesLeft - 1);
+            }, 50);
+        }
+    };
+    window.setTimeout(function() {
+        focusNewWeightInput(3);
+    }, 0);
 }
 
 // 重量列拖拽排序：拖动手柄时记录源索引
@@ -2794,12 +2798,16 @@ function parsePriceAdjustmentInput(rawInput) {
 
     if (normalized.endsWith('%')) {
         const numericPart = normalized.slice(0, -1).trim();
-        if (!/^-?\d+(\.\d+)?$/.test(numericPart)) return null;
-        return { type: 'percent', value: parseFloat(numericPart) };
+        if (!/^[+-]?\d+(\.\d+)?$/.test(numericPart)) return null;
+        const value = parseFloat(numericPart);
+        if (value > 0 && !numericPart.startsWith('+')) return null;
+        return { type: 'percent', value: value };
     }
 
-    if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null;
-    return { type: 'fixed', value: parseFloat(normalized) };
+    if (!/^[+-]?\d+(\.\d+)?$/.test(normalized)) return null;
+    const value = parseFloat(normalized);
+    if (value > 0 && !normalized.startsWith('+')) return null;
+    return { type: 'fixed', value: value };
 }
 
 function applyInlinePriceAdjustmentPreview(editor, panel) {
@@ -2853,7 +2861,7 @@ async function savePriceAdjustData(btn) {
     }
 
     if (!adjustment) {
-        alert('请输入有效调整值，例如 10%、-10%、10 或 -10');
+        alert('请输入有效调整值，例如 +10%、-10%、+10 或 -10。上涨必须带 + 号');
         return;
     }
 
