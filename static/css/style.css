@@ -713,6 +713,17 @@ a:hover {
     font-size: 16px;
 }
 
+@media (max-width: 768px) {
+    /* Keep the real font-size at 16px for iPhone focus behavior,
+       but visually scale the postcode field back down to the old size. */
+    .postcode-query-box .postcode-input {
+        width: 160px;
+        transform: scale(0.875);
+        transform-origin: left center;
+        margin-right: -20px;
+    }
+}
+
 .postcode-query-box .postcode-input:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
