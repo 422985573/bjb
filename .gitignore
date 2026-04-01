@@ -33,9 +33,11 @@ uploads/*
 .vscode/
 .idea/
 .cursor/
+/output/
 
 .playwright-cli/
 .gitignore
+
 
 uploads/
 # 运行文件
