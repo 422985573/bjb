@@ -176,6 +176,7 @@ function initArticlePage() {
     highlightChannelNames();
     mergeAllChannelTables();
     formatStandardCellText();
+    setupIOSInputZoomGuard();
     setupGlobalSearchClearButton();
     setupPostcodePopover();
     setupChannelNavigator();
@@ -189,6 +190,66 @@ function initArticlePage() {
 document.addEventListener('DOMContentLoaded', function() {
     initArticlePage();
 });
+
+function setupIOSInputZoomGuard() {
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (!viewportMeta) return;
+
+    const ua = navigator.userAgent || '';
+    const isIOSDevice = /iPhone|iPad|iPod/i.test(ua)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!isIOSDevice) return;
+
+    const focusSelector = [
+        '#globalPostcodeInput',
+        '.postcode-input'
+    ].join(',');
+
+    const originalViewport = viewportMeta.getAttribute('content') || '';
+    let viewportLocked = false;
+    let restoreTimer = null;
+
+    const lockViewport = function() {
+        if (viewportLocked) return;
+        viewportMeta.setAttribute(
+            'content',
+            'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        );
+        viewportLocked = true;
+    };
+
+    const restoreViewport = function() {
+        if (!viewportLocked) return;
+        viewportMeta.setAttribute('content', originalViewport);
+        viewportLocked = false;
+    };
+
+    document.addEventListener('focusin', function(event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || !target.matches(focusSelector)) return;
+        if (restoreTimer) {
+            clearTimeout(restoreTimer);
+            restoreTimer = null;
+        }
+        lockViewport();
+    });
+
+    document.addEventListener('focusout', function(event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || !target.matches(focusSelector)) return;
+        if (restoreTimer) {
+            clearTimeout(restoreTimer);
+        }
+        restoreTimer = window.setTimeout(function() {
+            const activeEl = document.activeElement;
+            if (activeEl instanceof HTMLElement && activeEl.matches(focusSelector)) {
+                return;
+            }
+            restoreViewport();
+            restoreTimer = null;
+        }, 180);
+    });
+}
 
 function setupGlobalSearchClearButton() {
     const input = document.getElementById('globalPostcodeInput');
