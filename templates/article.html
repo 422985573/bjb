@@ -30,7 +30,7 @@
             <div class="global-postcode-search">
                 <div class="search-box search-box-center">
                     <img src="{{ static_with_version('css/xb.jpg') }}" alt="Search" class="search-icon-img">
-                    <input type="text" id="globalPostcodeInput" placeholder="输入4位邮编查询所有渠道" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="globalSearchPostcodeDebounced()" aria-label="全局邮编搜索">
+                    <input type="text" id="globalPostcodeInput" placeholder="输入4位邮编查询所有渠道" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="globalSearchPostcodeDebounced()" aria-label="全局邮编搜索" style="font-size:16px;">
                     <button type="button" id="globalSearchClearBtn" class="search-clear-btn" aria-label="清除邮编" title="清除" hidden>×</button>
                     <span id="globalSearchResult" class="search-result" aria-live="polite"></span>
                 </div>
@@ -146,7 +146,7 @@
                     
                     <div class="postcode-query-box">
                         <span class="query-label">邮编查询：</span>
-                        <input type="text" class="postcode-input" placeholder="输入邮编" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="autoSearchPostcode(this)">
+                        <input type="text" class="postcode-input" placeholder="输入邮编" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="autoSearchPostcode(this)" style="font-size:16px;">
                         <span class="distance-result"></span>
                     </div>
                     

@@ -714,13 +714,13 @@ a:hover {
 }
 
 @media (max-width: 768px) {
-    /* Keep the real font-size at 16px for iPhone focus behavior,
-       but visually scale the postcode field back down to the old size. */
+    /* iOS/WeChat WebView: do not visually downscale inputs, keep true 16px */
     .postcode-query-box .postcode-input {
-        width: 160px;
-        transform: scale(0.875);
-        transform-origin: left center;
-        margin-right: -20px;
+        width: 140px;
+        font-size: 16px !important;
+        line-height: 1.4;
+        transform: none;
+        margin-right: 0;
     }
 }
 
