@@ -10,6 +10,8 @@ html {
     max-width: 100%;
     overflow-x: hidden;
     overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 :root {
@@ -39,6 +41,8 @@ body {
     max-width: 100%;
     overflow-x: hidden;
     overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 a {
@@ -695,7 +699,18 @@ a:hover {
     border-radius: 6px;
     /* iOS WebKit focuses and auto-zooms inputs smaller than 16px */
     font-size: 16px;
+    line-height: 1.4;
     width: 140px;
+}
+
+/* iOS Chrome/Safari: focused form controls under 16px can trigger viewport zoom */
+.article-content input[type="text"],
+.article-content input[type="search"],
+.article-content input[type="number"],
+.article-content input[type="tel"],
+.article-content select,
+.article-content textarea {
+    font-size: 16px;
 }
 
 .postcode-query-box .postcode-input:focus {
