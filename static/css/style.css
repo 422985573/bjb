@@ -491,6 +491,10 @@ a:hover {
     overflow-wrap: anywhere;
 }
 
+.search-result:empty {
+    display: none !important;
+}
+
 .search-result.success {
     color: #10b981;
 }

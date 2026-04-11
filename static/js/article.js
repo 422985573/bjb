@@ -176,6 +176,7 @@ function initArticlePage() {
     highlightChannelNames();
     mergeAllChannelTables();
     formatStandardCellText();
+    setupExportArticleTables();
     setupIOSInputZoomGuard();
     setupGlobalSearchClearButton();
     setupPostcodePopover();
@@ -190,6 +191,95 @@ function initArticlePage() {
 document.addEventListener('DOMContentLoaded', function() {
     initArticlePage();
 });
+
+function setupExportArticleTables() {
+    const exportBtn = document.getElementById('exportArticleTablesBtn');
+    const statusEl = document.getElementById('exportArticleTablesStatus');
+    const floatingEl = document.getElementById('articleExportFloating');
+    const panel = document.getElementById('channelNavPanel');
+    if (!exportBtn) return;
+
+    const syncFloatingPosition = function() {
+        if (!floatingEl || !panel) return;
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        if (isMobile) {
+            floatingEl.style.top = '';
+            floatingEl.style.right = '';
+            return;
+        }
+        const panelRect = panel.getBoundingClientRect();
+        const nextTop = Math.max(getCurrentNavHeight() + 12, panelRect.bottom + 12);
+        floatingEl.style.top = nextTop + 'px';
+        floatingEl.style.right = '';
+    };
+
+    syncFloatingPosition();
+    window.addEventListener('resize', syncFloatingPosition);
+    window.addEventListener('scroll', syncFloatingPosition, { passive: true });
+    if (panel) {
+        panel.addEventListener('toggle', function() {
+            window.setTimeout(syncFloatingPosition, 20);
+        });
+    }
+
+    exportBtn.addEventListener('click', function() {
+        exportCurrentArticleTables(exportBtn, statusEl);
+    });
+}
+
+async function exportCurrentArticleTables(buttonEl, statusEl) {
+    const articleContainer = document.getElementById('articleContainer');
+    const articleCode = articleContainer ? (articleContainer.dataset.articleCode || '').trim() : '';
+    if (!articleCode) {
+        if (statusEl) statusEl.textContent = '当前没有可导出的表格数据';
+        return;
+    }
+
+    if (buttonEl) buttonEl.disabled = true;
+    if (statusEl) statusEl.textContent = '正在导出，请稍候...';
+
+    try {
+        const response = await fetch('/api/article/' + encodeURIComponent(articleCode) + '/export-xlsx', {
+            method: 'GET',
+            cache: 'no-store'
+        });
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        const blob = await response.blob();
+        const fileName = getDownloadFileNameFromResponse(response) || '文章详情-表格导出.xlsx';
+        triggerBlobDownload(blob, fileName);
+        if (statusEl) statusEl.textContent = '导出成功';
+        window.alert('导出成功');
+    } catch (error) {
+        console.error('导出表格失败:', error);
+        if (statusEl) statusEl.textContent = '导出失败，请稍后重试';
+        window.alert('导出失败，请稍后重试');
+    } finally {
+        if (buttonEl) buttonEl.disabled = false;
+    }
+}
+
+function getDownloadFileNameFromResponse(response) {
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match && utf8Match[1]) {
+        return decodeURIComponent(utf8Match[1]);
+    }
+    const plainMatch = disposition.match(/filename="?([^"]+)"?/i);
+    return plainMatch && plainMatch[1] ? plainMatch[1] : '';
+}
+
+function triggerBlobDownload(blob, fileName) {
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+}
 
 function setupIOSInputZoomGuard() {
     const viewportMeta = document.querySelector('meta[name="viewport"]');

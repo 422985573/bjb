@@ -65,6 +65,92 @@
 .module-channel.search-mode .postcode-query-box {
     display: none !important;
 }
+.article-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+.article-quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 18px 0;
+    font-size: 17px;
+    line-height: 1.5;
+}
+.article-quick-links a {
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.article-quick-links a:hover {
+    color: rgba(255, 255, 255, 0.88);
+    text-decoration: none;
+}
+.global-postcode-search .search-icon-img {
+    display: block;
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    object-position: center;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: #ffffff;
+}
+.article-export-floating {
+    position: fixed;
+    right: var(--main-wrapper-inner-right);
+    top: calc(50% + 88px);
+    width: 68px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    z-index: 102;
+}
+.article-export-btn {
+    appearance: none;
+    border: 1px solid #2563eb;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    border-radius: 999px;
+    width: 68px;
+    height: 68px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.article-export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24);
+}
+.article-export-btn:active {
+    transform: translateY(0);
+}
+.article-export-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
+    box-shadow: none;
+}
+.article-export-status {
+    min-height: 0;
+    font-size: 11px;
+    color: #475569;
+    text-align: center;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
 /* 定义高度变量 */
 :root {
     --nav-height: 60px;
@@ -295,6 +381,26 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 10px 12px 14px;
+}
+.channel-nav-export {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+.channel-nav-export-btn {
+    width: 100%;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.16);
+}
+.channel-nav-export-status {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+}
+.channel-nav-export-status:empty {
+    display: none;
 }
 .channel-nav-panel[open] .channel-nav-panel-body {
     animation: cnpPanelIn 0.2s ease-out;
@@ -641,6 +747,37 @@ white-space: pre-line !important;
 }
 /* 多端适配：小屏加大触控、留边 */
 @media (max-width: 768px) {
+    .article-toolbar {
+        align-items: stretch;
+    }
+    .article-quick-links {
+        padding: 10px 12px 0;
+        gap: 8px 12px;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    .article-quick-links a {
+        white-space: normal;
+        text-align: center;
+    }
+    .global-postcode-search .search-icon-img {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+    }
+    .article-export-floating {
+        right: max(8px, env(safe-area-inset-right));
+        top: auto;
+        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + 132px);
+        width: 68px;
+    }
+    .article-export-btn {
+        width: 68px;
+        height: 68px;
+    }
+    .article-export-status {
+        width: 68px;
+    }
     :root {
         --channel-nav-collapsed-width: 58px;
         --back-to-top-size: 64px;
@@ -693,6 +830,10 @@ white-space: pre-line !important;
     .channel-nav-panel-body {
         max-height: 55vh;
     }
+    .channel-nav-export {
+        margin-top: 10px;
+        padding-top: 10px;
+    }
     .cnp-search-code {
         max-width: 88px;
         overflow: hidden;
@@ -730,7 +871,25 @@ white-space: pre-line !important;
         width: 28px;
         height: 28px;
     }
+    .article-quick-links {
+        padding: 8px 10px 0;
+        gap: 6px 10px;
+        font-size: 13px;
+    }
+    .article-quick-links a {
+        white-space: normal;
+        text-align: center;
+    }
+    .global-postcode-search .search-icon-img {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+    }
     .channel-nav-panel {
         bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + var(--floating-nav-offset-above-top));
+    }
+    .article-export-floating {
+        width: 68px;
+        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + 118px);
     }
 }

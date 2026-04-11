@@ -73,6 +73,7 @@ def init_db():
             FOREIGN KEY (article_id) REFERENCES articles(id)
         )
     ''')
+        cursor.execute("DELETE FROM modules WHERE type = 'richtext'")
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS channel_reject_postcodes (
             channel TEXT PRIMARY KEY,
