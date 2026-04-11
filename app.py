@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """应用入口：创建 Flask 应用、加载配置、注册蓝图与过滤器"""
+import logging
+
 from flask import Flask, send_from_directory, jsonify
 
 import config
@@ -15,12 +17,16 @@ app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+_logger = logging.getLogger(__name__)
 
 import os  # noqa: E402
 os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
 
 filters.register_filters(app)
-db.init_db()
+try:
+    db.init_db()
+except Exception as exc:
+    _logger.exception('database initialization failed; continuing with degraded startup: %s', exc)
 
 app.register_blueprint(front_bp)
 app.register_blueprint(admin_bp)
