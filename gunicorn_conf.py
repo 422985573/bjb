@@ -19,7 +19,11 @@ pidfile = os.environ.get('GUNICORN_PIDFILE') or os.path.join(_base, 'gunicorn.pi
 accesslog = os.environ.get('GUNICORN_ACCESSLOG') or os.path.join(_base, 'logs', 'gunicorn_access.log')
 errorlog = os.environ.get('GUNICORN_ERRORLOG') or os.path.join(_base, 'logs', 'gunicorn_error.log')
 
-os.makedirs(os.path.dirname(accesslog), exist_ok=True)
-os.makedirs(os.path.dirname(errorlog), exist_ok=True)
+accesslog_dir = os.path.dirname(accesslog)
+errorlog_dir = os.path.dirname(errorlog)
+if accesslog_dir:
+    os.makedirs(accesslog_dir, exist_ok=True)
+if errorlog_dir and errorlog_dir != accesslog_dir:
+    os.makedirs(errorlog_dir, exist_ok=True)
 
 loglevel = os.environ.get('GUNICORN_LOGLEVEL', 'info')
