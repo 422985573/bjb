@@ -246,6 +246,18 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.tox-tinymce {
+    border: none !important;
+}
+
+.tox .tox-edit-area__iframe {
+    background: #fff;
+}
+
+.tox-statusbar__path {
+    display: none !important;
+}
+
 /* 图片模块 */
 .image-editor {
     display: flex;
@@ -1091,6 +1103,11 @@
     border-color: var(--primary);
 }
 
+.module-list-item.fixed-first {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: #10b981;
+}
+
 .module-list-item-icon {
     font-size: 16px;
     flex-shrink: 0;
@@ -1221,7 +1238,7 @@
             <div id="moduleListContainer">
                 {% for module in modules %}
                 {% set content = module.content | from_json %}
-                <div class="module-list-item" data-module-id="{{ module.id }}" draggable="true" onclick="scrollToModule({{ module.id }})">
+                <div class="module-list-item" data-module-id="{{ module.id }}" data-module-type="{{ module.type }}" draggable="true" onclick="scrollToModule({{ module.id }})">
                     <span class="module-list-item-icon">
                         {% if module.type == 'text' %}📝{% endif %}
                         {% if module.type == 'image' %}🖼️{% endif %}
@@ -1268,7 +1285,7 @@
         
         <div class="modules-container" id="modulesContainer">
             {% for module in modules %}
-            <div class="module-item" data-module-id="{{ module.id }}">
+            <div class="module-item" data-module-id="{{ module.id }}" data-module-type="{{ module.type }}">
                 <div class="module-header">
                     <span class="module-title">
                         {% if module.type == 'text' %}📝 文本模块{% endif %}
@@ -1496,8 +1513,13 @@ const AUTO_SAVE_INTERVAL_MS = 60000;  // 60 秒自动保存一次
 let lastSavedState = null;      // 上次保存时的状态（JSON 字符串），用于判断是否有修改
 const INLINE_PRICE_ADJUST_STATE = new WeakMap();
 
+function syncAllRichTextEditors() {}
+
+function initRichTextEditors() {}
+
 // 获取当前页面状态（用于判断是否有修改，避免无效自动保存）
 function getCurrentState() {
+    syncAllRichTextEditors();
     let title = '';
     let categoryId = '';
     const form = document.getElementById('articleInfoForm');
@@ -1559,6 +1581,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 一键保存：文章信息 + 所有模块（优先调用统一后端接口，失败时自动降级为逐模块保存）
 async function saveAll() {
+    syncAllRichTextEditors();
     const saveButton = document.querySelector('.article-actions-sidebar .module-btn');
     const originalText = saveButton ? saveButton.textContent : '';
     
@@ -1676,6 +1699,7 @@ async function saveAll() {
 // 自动保存：静默调用与 saveAll 相同的接口，不弹窗、不禁用按钮
 async function autoSave() {
     if (isSaving) return;
+    syncAllRichTextEditors();
     const statusEl = document.getElementById('autoSaveStatus');
     const moduleItems = document.querySelectorAll('.module-item');
     if (moduleItems.length === 0) return;
@@ -1764,26 +1788,23 @@ function getModuleContentFromItem(moduleItem) {
     let content = {};
     let title = '';
     
-    // 文本模块
-    const textEditor = moduleBody.querySelector(`textarea.text-editor[data-module-id="${moduleId}"]`) || 
-                      moduleBody.querySelector('textarea.text-editor');
+    const textEditor = moduleBody.querySelector(`textarea.text-editor[data-module-id="${moduleId}"]`) ||
+        moduleBody.querySelector('textarea.text-editor');
     if (textEditor) {
-        const titleInput = moduleBody.querySelector(`input.module-title-input[data-module-id="${moduleId}"]`) || 
+        const titleInput = moduleBody.querySelector(`input.module-title-input[data-module-id="${moduleId}"]`) ||
                           moduleBody.querySelector('input.module-title-input');
         const remarkEditor = moduleBody.querySelector('textarea.remark-editor');
-        
+
         title = titleInput ? titleInput.value.trim() : '';
         const textValue = textEditor ? textEditor.value : '';
         const remarkValue = remarkEditor ? remarkEditor.value : '';
-        
-        content = { 
+
+        content = {
             title: title,
             text: textValue,
             remark: remarkValue
         };
-    } 
-    // 图片模块
-    else if (moduleBody.querySelector('.image-editor')) {
+    } else if (moduleBody.querySelector('.image-editor')) {
         const imageEditor = moduleBody.querySelector(`.image-editor[data-module-id="${moduleId}"]`);
         if (imageEditor) {
             const titleInput = imageEditor.querySelector(`input.module-title-input[data-module-id="${moduleId}"]`);
@@ -1791,13 +1812,13 @@ function getModuleContentFromItem(moduleItem) {
             const altInput = imageEditor.querySelector('input.image-alt');
             const captionInput = imageEditor.querySelector('input.image-caption');
             const remarkEditor = imageEditor.querySelector('textarea.remark-editor');
-            
+
             title = titleInput ? titleInput.value.trim() : '';
             const urlValue = urlInput ? urlInput.value.trim() : '';
             const altValue = altInput ? altInput.value.trim() : '';
             const captionValue = captionInput ? captionInput.value.trim() : '';
             const remarkValue = remarkEditor ? remarkEditor.value : '';
-            
+
             content = {
                 title: title,
                 url: urlValue,
@@ -1806,12 +1827,10 @@ function getModuleContentFromItem(moduleItem) {
                 remark: remarkValue
             };
         }
-    } 
-    // 渠道模块
-    else if (moduleBody.querySelector('.channel-editor')) {
+    } else if (moduleBody.querySelector('.channel-editor')) {
         const titleInput = moduleBody.querySelector('.module-title-input');
         title = titleInput ? titleInput.value.trim() : '';
-        
+
         content = getChannelEditorData(moduleBody.querySelector('.channel-editor'));
         if (!content.title && title) {
             content.title = title;
@@ -1825,7 +1844,13 @@ function getModuleContentFromItem(moduleItem) {
 
 async function saveModuleOrder() {
     const items = document.querySelectorAll('.module-item:not(.drag-placeholder)');
-    const orders = Array.from(items).map(item => parseInt(item.dataset.moduleId));
+    Array.from(items).forEach(function(item) {
+        const moduleId = parseInt(item.dataset.moduleId, 10);
+        if (Number.isNaN(moduleId)) return;
+    });
+    const orders = Array.from(items)
+        .map(function(item) { return parseInt(item.dataset.moduleId, 10); })
+        .filter(function(moduleId) { return !Number.isNaN(moduleId); });
     
     try {
         const response = await fetch('/api/modules/reorder', {
@@ -1846,6 +1871,7 @@ async function saveModuleOrder() {
 // 保存当前页面的所有模块数据（不刷新页面）
 async function saveAllModulesSilently() {
     try {
+        syncAllRichTextEditors();
         const moduleItems = document.querySelectorAll('.module-item');
         const modules = [];
         
@@ -1953,6 +1979,10 @@ async function addModule(type) {
     if (response.ok) {
         const result = await response.json().catch(() => null);
         const newModuleId = result && result.module_id ? result.module_id : '';
+        if (result && result.existing && newModuleId) {
+            scrollToModule(newModuleId);
+            return;
+        }
         if (newModuleId) {
             sessionStorage.setItem('adminEditorNewModuleId', String(newModuleId));
         } else {
@@ -1966,6 +1996,7 @@ async function addModule(type) {
 
 // 保存模块
 async function saveModule(moduleId) {
+    syncAllRichTextEditors();
     const moduleItem = document.querySelector(`.module-item[data-module-id="${moduleId}"]`);
     const { content } = getModuleContentFromItem(moduleItem);
     
@@ -2132,7 +2163,7 @@ function handleListDragOver(e) {
     if (!listDraggedElement) return;
     
     const container = document.getElementById('moduleListContainer');
-    const afterElement = getListDragAfterElement(container, e.clientY);
+    let afterElement = getListDragAfterElement(container, e.clientY);
     
     container.querySelectorAll('.module-list-item').forEach(item => {
         item.classList.remove('drag-over');
@@ -2189,7 +2220,12 @@ function getListDragAfterElement(container, y) {
 // 从标题列表同步模块顺序到主内容区域
 function syncModuleOrderFromList() {
     const listItems = document.querySelectorAll('#moduleListContainer .module-list-item:not(.drag-placeholder)');
-    const moduleIds = Array.from(listItems).map(item => parseInt(item.dataset.moduleId));
+    const moduleIds = [];
+    Array.from(listItems).forEach(function(item) {
+        const moduleId = parseInt(item.dataset.moduleId, 10);
+        if (Number.isNaN(moduleId)) return;
+        moduleIds.push(moduleId);
+    });
     
     const container = document.getElementById('modulesContainer');
     const moduleItems = Array.from(container.querySelectorAll('.module-item'));
@@ -2267,6 +2303,7 @@ async function deleteModule(moduleId) {
 
 // 复制模块
 async function copyModule(moduleId) {
+    syncAllRichTextEditors();
     const moduleItem = document.querySelector(`.module-item[data-module-id="${moduleId}"]`);
     if (!moduleItem) {
         alert('找不到模块');

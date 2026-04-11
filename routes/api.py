@@ -5,12 +5,13 @@ import os
 import re
 import time
 from datetime import datetime
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 import uuid
 
 import config
 import db
 import models
+from services import article_export
 from services import postcode as postcode_svc
 from util import admin_required
 
@@ -445,3 +446,37 @@ def channel_postcodes_save():
             )
         conn.commit()
         return jsonify({'success': True})
+
+
+@api_bp.route('/article/<article_code>/export-xlsx', methods=['GET'])
+def export_article_xlsx(article_code):
+    """导出文章详情为 xlsx。"""
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT a.*, c.name as category_name
+            FROM articles a
+            LEFT JOIN categories c ON a.category_id = c.id
+            WHERE a.article_code = ?
+        ''', (article_code,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'success': False, 'message': '文章不存在'}), 404
+        article = dict(row)
+        cursor.execute('SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order', (article['id'],))
+        modules = [dict(module) for module in cursor.fetchall()]
+
+    workbook = article_export.build_article_workbook(
+        article=article,
+        modules=modules,
+        exported_at_text=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    )
+    output = article_export.workbook_to_bytes(workbook)
+    safe_title = re.sub(r'[\\/:*?"<>|]+', '-', article.get('title') or '文章详情').strip() or '文章详情'
+    filename = f'{safe_title}-表格导出.xlsx'
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )

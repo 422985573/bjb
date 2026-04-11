@@ -107,7 +107,10 @@ def article_edit(article_id):
             abort(404)
         article = dict(article)
         categories = models.get_all_categories()
-        cursor.execute('SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order', (article_id,))
+        cursor.execute(
+            "SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order",
+            (article_id,)
+        )
         modules = [dict(r) for r in cursor.fetchall()]
         return render_template('admin/editor.html', article=article, categories=categories, modules=modules,
                               back_url=url_for('admin.articles'), fixed_category_id=None, fixed_category_name=None)
@@ -127,7 +130,10 @@ def article_copy(article_id):
             cursor.execute('INSERT INTO articles (title, category_id, article_code) VALUES (?, ?, ?)',
                            (article['title'] + ' (副本)', article['category_id'], new_code))
             new_article_id = cursor.lastrowid
-            cursor.execute('SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order', (article_id,))
+            cursor.execute(
+                "SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order",
+                (article_id,)
+            )
             modules = cursor.fetchall()
             for module in modules:
                 m = dict(module)

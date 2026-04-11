@@ -65,6 +65,9 @@ def article_detail(article_code):
         if not row:
             return '文章不存在', 404
         article = dict(row)
-        cursor.execute('SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order', (article['id'],))
+        cursor.execute(
+            "SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order",
+            (article['id'],)
+        )
         modules = [dict(r) for r in cursor.fetchall()]
         return render_template('article.html', article=article, modules=modules)
