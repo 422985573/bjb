@@ -71,24 +71,73 @@
     justify-content: center;
     width: 100%;
 }
+.article-links-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    width: 100%;
+    padding: 10px 18px 0;
+}
+.article-links-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 1 auto;
+    min-width: auto;
+}
+.article-links-hint {
+    color: #ffffff;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 30px;
+    line-height: 1;
+    flex: 0 0 auto;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    text-align: center;
+}
+.article-links-hint:first-child {
+    margin-right: 8px;
+}
+.article-links-hint:last-child {
+    margin-left: 8px;
+}
 .article-quick-links {
     display: flex;
     flex-wrap: wrap;
     gap: 10px 14px;
     justify-content: center;
     align-items: center;
-    padding: 10px 18px 0;
+    flex: 1;
+    padding: 0;
     font-size: 17px;
     line-height: 1.5;
 }
 .article-quick-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
     color: #ffffff;
     text-decoration: none;
     font-weight: 500;
     white-space: nowrap;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 .article-quick-links a:hover {
-    color: rgba(255, 255, 255, 0.88);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: #ffffff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+    transform: translateY(-1px);
     text-decoration: none;
 }
 .global-postcode-search .search-icon-img {
@@ -102,15 +151,12 @@
     background: #ffffff;
 }
 .article-export-floating {
-    position: fixed;
-    right: var(--main-wrapper-inner-right);
-    top: calc(50% + 88px);
-    width: 68px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
-    z-index: 102;
+    flex: 0 0 auto;
+    width: 68px;
 }
 .article-export-btn {
     appearance: none;
@@ -139,16 +185,6 @@
     opacity: 0.7;
     cursor: wait;
     transform: none;
-    box-shadow: none;
-}
-.article-export-status {
-    min-height: 0;
-    font-size: 11px;
-    color: #475569;
-    text-align: center;
-    padding: 0;
-    background: transparent;
-    border: 0;
     box-shadow: none;
 }
 /* 定义高度变量 */
@@ -750,8 +786,20 @@ white-space: pre-line !important;
     .article-toolbar {
         align-items: stretch;
     }
-    .article-quick-links {
+    .article-links-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
         padding: 10px 12px 0;
+    }
+    .article-links-group {
+        gap: 12px;
+    }
+    .article-links-hint {
+        font-size: 34px;
+        min-width: 40px;
+    }
+    .article-quick-links {
         gap: 8px 12px;
         font-size: 14px;
         line-height: 1.4;
@@ -759,6 +807,8 @@ white-space: pre-line !important;
     .article-quick-links a {
         white-space: normal;
         text-align: center;
+        width: 100%;
+        gap: 8px;
     }
     .global-postcode-search .search-icon-img {
         width: 44px;
@@ -766,17 +816,15 @@ white-space: pre-line !important;
         border-radius: 12px;
     }
     .article-export-floating {
-        right: max(8px, env(safe-area-inset-right));
-        top: auto;
-        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + 132px);
-        width: 68px;
+        width: 100%;
+        align-items: flex-end;
     }
     .article-export-btn {
-        width: 68px;
-        height: 68px;
-    }
-    .article-export-status {
-        width: 68px;
+        width: auto;
+        min-width: 96px;
+        height: 44px;
+        padding: 0 18px;
+        border-radius: 999px;
     }
     :root {
         --channel-nav-collapsed-width: 58px;
@@ -872,13 +920,22 @@ white-space: pre-line !important;
         height: 28px;
     }
     .article-quick-links {
-        padding: 8px 10px 0;
         gap: 6px 10px;
         font-size: 13px;
+    }
+    .article-links-group {
+        gap: 8px;
+    }
+    .article-links-hint {
+        font-size: 30px;
+        min-width: 36px;
     }
     .article-quick-links a {
         white-space: normal;
         text-align: center;
+        width: 100%;
+        gap: 6px;
+        padding: 7px 10px;
     }
     .global-postcode-search .search-icon-img {
         width: 42px;
@@ -889,7 +946,6 @@ white-space: pre-line !important;
         bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + var(--floating-nav-offset-above-top));
     }
     .article-export-floating {
-        width: 68px;
-        bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + 118px);
+        width: 100%;
     }
 }

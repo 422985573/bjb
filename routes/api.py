@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import importlib
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ import uuid
 import config
 import db
 import models
-from services import article_export
 from services import postcode as postcode_svc
 from util import admin_required
 
@@ -28,6 +28,14 @@ def _is_exact_postcode(value):
 
 def _json_business(payload):
     return jsonify(payload)
+
+
+def _load_article_export_service():
+    try:
+        return importlib.import_module('services.article_export'), None
+    except ImportError as exc:
+        _logger.exception('article export service unavailable: %s', exc)
+        return None, 'ARTICLE_EXPORT_UNAVAILABLE'
 
 
 def _safe_get_reject_postcodes_by_channel():
@@ -451,6 +459,10 @@ def channel_postcodes_save():
 @api_bp.route('/article/<article_code>/export-xlsx', methods=['GET'])
 def export_article_xlsx(article_code):
     """导出文章详情为 xlsx。"""
+    article_export, err = _load_article_export_service()
+    if err:
+        return jsonify({'success': False, 'message': '导出功能暂不可用，请检查服务器依赖安装'}), 503
+
     with db.get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('''

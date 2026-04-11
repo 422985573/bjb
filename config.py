@@ -14,7 +14,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY') or 'quote_website_secret_key_2026'
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or '999888777a'
 DB_PATH = os.environ.get('DB_PATH') or os.path.join(_BASE_DIR, 'data', 'database.db')
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(_BASE_DIR, 'uploads')
-POSTCODE_API_BASE_URL = (os.environ.get('POSTCODE_API_BASE_URL') or 'http://py.api.aubaws.xyz').rstrip('/')
 POSTCODE_CSV_PATH = os.environ.get('POSTCODE_CSV_PATH') or os.path.join(_BASE_DIR, 'data', 'postcode_distance_final.csv')
 PER_PAGE = int(os.environ.get('PER_PAGE', '20'))
 APP_ENV = (os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'development').strip().lower()
