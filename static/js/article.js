@@ -194,49 +194,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function setupExportArticleTables() {
     const exportBtn = document.getElementById('exportArticleTablesBtn');
-    const statusEl = document.getElementById('exportArticleTablesStatus');
-    const floatingEl = document.getElementById('articleExportFloating');
-    const panel = document.getElementById('channelNavPanel');
     if (!exportBtn) return;
 
-    const syncFloatingPosition = function() {
-        if (!floatingEl || !panel) return;
-        const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        if (isMobile) {
-            floatingEl.style.top = '';
-            floatingEl.style.right = '';
-            return;
-        }
-        const panelRect = panel.getBoundingClientRect();
-        const nextTop = Math.max(getCurrentNavHeight() + 12, panelRect.bottom + 12);
-        floatingEl.style.top = nextTop + 'px';
-        floatingEl.style.right = '';
-    };
-
-    syncFloatingPosition();
-    window.addEventListener('resize', syncFloatingPosition);
-    window.addEventListener('scroll', syncFloatingPosition, { passive: true });
-    if (panel) {
-        panel.addEventListener('toggle', function() {
-            window.setTimeout(syncFloatingPosition, 20);
-        });
-    }
-
     exportBtn.addEventListener('click', function() {
-        exportCurrentArticleTables(exportBtn, statusEl);
+        exportCurrentArticleTables(exportBtn);
     });
 }
 
-async function exportCurrentArticleTables(buttonEl, statusEl) {
+async function exportCurrentArticleTables(buttonEl) {
     const articleContainer = document.getElementById('articleContainer');
     const articleCode = articleContainer ? (articleContainer.dataset.articleCode || '').trim() : '';
     if (!articleCode) {
-        if (statusEl) statusEl.textContent = '当前没有可导出的表格数据';
+        window.alert('当前没有可导出的表格数据');
         return;
     }
 
     if (buttonEl) buttonEl.disabled = true;
-    if (statusEl) statusEl.textContent = '正在导出，请稍候...';
 
     try {
         const response = await fetch('/api/article/' + encodeURIComponent(articleCode) + '/export-xlsx', {
@@ -249,11 +222,8 @@ async function exportCurrentArticleTables(buttonEl, statusEl) {
         const blob = await response.blob();
         const fileName = getDownloadFileNameFromResponse(response) || '文章详情-表格导出.xlsx';
         triggerBlobDownload(blob, fileName);
-        if (statusEl) statusEl.textContent = '导出成功';
-        window.alert('导出成功');
     } catch (error) {
         console.error('导出表格失败:', error);
-        if (statusEl) statusEl.textContent = '导出失败，请稍后重试';
         window.alert('导出失败，请稍后重试');
     } finally {
         if (buttonEl) buttonEl.disabled = false;
