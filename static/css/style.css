@@ -1038,10 +1038,12 @@ a:hover {
     background: var(--bg-gray);
 }
 
-.article-table .actions {
+.article-table .actions-row {
     display: flex;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    white-space: nowrap;
 }
 
 /* 表单 */
