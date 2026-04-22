@@ -343,13 +343,22 @@ def article_save_all(article_id):
         data = request.json or {}
         title = data.get('title')
         category_id = data.get('category_id')
+        is_published = data.get('is_published')
         modules = data.get('modules', [])
         with db.get_db() as conn:
             cursor = conn.cursor()
-            if title is not None or category_id is not None:
+            if title is not None or category_id is not None or is_published is not None:
+                cursor.execute('SELECT title, category_id, is_published FROM articles WHERE id = ?', (article_id,))
+                article_row = cursor.fetchone()
+                if not article_row:
+                    return jsonify({'success': False, 'message': '文章不存在'}), 404
+
+                next_title = article_row['title'] if title is None else title
+                next_category_id = article_row['category_id'] if category_id is None else category_id
+                next_is_published = article_row['is_published'] if is_published is None else (1 if str(is_published) == '1' else 0)
                 cursor.execute(
-                    'UPDATE articles SET title = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                    (title, category_id, article_id)
+                    'UPDATE articles SET title = ?, category_id = ?, is_published = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                    (next_title, next_category_id, next_is_published, article_id)
                 )
             for module in modules:
                 module_id = module.get('id')
@@ -364,6 +373,33 @@ def article_save_all(article_id):
             return jsonify({'success': True})
     except Exception:
         return jsonify({'success': False, 'message': '保存失败，请稍后重试'}), 500
+
+
+@api_bp.route('/article/<int:article_id>/publish-status', methods=['POST'])
+@admin_required
+def article_publish_status(article_id):
+    """切换文章发布状态"""
+    data = request.json or {}
+    is_published = data.get('is_published')
+    if is_published in (True, False):
+        is_published = 1 if is_published else 0
+    try:
+        is_published = int(is_published)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': '发布状态参数无效'}), 400
+    if is_published not in (0, 1):
+        return jsonify({'success': False, 'message': '发布状态参数无效'}), 400
+
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE articles SET is_published = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            (is_published, article_id)
+        )
+        if cursor.rowcount == 0:
+            return jsonify({'success': False, 'message': '文章不存在'}), 404
+        conn.commit()
+    return jsonify({'success': True, 'is_published': is_published})
 
 
 @api_bp.route('/category/add', methods=['POST'])
