@@ -32,7 +32,7 @@
                     </a>
                     <div class="article-card-meta">
                         <span>📁 分类：{{ article.category_name or '未分类' }}</span>
-                        <span>📅 发布时间：{{ article.created_at[:16] if article.created_at else '' }}</span>
+                        <span>📅 发布时间：{{ article.created_at | format_datetime_beijing }}</span>
                     </div>
                     <a href="{{ url_for('front.article_detail', article_code=article.article_code) }}" class="article-card-btn">
                         查看详情 →

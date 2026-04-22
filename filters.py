@@ -2,6 +2,7 @@
 """Jinja2 自定义过滤器与模板上下文"""
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 
 from markupsafe import Markup, escape
@@ -153,6 +154,26 @@ def format_postcode_filter(value):
     return value
 
 
+def format_datetime_beijing_filter(value, fmt='%Y-%m-%d %H:%M'):
+    """将数据库中的 UTC 时间按北京时间展示。"""
+    if not value:
+        return ''
+    raw = str(value).strip()
+    if not raw:
+        return ''
+    parsed = None
+    for pattern in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+        try:
+            parsed = datetime.strptime(raw, pattern).replace(tzinfo=timezone.utc)
+            break
+        except ValueError:
+            continue
+    if parsed is None:
+        return raw[:16] if len(raw) >= 16 else raw
+    beijing_time = parsed.astimezone(timezone(timedelta(hours=8)))
+    return beijing_time.strftime(fmt)
+
+
 def _static_with_version(filename):
     """返回带 ?v=文件修改时间 的静态 URL，用于避免 CSS/JS 缓存不更新"""
     from flask import url_for, current_app
@@ -171,6 +192,7 @@ def register_filters(app):
     app.jinja_env.filters['from_json'] = from_json_filter
     app.jinja_env.filters['safe_html'] = safe_html_filter
     app.jinja_env.filters['format_postcode'] = format_postcode_filter
+    app.jinja_env.filters['format_datetime_beijing'] = format_datetime_beijing_filter
 
     @app.context_processor
     def inject_static_version():
