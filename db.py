@@ -48,6 +48,7 @@ def init_db():
             article_code TEXT UNIQUE,
             category_id INTEGER,
             title TEXT NOT NULL,
+            is_published INTEGER NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -62,6 +63,9 @@ def init_db():
             for i, article in enumerate(articles):
                 code = datetime.now().strftime('%Y%m%d') + str(i + 1).zfill(4)
                 cursor.execute('UPDATE articles SET article_code = ? WHERE id = ?', (code, article['id']))
+        if 'is_published' not in columns:
+            cursor.execute('ALTER TABLE articles ADD COLUMN is_published INTEGER NOT NULL DEFAULT 1')
+            cursor.execute('UPDATE articles SET is_published = 1 WHERE is_published IS NULL')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS modules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

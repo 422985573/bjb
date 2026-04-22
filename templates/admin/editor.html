@@ -1194,6 +1194,27 @@
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
 }
+
+.article-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.article-status-badge.published {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.article-status-badge.unpublished {
+    background: #fee2e2;
+    color: #991b1b;
+}
 </style>
 {% endblock %}
 
@@ -1203,6 +1224,12 @@
         <div class="article-actions-sidebar">
             <h3>文章操作</h3>
             <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div
+                    id="articleStatusBadge"
+                    class="article-status-badge {% if article.get('is_published') %}published{% else %}unpublished{% endif %}"
+                >
+                    {{ '当前状态：已发布' if article.get('is_published') else '当前状态：未发布' }}
+                </div>
                 <button type="button" class="module-btn" onclick="saveAll()">💾 保存信息</button>
                 <a href="{{ url_for('front.article_detail', article_code=article['article_code']) }}" target="_blank" class="module-btn" style="display: block; text-align: center; text-decoration: none;">👁️ 预览文章</a>
                 <a href="{{ back_url or url_for('admin.articles') }}" class="module-btn" style="display: block; text-align: center; text-decoration: none;">← 返回列表</a>
@@ -1263,6 +1290,13 @@
                             {{ category['name'] }}
                         </option>
                         {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>发布状态</label>
+                    <select name="is_published" id="publishStatusSelect">
+                        <option value="1" {% if article.get('is_published') %}selected{% endif %}>已发布</option>
+                        <option value="0" {% if not article.get('is_published') %}selected{% endif %}>未发布</option>
                     </select>
                 </div>
             </form>
@@ -1504,11 +1538,13 @@ function getCurrentState() {
     syncAllRichTextEditors();
     let title = '';
     let categoryId = '';
+    let isPublished = '1';
     const form = document.getElementById('articleInfoForm');
     if (form) {
         const formData = new FormData(form);
         title = formData.get('title') || '';
         categoryId = formData.get('category_id') || '';
+        isPublished = String(formData.get('is_published') || '1');
     }
     const modules = [];
     document.querySelectorAll('.module-item').forEach(moduleItem => {
@@ -1518,7 +1554,7 @@ function getCurrentState() {
         if (!moduleData) return;
         modules.push({ id: moduleId, content: moduleData.content || {} });
     });
-    return { title: title, category_id: categoryId, modules: modules };
+    return { title: title, category_id: categoryId, is_published: isPublished, modules: modules };
 }
 
 // 左侧列表拖拽排序（保留）
@@ -1529,6 +1565,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateActiveModule();
     initWeightInputListeners();
     initInlinePriceAdjustPanels();
+    bindPublishStatusBadge();
 
     const params = new URLSearchParams(window.location.search);
     const newModuleIdFromUrl = parseInt(params.get('new_module_id') || '', 10);
@@ -1573,11 +1610,13 @@ async function saveAll() {
         // 1. 收集文章基本信息（标题、分类）
         let title = '';
         let categoryId = '';
+        let isPublished = '1';
         const form = document.getElementById('articleInfoForm');
         if (form) {
             const formData = new FormData(form);
             title = formData.get('title') || '';
             categoryId = formData.get('category_id') || '';
+            isPublished = String(formData.get('is_published') || '1');
         }
         
         // 2. 收集所有模块的数据
@@ -1606,6 +1645,7 @@ async function saveAll() {
                 body: JSON.stringify({
                     title: title,
                     category_id: categoryId,
+                    is_published: isPublished,
                     modules: modules
                 })
             });
@@ -1672,6 +1712,24 @@ async function saveAll() {
             saveButton.textContent = originalText || '💾 保存信息';
         }
     }
+}
+
+function updatePublishStatusBadge(value) {
+    const badge = document.getElementById('articleStatusBadge');
+    if (!badge) return;
+    const isPublished = String(value) === '1';
+    badge.textContent = isPublished ? '当前状态：已发布' : '当前状态：未发布';
+    badge.classList.remove('published', 'unpublished');
+    badge.classList.add(isPublished ? 'published' : 'unpublished');
+}
+
+function bindPublishStatusBadge() {
+    const select = document.getElementById('publishStatusSelect');
+    if (!select) return;
+    updatePublishStatusBadge(select.value);
+    select.addEventListener('change', function() {
+        updatePublishStatusBadge(this.value);
+    });
 }
 
 // 从模块元素中获取模块内容（供单个/全部保存复用）
@@ -1858,7 +1916,7 @@ async function addModule(type) {
                     { name_cn: '珀斯', postcode_range: '6000~6999', prices: ['14.5', '14', '12.5', '12', '11.5', '11'], delivery_time: '开船后20-25工作日', channel: 'AU01-PER' },
                     { name_cn: '其他地区', postcode_range: '7000~7999', prices: ['19.5', '19.5', '18.5', '17.5', '16.5', '15.5'], delivery_time: '开船后20-25工作日', channel: 'AU01-OTHER' }
                 ],
-                remark: '<span style="color:#e94560;font-weight:bold;">无服务邮编：</span>0881、2640、2641、2898、2899、3690、3694、5605、6434、6445、6446、6447、6448、6452、6535、6536、6537、6631、6632、6635、6639、6701、6707、6710、6711、6712、6713、6716、6720、6726、6731、6733、6743、6758、6760、6762、6765、6798、6999'
+                remark: '无服务邮编：0881、2640、2641、2898、2899、3690、3694、5605、6434、6445、6446、6447、6448、6452、6535、6536、6537、6631、6632、6635、6639、6701、6707、6710、6711、6712、6713、6716、6720、6726、6731、6733、6743、6758、6760、6762、6765、6798、6999'
             };
         }
     }

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, session
 
 import config
 import db
@@ -14,7 +14,7 @@ def index():
     categories = models.get_all_categories()
     with db.get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM articles')
+        cursor.execute('SELECT COUNT(*) FROM articles WHERE is_published = 1')
         total = cursor.fetchone()[0]
         total_pages = max(1, (total + config.PER_PAGE - 1) // config.PER_PAGE)
         page = max(1, min(request.args.get('page', 1, type=int), total_pages))
@@ -22,6 +22,7 @@ def index():
         cursor.execute('''
             SELECT a.*, c.name as category_name FROM articles a
             LEFT JOIN categories c ON a.category_id = c.id
+            WHERE a.is_published = 1
             ORDER BY a.created_at DESC LIMIT ? OFFSET ?
         ''', (config.PER_PAGE, offset))
         articles = cursor.fetchall()
@@ -35,7 +36,7 @@ def category_articles(category_id):
     categories = models.get_all_categories()
     with db.get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM articles WHERE category_id = ?', (category_id,))
+        cursor.execute('SELECT COUNT(*) FROM articles WHERE category_id = ? AND is_published = 1', (category_id,))
         total = cursor.fetchone()[0]
         total_pages = max(1, (total + config.PER_PAGE - 1) // config.PER_PAGE)
         page = max(1, min(request.args.get('page', 1, type=int), total_pages))
@@ -43,7 +44,8 @@ def category_articles(category_id):
         cursor.execute('''
             SELECT a.*, c.name as category_name FROM articles a
             LEFT JOIN categories c ON a.category_id = c.id
-            WHERE a.category_id = ? ORDER BY a.created_at DESC LIMIT ? OFFSET ?
+            WHERE a.category_id = ? AND a.is_published = 1
+            ORDER BY a.created_at DESC LIMIT ? OFFSET ?
         ''', (category_id, config.PER_PAGE, offset))
         articles = cursor.fetchall()
         return render_template('index.html', categories=categories, articles=articles, current_category=category_id,
@@ -53,14 +55,15 @@ def category_articles(category_id):
 @front_bp.route('/article/<article_code>')
 def article_detail(article_code):
     """文章详情页"""
+    is_admin = bool(session.get('admin_logged_in'))
     with db.get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('''
             SELECT a.*, c.name as category_name
             FROM articles a
             LEFT JOIN categories c ON a.category_id = c.id
-            WHERE a.article_code = ?
-        ''', (article_code,))
+            WHERE a.article_code = ? AND (a.is_published = 1 OR ? = 1)
+        ''', (article_code, 1 if is_admin else 0))
         row = cursor.fetchone()
         if not row:
             return '文章不存在', 404

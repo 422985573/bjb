@@ -54,6 +54,7 @@
                             <th>编号</th>
                             <th>标题</th>
                             <th>分类</th>
+                            <th>状态</th>
                             <th>创建时间</th>
                             <th>修改时间</th>
                             <th>操作</th>
@@ -69,6 +70,14 @@
                                 </a>
                             </td>
                             <td>{{ article.get('category_name') or '未分类' }}</td>
+                            <td>
+                                <button
+                                    class="btn btn-small {% if article.get('is_published') %}btn-secondary{% else %}btn-danger{% endif %}"
+                                    onclick="togglePublishStatus({{ article['id'] }}, {{ 0 if article.get('is_published') else 1 }}, this)"
+                                >
+                                    {{ '已发布' if article.get('is_published') else '未发布' }}
+                                </button>
+                            </td>
                             <td>{{ article['created_at'][:16] if article.get('created_at') else '' }}</td>
                             <td>{{ article['updated_at'][:16] if article.get('updated_at') else '' }}</td>
                             <td class="actions">
@@ -111,6 +120,28 @@ function applyFilter() {
     if (id) url.searchParams.set('category_id', id);
     else url.searchParams.delete('category_id');
     location.href = url.toString();
+}
+async function togglePublishStatus(articleId, nextStatus, buttonEl) {
+    const originalText = buttonEl.textContent;
+    buttonEl.disabled = true;
+    buttonEl.textContent = '切换中...';
+    try {
+        const response = await fetch('/api/article/' + articleId + '/publish-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_published: nextStatus })
+        });
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.success) {
+            location.reload();
+            return;
+        }
+        alert(data.message || '切换失败');
+    } catch (e) {
+        alert('切换失败');
+    }
+    buttonEl.disabled = false;
+    buttonEl.textContent = originalText;
 }
 document.querySelectorAll('.btn-edit-cat').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -175,4 +206,3 @@ async function deleteCategory(categoryId) {
 }
 </script>
 {% endblock %}
-

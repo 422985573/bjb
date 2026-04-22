@@ -78,9 +78,12 @@ def article_create():
         if request.method == 'POST':
             title = request.form.get('title')
             category_id = request.form.get('category_id')
+            is_published = 1 if request.form.get('is_published', '1') == '1' else 0
             article_code = models.generate_article_code()
-            cursor.execute('INSERT INTO articles (title, category_id, article_code) VALUES (?, ?, ?)',
-                           (title, category_id, article_code))
+            cursor.execute(
+                'INSERT INTO articles (title, category_id, article_code, is_published) VALUES (?, ?, ?, ?)',
+                (title, category_id, article_code, is_published)
+            )
             article_id = cursor.lastrowid
             conn.commit()
             return redirect(url_for('admin.article_edit', article_id=article_id))
@@ -98,8 +101,11 @@ def article_edit(article_id):
         if request.method == 'POST':
             title = request.form.get('title')
             category_id = request.form.get('category_id')
-            cursor.execute('UPDATE articles SET title = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                           (title, category_id, article_id))
+            is_published = 1 if request.form.get('is_published', '1') == '1' else 0
+            cursor.execute(
+                'UPDATE articles SET title = ?, category_id = ?, is_published = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                (title, category_id, is_published, article_id)
+            )
             conn.commit()
         cursor.execute('SELECT * FROM articles WHERE id = ?', (article_id,))
         article = cursor.fetchone()
@@ -127,8 +133,10 @@ def article_copy(article_id):
         article = dict(row) if row else None
         if article:
             new_code = models.generate_article_code()
-            cursor.execute('INSERT INTO articles (title, category_id, article_code) VALUES (?, ?, ?)',
-                           (article['title'] + ' (副本)', article['category_id'], new_code))
+            cursor.execute(
+                'INSERT INTO articles (title, category_id, article_code, is_published) VALUES (?, ?, ?, ?)',
+                (article['title'] + ' (副本)', article['category_id'], new_code, 0)
+            )
             new_article_id = cursor.lastrowid
             cursor.execute(
                 "SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order",
