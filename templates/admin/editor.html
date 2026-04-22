@@ -176,20 +176,6 @@
     background: #dc2626;
 }
 
-/* 自动保存状态提示 */
-.auto-save-status {
-    font-size: 12px;
-    color: var(--text-light);
-    min-height: 18px;
-    transition: opacity 0.3s;
-}
-.auto-save-status.show {
-    color: var(--primary);
-}
-.auto-save-status.error {
-    color: #ef4444;
-}
-
 .module-body {
     padding: 15px;
 }
@@ -1218,7 +1204,6 @@
             <h3>文章操作</h3>
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button type="button" class="module-btn" onclick="saveAll()">💾 保存信息</button>
-                <div id="autoSaveStatus" class="auto-save-status" aria-live="polite"></div>
                 <a href="{{ url_for('front.article_detail', article_code=article['article_code']) }}" target="_blank" class="module-btn" style="display: block; text-align: center; text-decoration: none;">👁️ 预览文章</a>
                 <a href="{{ back_url or url_for('admin.articles') }}" class="module-btn" style="display: block; text-align: center; text-decoration: none;">← 返回列表</a>
             </div>
@@ -1508,9 +1493,6 @@ const articleId = {{ article['id'] }};
 // 报价文章编辑页：渠道表含目的港/区域，新建渠道模块用海派模板
 const isChannelSimple = false;
 let isSaving = false;           // 手动保存进行中时不再触发自动保存
-let autoSaveTimerId = null;     // 定时自动保存
-const AUTO_SAVE_INTERVAL_MS = 60000;  // 60 秒自动保存一次
-let lastSavedState = null;      // 上次保存时的状态（JSON 字符串），用于判断是否有修改
 const INLINE_PRICE_ADJUST_STATE = new WeakMap();
 
 function syncAllRichTextEditors() {}
@@ -1547,10 +1529,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateActiveModule();
     initWeightInputListeners();
     initInlinePriceAdjustPanels();
-    if (typeof getCurrentState === 'function') {
-        lastSavedState = JSON.stringify(getCurrentState());  // 记录初始状态，无修改则不保存
-    }
-    startAutoSave();
 
     const params = new URLSearchParams(window.location.search);
     const newModuleIdFromUrl = parseInt(params.get('new_module_id') || '', 10);
@@ -1694,87 +1672,6 @@ async function saveAll() {
             saveButton.textContent = originalText || '💾 保存信息';
         }
     }
-}
-
-// 自动保存：静默调用与 saveAll 相同的接口，不弹窗、不禁用按钮
-async function autoSave() {
-    if (isSaving) return;
-    syncAllRichTextEditors();
-    const statusEl = document.getElementById('autoSaveStatus');
-    const moduleItems = document.querySelectorAll('.module-item');
-    if (moduleItems.length === 0) return;
-    
-    let title = '';
-    let categoryId = '';
-    const form = document.getElementById('articleInfoForm');
-    if (form) {
-        const formData = new FormData(form);
-        title = formData.get('title') || '';
-        categoryId = formData.get('category_id') || '';
-    }
-    
-    const modules = [];
-    moduleItems.forEach(moduleItem => {
-        const moduleId = parseInt(moduleItem.dataset.moduleId);
-        if (!moduleId) return;
-        const moduleData = getModuleContentFromItem(moduleItem);
-        if (!moduleData) return;
-        modules.push({ id: moduleId, content: moduleData.content || {} });
-    });
-    
-    if (modules.length === 0) return;
-    
-    try {
-        const response = await fetch(`/api/article/${articleId}/save_all`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title, category_id: categoryId, modules: modules })
-        });
-        const result = await response.json().catch(() => null);
-        if (response.ok && result && result.success) {
-            const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            if (statusEl) {
-                statusEl.textContent = '已自动保存 ' + time;
-                statusEl.className = 'auto-save-status show';
-                statusEl.style.display = '';
-                setTimeout(function() {
-                    statusEl.className = 'auto-save-status';
-                    statusEl.style.display = 'none';
-                    statusEl.textContent = '';
-                }, 3000);
-            }
-        } else {
-            let reason = '自动保存失败';
-            if (result && (result.message || result.error)) {
-                reason = '自动保存失败：' + (result.message || result.error);
-            } else if (!response.ok) {
-                reason = '自动保存失败：HTTP ' + response.status + (response.statusText ? ' ' + response.statusText : '');
-            } else if (result === null) {
-                reason = '自动保存失败：服务器返回异常（可能未登录或会话已过期）';
-            }
-            if (statusEl) {
-                statusEl.textContent = reason;
-                statusEl.className = 'auto-save-status error';
-                statusEl.style.display = '';
-                statusEl.title = reason;
-                setTimeout(function() { statusEl.style.display = 'none'; statusEl.textContent = ''; statusEl.title = ''; }, 5000);
-            }
-        }
-    } catch (e) {
-        const reason = '自动保存失败：' + (e && (e.message || e.toString()) ? (e.message || e.toString()) : '网络或请求异常');
-        if (statusEl) {
-            statusEl.textContent = reason;
-            statusEl.className = 'auto-save-status error';
-            statusEl.style.display = '';
-            statusEl.title = reason;
-            setTimeout(function() { statusEl.style.display = 'none'; statusEl.textContent = ''; statusEl.title = ''; }, 5000);
-        }
-    }
-}
-
-function startAutoSave() {
-    if (autoSaveTimerId) clearInterval(autoSaveTimerId);
-    autoSaveTimerId = setInterval(autoSave, AUTO_SAVE_INTERVAL_MS);
 }
 
 // 从模块元素中获取模块内容（供单个/全部保存复用）
