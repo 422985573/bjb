@@ -390,7 +390,7 @@ function detectColumnRoleByHeaderText(headerText) {
     const text = (headerText || '').trim();
     const textLower = text.toLowerCase();
     if (text.includes('备注')) return 'remark';
-    if (text.includes('澳洲小包限定标准')) return 'standard';
+    if (text.includes('澳洲小包限定标准') || text.includes('规则') || text.includes('标准')) return 'standard';
     if (text.includes('挂号费') || text.includes('单价')) return 'fee';
     if (text.includes('首') || text.includes('续') || text.includes('重量') || textLower.includes('kg')) return 'price';
     return 'generic';

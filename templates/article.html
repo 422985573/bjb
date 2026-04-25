@@ -117,7 +117,7 @@
                                     {% if '备注' in weight_text %}
                                     {% set col_role = 'remark' %}
                                     {% set role_class = 'remark-header' %}
-                                    {% elif '澳洲小包限定标准' in weight_text %}
+                                    {% elif '澳洲小包限定标准' in weight_text or '规则' in weight_text or '标准' in weight_text %}
                                     {% set col_role = 'standard' %}
                                     {% set role_class = 'standard-header' %}
                                     {% elif '挂号费' in weight_text or '单价' in weight_text %}
@@ -145,7 +145,7 @@
                                     {% if '备注' in weight_text %}
                                     {% set col_role = 'remark' %}
                                     {% set role_class = 'remark-cell' %}
-                                    {% elif '澳洲小包限定标准' in weight_text %}
+                                    {% elif '澳洲小包限定标准' in weight_text or '规则' in weight_text or '标准' in weight_text %}
                                     {% set col_role = 'standard' %}
                                     {% set role_class = 'standard-cell' %}
                                     {% elif '挂号费' in weight_text or '单价' in weight_text %}
