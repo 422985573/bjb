@@ -641,10 +641,20 @@ a:hover {
 /* 动态列基础规则：不依赖列序号，统一按语义类控制 */
 .channel-table th.col-dynamic,
 .channel-table td.col-dynamic {
-    white-space: nowrap !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
     min-width: 75px !important;
     padding: 12px 6px !important;
     font-size: 12px !important;
+}
+
+/* 只有价格/费用这类短数值列保持单行，其他动态列默认允许换行 */
+.channel-table th.col-dynamic.col-price,
+.channel-table td.col-dynamic.col-price,
+.channel-table th.col-dynamic.col-fee,
+.channel-table td.col-dynamic.col-fee {
+    white-space: nowrap !important;
     text-align: center !important;
 }
 
