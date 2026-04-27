@@ -281,6 +281,10 @@
 .dg-v2-fee-add-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .dg-v2-fee-tr--subtotal .dg-v2-fee-td-merged { background: #f8fafc; font-weight: 600; }
 .dg-v2-fee-tr--subtotal .dg-v2-fee-td-merged .dg-v2-fee-inp { font-weight: 600; }
+.dg-v2-fee-th-drag { width: 36px; min-width: 36px; text-align: center; padding: 4px 2px !important; }
+.dg-v2-fee-td-drag { width: 36px; min-width: 36px; text-align: center; vertical-align: middle; background: var(--bg-gray); }
+.dg-v2-fee-tr--dragging { opacity: 0.55; }
+.dg-v2-fee-tr--drag-over { outline: 2px dashed var(--primary); outline-offset: -2px; }
 
 .module-drag-handle {
     display: inline-flex;
@@ -1849,6 +1853,7 @@ document.addEventListener('DOMContentLoaded', function() {
     bindChannelEditorDelegatedActions();
     bindDgGridToolbarActions();
     bindDgV2FeeActions();
+    bindDgV2FeeRowDrag();
     initInlinePriceAdjustPanels();
     bindPublishStatusBadge();
 
@@ -2406,15 +2411,38 @@ function bindDgGridToolbarActions() {
     });
 }
 
+const DG_V2_FEE_ROW_DND_PREFIX = 'dg-v2-fee-row:';
+
+function dgV2FeeRowSetDragPayload(dataTransfer, moduleId, fromIndex) {
+    dataTransfer.setData('text/plain', DG_V2_FEE_ROW_DND_PREFIX + String(moduleId) + ':' + String(fromIndex));
+}
+
+function dgV2FeeRowParseDragPayload(raw) {
+    if (!raw || !raw.startsWith(DG_V2_FEE_ROW_DND_PREFIX)) return null;
+    const rest = raw.slice(DG_V2_FEE_ROW_DND_PREFIX.length);
+    const colon = rest.indexOf(':');
+    if (colon < 0) return null;
+    const moduleId = rest.slice(0, colon);
+    const fromIndex = parseInt(rest.slice(colon + 1), 10);
+    if (!moduleId || isNaN(fromIndex)) return null;
+    return { moduleId: moduleId, fromIndex: fromIndex };
+}
+
+function dgV2FeeRowDragCellHtml() {
+    return '<td class="dg-v2-fee-td-drag"><span class="dg-v2-fee-drag-handle weight-drag-handle" draggable="true" title="拖动调整行顺序">⋮⋮</span></td>';
+}
+
 function dgV2AddFeeRow(root, rowKind) {
     const kind = (rowKind === 'subtotal') ? 'subtotal' : 'item';
     const tb = root.querySelector('.dg-v2-fee-tbody');
     if (!tb) return;
     const tr = document.createElement('tr');
+    const dragTd = dgV2FeeRowDragCellHtml();
     if (kind === 'subtotal') {
         tr.className = 'dg-v2-fee-tr dg-v2-fee-tr--subtotal';
         tr.setAttribute('data-fee-row-kind', 'subtotal');
-        tr.innerHTML = '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
+        tr.innerHTML = dragTd +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value=""></td>' +
             '<td colspan="2" class="dg-v2-fee-td-merged"><input type="text" class="dg-v2-fee-inp" data-f="name" value="" placeholder="如 RMB合计"></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="amount" value=""></td>' +
@@ -2423,7 +2451,8 @@ function dgV2AddFeeRow(root, rowKind) {
     } else {
         tr.className = 'dg-v2-fee-tr dg-v2-fee-tr--item';
         tr.setAttribute('data-fee-row-kind', 'item');
-        tr.innerHTML = '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
+        tr.innerHTML = dragTd +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="name" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="currency" value="RMB"></td>' +
@@ -2462,6 +2491,67 @@ function bindDgV2FeeActions() {
             return;
         }
         if (act === 'remove-fee') { dgV2RemoveFeeRow(dg, btn.closest('tr')); }
+    });
+}
+
+function bindDgV2FeeRowDrag() {
+    const root = document.getElementById('modulesContainer');
+    if (!root || root.dataset.dgV2FeeDragBound === '1') return;
+    root.dataset.dgV2FeeDragBound = '1';
+    root.addEventListener('dragstart', function(e) {
+        const handle = e.target && e.target.closest && e.target.closest('.dg-v2-fee-drag-handle');
+        if (!handle || !root.contains(handle)) return;
+        const tr = handle.closest('tr');
+        const tb = tr && tr.closest('.dg-v2-fee-tbody');
+        if (!tr || !tb) return;
+        const dgEd = tb.closest('.dg-grid-editor');
+        const moduleId = dgEd && dgEd.getAttribute('data-module-id');
+        if (!moduleId) return;
+        const rows = Array.from(tb.querySelectorAll('tr'));
+        const fromIndex = rows.indexOf(tr);
+        if (fromIndex < 0) return;
+        dgV2FeeRowSetDragPayload(e.dataTransfer, moduleId, fromIndex);
+        e.dataTransfer.effectAllowed = 'move';
+        tr.classList.add('dg-v2-fee-tr--dragging');
+        handle.addEventListener('dragend', function() {
+            tr.classList.remove('dg-v2-fee-tr--dragging');
+            root.querySelectorAll('.dg-v2-fee-tr--drag-over').forEach(function(r) {
+                r.classList.remove('dg-v2-fee-tr--drag-over');
+            });
+        }, { once: true });
+    });
+    root.addEventListener('dragover', function(e) {
+        const tr = e.target && e.target.closest && e.target.closest('.dg-v2-fee-tbody tr');
+        if (!tr || !root.contains(tr)) return;
+        const types = e.dataTransfer && e.dataTransfer.types ? Array.from(e.dataTransfer.types) : [];
+        if (!types.includes('text/plain')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const tb = tr.closest('.dg-v2-fee-tbody');
+        tb.querySelectorAll('tr').forEach(function(r) { r.classList.remove('dg-v2-fee-tr--drag-over'); });
+        tr.classList.add('dg-v2-fee-tr--drag-over');
+    });
+    root.addEventListener('drop', function(e) {
+        const tr = e.target && e.target.closest && e.target.closest('.dg-v2-fee-tbody tr');
+        if (!tr || !root.contains(tr)) return;
+        const raw = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || '';
+        const parsed = dgV2FeeRowParseDragPayload(raw);
+        if (!parsed) return;
+        e.preventDefault();
+        tr.classList.remove('dg-v2-fee-tr--drag-over');
+        const dgDrop = tr.closest('.dg-grid-editor');
+        if (!dgDrop || dgDrop.getAttribute('data-module-id') !== parsed.moduleId) return;
+        const tb = tr.closest('.dg-v2-fee-tbody');
+        const rows = Array.from(tb.querySelectorAll('tr'));
+        const toIndex = rows.indexOf(tr);
+        if (toIndex < 0 || parsed.fromIndex === toIndex) return;
+        const sourceRow = rows[parsed.fromIndex];
+        if (!sourceRow) return;
+        if (parsed.fromIndex < toIndex) {
+            tr.after(sourceRow);
+        } else {
+            tr.before(sourceRow);
+        }
     });
 }
 

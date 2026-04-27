@@ -48,14 +48,8 @@
                 <tr class="dg-v2-s-log">
                     <th scope="row" class="dg-v2-ms-lab">目的港</th>
                     <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="dest_port" value="{{ log.dest_port|e }}"></td>
-                    <th scope="row" class="dg-v2-ms-lab">海外仓</th>
-                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="dest_warehouse" value="{{ log.dest_warehouse|e }}"></td>
-                </tr>
-                <tr class="dg-v2-s-log">
                     <th scope="row" class="dg-v2-ms-lab">船名航次</th>
                     <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="vessel" value="{{ log.vessel|e }}"></td>
-                    <th scope="row" class="dg-v2-ms-lab"></th>
-                    <td class="dg-v2-ms-val"></td>
                 </tr>
             </table>
             </div>
@@ -63,12 +57,14 @@
         <div class="dg-grid-editor-section">
             <div class="channel-section-header">
                 <h4>💰 费用项目</h4>
+                <p class="channel-fee-items-hint">拖动每行左侧 ⋮⋮ 可调整顺序。</p>
             </div>
             <div class="dg-v2-fee-table-editor">
                 <div class="dg-table-scroll">
                     <table class="dg-v2-fee-table">
                         <thead>
                             <tr>
+                                <th class="dg-v2-fee-th-drag" aria-label="排序"></th>
                                 <th>提单号</th>
                                 <th>柜号</th>
                                 <th>费用项目</th>
@@ -83,6 +79,7 @@
                             {% set fee_rk = it.row_kind|default('item') %}
                             {% if fee_rk == 'subtotal' %}
                             <tr class="dg-v2-fee-tr dg-v2-fee-tr--subtotal" data-fee-row-kind="subtotal">
+                                <td class="dg-v2-fee-td-drag"><span class="dg-v2-fee-drag-handle weight-drag-handle" draggable="true" title="拖动调整行顺序">⋮⋮</span></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value="{{ it.bl_no|default('')|e }}"></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value="{{ it.container_no|default('')|e }}"></td>
                                 <td colspan="2" class="dg-v2-fee-td-merged"><input type="text" class="dg-v2-fee-inp" data-f="name" value="{{ it.name|e }}" placeholder="如 RMB合计"></td>
@@ -94,6 +91,7 @@
                             </tr>
                             {% else %}
                             <tr class="dg-v2-fee-tr dg-v2-fee-tr--item" data-fee-row-kind="item">
+                                <td class="dg-v2-fee-td-drag"><span class="dg-v2-fee-drag-handle weight-drag-handle" draggable="true" title="拖动调整行顺序">⋮⋮</span></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value="{{ it.bl_no|default('')|e }}"></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value="{{ it.container_no|default('')|e }}"></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="name" value="{{ it.name|e }}"></td>
