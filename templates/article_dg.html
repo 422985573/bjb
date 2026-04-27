@@ -1,0 +1,79 @@
+{# 仅含 DG 报价表模块的文章：独立版式，无渠道目录、无全局邮编搜索 #}
+{% extends 'base.html' %}
+
+{% block title %}{{ article['title'] }} - 中海豹国际{% endblock %}
+{% block share_description %}链接中澳，以稳定高效科技化的
+多式联运服务，赋能跨境贸易价值共生。{% endblock %}
+{% block og_type %}article{% endblock %}
+
+{% block viewport_meta %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ static_with_version('css/article.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="article-container article-container--dg-page" data-category-name="{{ article.get('category_name') or '' }}" data-article-title="{{ article['title'] }}" data-article-code="{{ article['article_code'] }}" id="articleContainer">
+    <div class="breadcrumb">
+        <a href="{{ url_for('front.index') }}">首页</a>
+        <span class="separator">/</span>
+        <span>{{ article.get('category_name') or '未分类' }}</span>
+        <span class="separator">/</span>
+        <span>{{ article['title'] }}</span>
+    </div>
+
+    <div class="article-content">
+        <div class="global-postcode-search">
+            <div class="article-links-bar">
+                <div class="article-links-group" aria-label="快捷链接">
+                    <span class="article-links-hint" aria-hidden="true">👉🏻</span>
+                    <div class="article-quick-links">
+                        <a href="https://www.aubvip.com" target="_blank" rel="noopener noreferrer">公司官网</a>
+                        <a href="https://auspost.com.au/" target="_blank" rel="noopener noreferrer">澳邮POST网站</a>
+                        <a href="https://teamglobalexp.com/" target="_blank" rel="noopener noreferrer">TGE网站</a>
+                        <a href="https://www.tfmxpress.com.au/index.html" target="_blank" rel="noopener noreferrer">TFM网站</a>
+                        <a href="https://www.hunterexpress.com.au/" target="_blank" rel="noopener noreferrer">Hunter网站</a>
+                        <a href="https://www.alliedexpress.com.au/" target="_blank" rel="noopener noreferrer">Alliede网站</a>
+                        <a href="https://borderexpress.com.au/" target="_blank" rel="noopener noreferrer">Border网站</a>
+                    </div>
+                    <span class="article-links-hint" aria-hidden="true">👈🏻</span>
+                </div>
+                <div class="article-export-floating article-export-inline" id="articleExportFloating">
+                    <button type="button" class="article-export-btn" id="exportArticleTablesBtn">导出</button>
+                </div>
+            </div>
+        </div>
+
+        {% for module in modules %}
+        {% if module.type == 'dg_grid' %}
+        {% include 'partials/dg_grid_article_block.html' %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="image-lightbox" id="imageLightbox" aria-hidden="true">
+    <button type="button" class="image-lightbox-close" id="imageLightboxClose" aria-label="关闭">×</button>
+    <div class="image-lightbox-inner">
+        <div class="image-lightbox-img-wrap">
+            <img src="" alt="" id="imageLightboxImg">
+        </div>
+    </div>
+</div>
+
+<button type="button" class="back-to-top" id="backToTop" aria-label="返回顶部" title="返回顶部">
+    <img src="{{ static_with_version('images/icon-back-to-top.svg') }}" alt="" class="back-to-top-icon">
+</button>
+<div class="postcode-popover" id="postcodePopover" hidden></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.globalSearchPostcode = window.globalSearchPostcode || function() {};
+    window.globalSearchPostcodeDebounced = window.globalSearchPostcodeDebounced || function() {};
+</script>
+<script src="{{ static_with_version('js/article.js') }}"></script>
+{% endblock %}

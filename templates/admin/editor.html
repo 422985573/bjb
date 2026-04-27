@@ -105,6 +105,183 @@
     border-color: var(--primary);
 }
 
+/* 显式标出含「费用项目」的渠道模块，避免与 DG/文本 混淆 */
+.module-item.module-item--channel {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+.module-item.module-item--channel .module-header {
+    background: linear-gradient(90deg, #eff6ff, #fff);
+}
+.editor-pro-tip {
+    background: #fffbeb;
+    border: 2px solid #f59e0b;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #0f172a;
+}
+.editor-pro-tip strong { color: #b45309; }
+.editor-pro-tip-ok { margin: 0.5em 0 0; color: #166534; font-weight: 600; }
+.channel-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 12px;
+    align-items: center;
+}
+.channel-toolbar-actions .ch-tool-btn {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #2563eb;
+    color: #fff;
+}
+.channel-toolbar-actions .ch-tool-btn--danger {
+    background: #fff;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+.channel-toolbar-actions .ch-tool-btn--danger:hover { background: #fef2f2; }
+.channel-toolbar-hint { font-size: 12px; color: #64748b; width: 100%; margin: 0; }
+/* DG 编辑器顶栏：与 .channel-toolbar-actions 同型 */
+.dg-grid-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 12px;
+    align-items: center;
+}
+.dg-grid-toolbar-actions .ch-tool-btn {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #2563eb;
+    color: #fff;
+}
+.dg-grid-toolbar-hint { font-size: 12px; color: #64748b; width: 100%; margin: 0; }
+.dg-editor {
+    color: var(--text-dark);
+}
+.dg-grid-editor-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: var(--bg-gray);
+    border-radius: 8px;
+}
+.dg-grid-editor-section h4 {
+    color: var(--primary);
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+.dg-table-editor {
+    margin-top: 4px;
+}
+.dg-table-editor .add-row-btn {
+    margin-top: 10px;
+}
+.dg-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+}
+/* DG v2：抬头+客户+单证 同一张四列表（对齐 Excel） */
+.dg-v2-metasheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    table-layout: fixed;
+}
+.dg-v2-metasheet-table th,
+.dg-v2-metasheet-table td {
+    border: 1px solid #cbd5e1;
+    padding: 4px 6px;
+    vertical-align: middle;
+}
+.dg-v2-s-main th, .dg-v2-s-sub th {
+    background: #f8fafc;
+    text-align: center;
+    padding: 8px 6px;
+}
+.dg-v2-metasheet-h1, .dg-v2-metasheet-h2, .dg-v2-header-main, .dg-v2-header-sub {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    padding: 4px 6px;
+}
+.dg-v2-metasheet-h2, .dg-v2-header-sub { font-size: 0.95rem; font-weight: 600; color: #334155; }
+/* 客户行与起运/单证行：标签列同底色、同左对齐，避免 th 默认居中与 input 混用发花 */
+.dg-v2-metasheet-table tbody th.dg-v2-ms-lab,
+.dg-v2-metasheet-table tbody td.dg-v2-ms-val {
+    text-align: left;
+}
+.dg-v2-metasheet-table tbody th.dg-v2-ms-lab {
+    width: 18%;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 500;
+}
+.dg-v2-metasheet-table tbody td.dg-v2-ms-val {
+    background: #fff;
+}
+.dg-v2-ms-lab .dg-v2-cust-label {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: #334155;
+    padding: 4px 4px;
+    text-align: left;
+}
+.dg-v2-ms-val .dg-v2-cust-value, .dg-v2-ms-val .dg-v2-loc {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: #0f172a;
+    padding: 4px 4px;
+    text-align: left;
+}
+.dg-v2-loc { width: 100%; box-sizing: border-box; }
+.dg-v2-ms-val .dg-v2-cust-value:focus, .dg-v2-ms-val .dg-v2-loc:focus,
+.dg-v2-cust-label:focus, .dg-v2-metasheet-h1:focus, .dg-v2-metasheet-h2:focus {
+    outline: 1px solid #93c5fd;
+    background: #f0f9ff;
+    border-radius: 2px;
+}
+.dg-v2-fee-table { table-layout: auto; width: 100%; border-collapse: collapse; font-size: 12px; }
+.dg-v2-fee-table th, .dg-v2-fee-table td { border: 1px solid var(--border); padding: 4px; text-align: left; }
+.dg-v2-fee-th-act { text-align: center; white-space: nowrap; }
+.dg-v2-fee-td-act { text-align: center; vertical-align: middle; white-space: nowrap; }
+.dg-v2-fee-table thead th { background: var(--bg-gray); }
+.dg-v2-fee-inp { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; border: none; background: transparent; font-size: 12px; padding: 4px; }
+.dg-v2-fee-inp:focus { background: #f0f9ff; outline: 1px solid #93c5fd; }
+.dg-v2-fee-del { cursor: pointer; padding: 2px 8px !important; font-size: 12px; background: #fff !important; color: #b91c1c !important; border: 1px solid #fecaca !important; }
+.dg-v2-fee-table-editor .add-row-btn { background: var(--primary); }
+.dg-v2-fee-add-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.dg-v2-fee-tr--subtotal .dg-v2-fee-td-merged { background: #f8fafc; font-weight: 600; }
+.dg-v2-fee-tr--subtotal .dg-v2-fee-td-merged .dg-v2-fee-inp { font-weight: 600; }
+
 .module-drag-handle {
     display: inline-flex;
     align-items: center;
@@ -760,6 +937,13 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.channel-fee-items-hint {
+    font-size: 13px;
+    color: var(--text-light, #64748b);
+    margin: 0 0 12px;
+    line-height: 1.5;
+}
+
 .weight-editor {
     display: flex;
     gap: 10px;
@@ -881,45 +1065,50 @@
     outline: 1px solid var(--primary);
 }
 
-/* DG 报价表（xlsx 全表可编辑） */
-.dg-grid-editor {
-    padding-bottom: 8px;
-}
-/* 与文章页 module-dg-grid 同结构；标题为可编辑 input */
-.module-dg-grid--in-editor {
-    max-width: 100%;
-    margin: 0;
-}
-.module-dg-grid--in-editor .dg-grid-title {
-    display: block;
-    padding: 0 4px 8px 4px;
-}
-.module-dg-grid--in-editor .dg-grid-title .dg-grid-title-input {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
+/* DG 报价表（与渠道模块同：分区 + 内层 table 可编辑区） */
+.dg-editor .dg-grid-table--editable .dg-grid-cell--row-action {
+    width: 3.2rem;
+    min-width: 3.2rem;
+    max-width: 4.5rem;
+    padding: 4px 6px;
+    vertical-align: middle;
     text-align: center;
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: #0f172a;
-    border: 1px dashed #e2e8f0;
-    border-radius: 6px;
+    background: #f8fafc;
+    border-left: 1px solid #e2e8f0;
+    box-sizing: border-box;
+}
+.dg-editor .dg-row-del-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid #f87171;
+    border-radius: 4px;
     background: #fff;
-    padding: 8px 10px;
+    color: #b91c1c;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.dg-editor .dg-row-del-btn:hover { background: #fef2f2; }
+.dg-grid-editor { padding-bottom: 8px; }
+.dg-grid-editor-section .dg-grid-title-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dark);
+    padding: 10px 15px;
+    font-size: 16px;
+    font-weight: 600;
     font-family: inherit;
     margin: 0;
 }
-.module-dg-grid--in-editor .dg-grid-title .dg-grid-title-input:focus {
-    border-color: var(--primary, #2563eb);
+.dg-grid-editor-section .dg-grid-title-input:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
-/* 可编辑表：textarea 充满单元格，与前台表视觉一致 */
-.module-dg-grid--in-editor .dg-grid-table--editable .dg-grid-cell {
-    padding: 0;
-    vertical-align: top;
-}
-.module-dg-grid--in-editor .dg-grid-table--editable .dg-grid-cell .dg-grid-cell-input {
+.dg-editor .dg-grid-table--editable .dg-grid-cell { padding: 0; vertical-align: top; }
+.dg-editor .dg-grid-table--editable .dg-grid-cell .dg-grid-cell-input {
     display: block;
     width: 100%;
     min-height: 2rem;
@@ -936,19 +1125,19 @@
     white-space: pre-wrap;
     word-break: break-word;
 }
-.module-dg-grid--in-editor .dg-grid-table--editable .dg-grid-cell--fullrow .dg-grid-cell-input {
+.dg-editor .dg-grid-table--editable .dg-grid-cell--fullrow .dg-grid-cell-input {
     text-align: center;
     font-size: 1.05em;
     font-weight: 600;
     min-height: 2.4rem;
     padding: 8px 6px;
 }
-.module-dg-grid--in-editor .dg-grid-tr-tidan-header .dg-grid-cell-input {
+.dg-editor .dg-grid-tr-tidan-header .dg-grid-cell-input {
     background: transparent !important;
     color: #0f172a;
     font-weight: 600;
 }
-.module-dg-grid--in-editor .dg-grid-cell-input:focus {
+.dg-editor .dg-grid-cell-input:focus {
     background: #f0f9ff !important;
     outline: 1px solid #93c5fd;
     outline-offset: -1px;
@@ -1312,11 +1501,12 @@
             </div>
         </div>
         
-        <div class="module-buttons">
-            <button class="module-btn" onclick="addModule('text')">📝 添加文本</button>
-            <button class="module-btn" onclick="addModule('image')">🖼️ 添加图片</button>
-            <button class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
-            <button class="module-btn" onclick="addModule('dg_grid')">📋 添加 DG 报价表</button>
+            <div class="module-buttons">
+            <button type="button" class="module-btn" onclick="addModule('text')">📝 添加文本</button>
+            <button type="button" class="module-btn" onclick="addModule('image')">🖼️ 添加图片</button>
+            <button type="button" class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
+            <p class="sidebar-hint-channel" style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">含「费用项目」与表格增删行</p>
+            <button type="button" class="module-btn" onclick="addModule('dg_grid')">📋 添加 DG 报价表</button>
         </div>
         
         <div class="module-list-sidebar">
@@ -1379,7 +1569,7 @@
         
         <div class="modules-container" id="modulesContainer">
             {% for module in modules %}
-            <div class="module-item" data-module-id="{{ module.id }}" data-module-type="{{ module.type }}">
+            <div class="module-item{% if module.type == 'channel' %} module-item--channel{% endif %}" id="admin-module-{{ module.id }}" data-module-id="{{ module.id }}" data-module-type="{{ module.type }}">
                 <div class="module-header">
                     <span class="module-title">
                         {% if module.type == 'text' %}📝 文本模块{% endif %}
@@ -1388,7 +1578,7 @@
                         {% if module.type == 'dg_grid' %}📋 DG 报价表{% endif %}
                     </span>
                     <div class="module-actions">
-                        <button class="btn-delete" onclick="deleteModule({{ module.id }})">删除</button>
+                        <button type="button" class="btn-delete" onclick="deleteModule({{ module.id }})">删除</button>
                     </div>
                 </div>
                 <div class="module-body">
@@ -1437,7 +1627,18 @@
                         </div>
                     {% elif module.type == 'channel' %}
                         {% set content = module.content | from_json %}
+                        {# weights 为 [] 时必须渲染 0 列；无 weights 键时沿用 6 列老模板 #}
+                        {% if content and content is mapping and ('weights' in content) %}
+                            {% set fee_list = content['weights'] or [] %}
+                        {% else %}
+                            {% set fee_list = ['21.01KG', '50KG', '100KG', '300KG', '500KG', '1000KG'] %}
+                        {% endif %}
                         <div class="channel-editor" data-module-id="{{ module.id }}">
+                            <div class="channel-toolbar-actions">
+                                <button type="button" class="ch-tool-btn add-weight-btn" data-ch-act="add-weight">+ 添加费用项目</button>
+                                <button type="button" class="ch-tool-btn add-row-btn" data-ch-act="add-row">+ 添加行</button>
+                                <p class="channel-toolbar-hint">删除整列用上方每列的 ×；删行 / 复制行在表格最左列。</p>
+                            </div>
                             <div class="channel-editor-section">
                                 <h4>📋 渠道标题</h4>
                                 <input type="text" class="channel-title-input" data-module-id="{{ module.id }}" 
@@ -1447,49 +1648,17 @@
                             </div>
                             
                             <div class="channel-editor-section">
-                                <h4>⚖️ 重量列设置</h4>
+                                <h4>💰 费用项目</h4>
+                                <p class="channel-fee-items-hint">费用列可随时用「+ 添加费用项目」增加、用 × 删除（可删到 0 列再添加）。价格表里每行可用 × 删行、⧉ 复制行，与行操作一样方便。拖动 ⋮⋮ 可改列顺序。</p>
                                 <div class="weight-editor">
-                                    {% if content and content.weights %}
-                                        {% for weight in content.weights %}
+                                    {% for weight in fee_list %}
                                         <div class="weight-item" draggable="false" ondragover="weightDragOver(event)" ondragleave="weightDragLeave(event)" ondrop="weightDrop(event)">
                                             <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
                                             <input type="text" class="weight-input" value="{{ weight }}">
-                                            <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
+                                            <button type="button" class="weight-delete-btn" data-ch-act="remove-weight" title="删除此费用列">×</button>
                                         </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <div class="weight-item" draggable="false" ondragover="weightDragOver(event)" ondragleave="weightDragLeave(event)" ondrop="weightDrop(event)">
-                                            <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
-                                            <input type="text" class="weight-input" value="21.01KG">
-                                            <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
-                                        </div>
-                                        <div class="weight-item" draggable="false" ondragover="weightDragOver(event)" ondragleave="weightDragLeave(event)" ondrop="weightDrop(event)">
-                                            <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
-                                            <input type="text" class="weight-input" value="50KG">
-                                            <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
-                                        </div>
-                                        <div class="weight-item" draggable="false" ondragover="weightDragOver(event)" ondragleave="weightDragLeave(event)" ondrop="weightDrop(event)">
-                                            <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
-                                            <input type="text" class="weight-input" value="100KG">
-                                            <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
-                                        </div>
-                                        <div class="weight-item" draggable="false" ondragover="weightDragOver(event)" ondragleave="weightDragLeave(event)" ondrop="weightDrop(event)">
-                                            <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
-                                            <input type="text" class="weight-input" value="300KG">
-                                            <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
-                                        </div>
-                                        <div class="weight-item" draggable="false" ondragover="weightDragOver(event)" ondragleave="weightDragLeave(event)" ondrop="weightDrop(event)">
-                                            <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
-                                            <input type="text" class="weight-input" value="500KG">
-                                            <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
-                                        </div>
-                                        <div class="weight-item" draggable="false" ondragover="weightDragOver(event)" ondragleave="weightDragLeave(event)" ondrop="weightDrop(event)">
-                                            <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
-                                            <input type="text" class="weight-input" value="1000KG">
-                                            <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
-                                        </div>
-                                    {% endif %}
-                                    <button class="add-weight-btn" onclick="addWeightColumn(this)">+ 添加</button>
+                                    {% endfor %}
+                                    <button type="button" class="add-weight-btn" data-ch-act="add-weight">+ 添加费用项目</button>
                                 </div>
                             </div>
                             
@@ -1505,7 +1674,7 @@
                                         </label>
                                     </div>
                                     <div class="price-adjust-weight-list">
-                                        <div class="price-adjust-preview-empty" style="width:100%;">当前没有可用公斤列</div>
+                                        <div class="price-adjust-preview-empty" style="width:100%;">请先在上方添加费用项目；仅含纯数字的单元格会参与调价</div>
                                     </div>
                                     <div class="price-adjust-form">
                                         <div class="price-adjust-input-box">
@@ -1522,18 +1691,9 @@
                                                 <th>目的港</th>
                                                 <th>邮编</th>
                                                 <th>区域</th>
-                                                {% if content and content.weights %}
-                                                    {% for weight in content.weights %}
-                                                    <th>{{ weight }}</th>
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <th>21.01KG</th>
-                                                    <th>50KG</th>
-                                                    <th>100KG</th>
-                                                    <th>300KG</th>
-                                                    <th>500KG</th>
-                                                    <th>1000KG</th>
-                                                {% endif %}
+                                                {% for weight in fee_list %}
+                                                    <th class="weight-col">{{ weight }}</th>
+                                                {% endfor %}
                                                 <th>到门时效</th>
                                                 <th>渠道</th>
                                             </tr>
@@ -1543,13 +1703,13 @@
                                                 {% for state in content.states %}
                                                 <tr>
                                                     <td>
-                                                        <button class="delete-row-btn" onclick="deleteRow(this)">×</button>
-                                                        <button class="delete-row-btn" style="margin-left:4px;background:#4b9cff;" onclick="copyRow(this)">⧉</button>
+                                                        <button type="button" class="delete-row-btn" data-ch-act="row-delete" aria-label="删除本行">×</button>
+                                                        <button type="button" class="delete-row-btn" data-ch-act="row-copy" style="margin-left:4px;background:#4b9cff;" aria-label="复制本行">⧉</button>
                                                     </td>
                                                     <td><input type="text" class="state-name" value="{{ state.name_cn }}"></td>
                                                     <td><input type="text" class="postcode-range" value="{{ state.postcode_range if state.postcode_range else '' }}"></td>
                                                     <td><input type="text" class="area-type" placeholder="如：市区" value="{{ state.area_type if state.area_type else '' }}"></td>
-                                                    {% for i in range(content.weights | length) %}
+                                                    {% for i in range(fee_list|length) %}
                                                     <td><input type="text" class="price" value="{{ state.prices[i] if state.prices and i < state.prices | length else '' }}"></td>
                                                     {% endfor %}
                                                     <td><input type="text" class="delivery-time" value="{{ state.delivery_time }}"></td>
@@ -1559,7 +1719,7 @@
                                             {% endif %}
                                         </tbody>
                                     </table>
-                                    <button class="add-row-btn" onclick="addTableRow(this)">+ 添加行</button>
+                                    <button type="button" class="add-row-btn" data-ch-act="add-row">+ 添加行</button>
                                 </div>
                             </div>
                             
@@ -1570,32 +1730,50 @@
                         </div>
                     {% elif module.type == 'dg_grid' %}
                         {% set dg = module.content | from_json %}
+                        {% if (dg.schema|default(0))|int == 2 %}
+                            {% include 'admin/dg_grid_editor_v2.html' %}
+                        {% else %}
                         {% set dg_cells = (dg.cells if dg and dg.cells else [])|dg_grid_normalize %}
                         {% set dg_rows = (dg_cells|length) if dg_cells else 1 %}
                         {% set dg_cols = ((dg.cols if dg and dg.cols else (dg_cells[0]|length if dg_cells else 1))|int) %}
                         <div class="dg-grid-editor" data-module-id="{{ module.id }}"
+                             data-dg-schema="1"
                              data-rows="{{ dg_rows }}"
                              data-cols="{{ dg_cols }}"
                              data-sheet-name="{{ (dg.sheet_name or '')|e }}"
                              data-template-file="{{ (dg.template_file or '')|e }}">
                             <script type="application/json" class="dg-grid-struct">{{ {'merges': (dg or {}).get('merges', []), 'header_orange_row': (dg or {}).get('header_orange_row') }|tojson }}</script>
-                            {# 布局与文章详情页 module-dg-grid 一致：标题 + dg-grid-scroll + 合并表可编辑 + 备注 #}
-                            <div class="module module-dg-grid module-dg-grid--in-editor">
-                                <div class="dg-grid-title">
+                            <div class="dg-editor">
+                                <div class="dg-grid-toolbar-actions" aria-label="DG 操作（旧版合并表）">
+                                    <button type="button" class="ch-tool-btn" data-dg-act="append-row" data-dg-target="{{ module.id }}">+ 添加费用项目</button>
+                                    <p class="dg-grid-toolbar-hint">旧版：合并单元格大表。新建模块已改为客户信息+费用行版式。编辑后点「保存信息」。</p>
+                                </div>
+                                <div class="dg-grid-editor-section">
+                                    <h4>📋 模块标题</h4>
                                     <input type="text" class="module-title-input dg-grid-title-input" data-module-id="{{ module.id }}"
-                                           placeholder="模块标题（与前台大标题一致）"
+                                           placeholder="与前台大标题一致"
                                            value="{{ dg.title if dg and dg.title else '' }}"
                                            oninput="updateModuleTitle({{ module.id }}, this.value)">
                                 </div>
-                                <div class="dg-grid-scroll">
-                                    {{ (dg or {})|dg_grid_editable_table }}
+                                <div class="dg-grid-editor-section">
+                                    <div class="channel-section-header">
+                                        <h4>📊 报价表</h4>
+                                    </div>
+                                    <p class="channel-fee-items-hint">与 xlsx 合并布局一致；可横向滚动。</p>
+                                    <div class="dg-table-editor">
+                                        <div class="dg-table-scroll">
+                                            {{ (dg or {})|dg_grid_editable_table }}
+                                        </div>
+                                        <button type="button" class="ch-tool-btn add-row-btn" data-dg-act="append-row" data-dg-target="{{ module.id }}">+ 添加行</button>
+                                    </div>
                                 </div>
-                                <div class="remark-section" style="margin-top: 12px;">
+                                <div class="remark-section">
                                     <label>📌 模块备注（显示在模块下方，支持HTML）</label>
                                     <textarea class="remark-editor dg-grid-remark" style="min-height: 80px;">{{ dg.remark if dg else '' }}</textarea>
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -1668,6 +1846,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initModuleListDrag();
     updateActiveModule();
     initWeightInputListeners();
+    bindChannelEditorDelegatedActions();
+    bindDgGridToolbarActions();
+    bindDgV2FeeActions();
     initInlinePriceAdjustPanels();
     bindPublishStatusBadge();
 
@@ -1999,7 +2180,7 @@ async function addModule(type) {
     } else if (type === 'image') {
         content = { title: '', url: '', alt: '', caption: '', remark: '' };
     } else if (type === 'dg_grid') {
-        content = { from_template: true };
+        content = {};
     } else if (type === 'channel') {
         if (isChannelSimple) {
             // 大件/纸箱编辑页：表头只有「邮编」，默认一行 0000,0001
@@ -2079,11 +2260,274 @@ async function saveModule(moduleId) {
     }
 }
 
-// DG 报价表（xlsx 网格）
+// DG 报价表：根据页面上的 textarea 同步 data-rows / data-cols（增删行后保持与 getDgGridEditorData 一致）
+function syncDgGridDatasetFromTextareas(root) {
+    if (!root) return;
+    const tas = root.querySelectorAll('textarea.dg-grid-cell-input');
+    let maxR = -1;
+    let maxC = -1;
+    tas.forEach(function(ta) {
+        const r = parseInt(ta.getAttribute('data-r'), 10);
+        const c = parseInt(ta.getAttribute('data-c'), 10);
+        if (!Number.isNaN(r)) maxR = Math.max(maxR, r);
+        if (!Number.isNaN(c)) maxC = Math.max(maxC, c);
+    });
+    if (maxR >= 0) root.dataset.rows = String(maxR + 1);
+    if (maxC >= 0) root.dataset.cols = String(maxC + 1);
+}
+
+function dgGridAppendRowAtEnd(root) {
+    const table = root.querySelector('table.dg-grid-table');
+    const tbody = table && table.querySelector('tbody');
+    if (!tbody) {
+        alert('未找到 DG 表格，请刷新后重试。');
+        return;
+    }
+    let nC = parseInt(root.dataset.cols || '0', 10) || 0;
+    const nR = parseInt(root.dataset.rows || '0', 10) || 0;
+    if (nC <= 0) {
+        root.querySelectorAll('textarea.dg-grid-cell-input').forEach(function(ta) {
+            const c = parseInt(ta.getAttribute('data-c'), 10);
+            if (!Number.isNaN(c)) nC = Math.max(nC, c + 1);
+        });
+    }
+    if (nC <= 0) nC = 6;
+    const newR = nR;
+    const tr = document.createElement('tr');
+    tr.className = 'dg-grid-tr';
+    for (let c = 0; c < nC; c++) {
+        const td = document.createElement('td');
+        td.className = 'dg-grid-cell';
+        const ta = document.createElement('textarea');
+        ta.className = 'dg-grid-cell-input';
+        ta.setAttribute('data-r', String(newR));
+        ta.setAttribute('data-c', String(c));
+        ta.setAttribute('rows', '1');
+        ta.setAttribute('spellcheck', 'false');
+        ta.setAttribute('autocomplete', 'off');
+        td.appendChild(ta);
+        tr.appendChild(td);
+    }
+    const actionTd = document.createElement('td');
+    actionTd.className = 'dg-grid-cell dg-grid-cell--row-action';
+    actionTd.setAttribute('data-dg-side', 'actions');
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'dg-row-del-btn';
+    delBtn.setAttribute('data-dg-act', 'remove-row');
+    delBtn.setAttribute('title', '删除本行');
+    delBtn.textContent = '删除';
+    actionTd.appendChild(delBtn);
+    tr.appendChild(actionTd);
+    tbody.appendChild(tr);
+    root.dataset.rows = String(nR + 1);
+    root.dataset.cols = String(nC);
+}
+
+function renumberDgGridTextareaRowsInTbody(tbody) {
+    if (!tbody) return;
+    const trs = tbody.querySelectorAll('tr');
+    trs.forEach(function(tr, idx) {
+        tr.querySelectorAll('textarea.dg-grid-cell-input').forEach(function(ta) {
+            ta.setAttribute('data-r', String(idx));
+        });
+    });
+}
+
+function adjustDgGridStructAfterRowDelete(root, deletedIndex) {
+    const el = root.querySelector('script.dg-grid-struct');
+    if (!el) return;
+    var o;
+    try { o = JSON.parse(el.textContent || '{}'); } catch (err) { return; }
+    if (o.header_orange_row != null && o.header_orange_row !== '') {
+        const h = parseInt(o.header_orange_row, 10);
+        if (!Number.isNaN(h)) {
+            if (h === deletedIndex) { o.header_orange_row = null; }
+            else if (h > deletedIndex) { o.header_orange_row = h - 1; }
+        }
+    }
+    if (Array.isArray(o.merges)) {
+        o.merges = o.merges.map(function(mg) {
+            const r0 = parseInt(mg.r, 10) || 0;
+            const rs = parseInt(mg.rs, 10) || 1;
+            if (deletedIndex >= r0 && deletedIndex < r0 + rs) { return null; }
+            if (r0 > deletedIndex) { return { r: r0 - 1, c: mg.c, rs: rs, cs: mg.cs }; }
+            return { r: r0, c: mg.c, rs: rs, cs: mg.cs };
+        }).filter(function(x) { return x != null; });
+    }
+    el.textContent = JSON.stringify(o);
+}
+
+function dgGridRemoveOneRow(root, tr) {
+    const tbody = tr && tr.parentElement;
+    if (!tbody || !tbody.tagName || tbody.tagName.toUpperCase() !== 'TBODY') return;
+    const table = root.querySelector('table.dg-grid-table');
+    if (!table || tr.closest('table') !== table) return;
+    const allTr = tbody.querySelectorAll('tr');
+    if (allTr.length <= 1) {
+        alert('至少保留一行表格。');
+        return;
+    }
+    const deletedIndex = Array.prototype.indexOf.call(allTr, tr);
+    if (deletedIndex < 0) return;
+    tr.remove();
+    renumberDgGridTextareaRowsInTbody(tbody);
+    adjustDgGridStructAfterRowDelete(root, deletedIndex);
+    syncDgGridDatasetFromTextareas(root);
+}
+
+function bindDgGridToolbarActions() {
+    const el = document.getElementById('modulesContainer');
+    if (!el || el.dataset.dgToolbarBound === '1') return;
+    el.dataset.dgToolbarBound = '1';
+    el.addEventListener('click', function(e) {
+        const btn = e.target && e.target.closest && e.target.closest('[data-dg-act]');
+        if (!btn || !el.contains(btn)) return;
+        const act = btn.getAttribute('data-dg-act');
+        if (act === 'remove-row') {
+            e.preventDefault();
+            e.stopPropagation();
+            const tr = btn.closest('tr');
+            const dgRoot = btn.closest('.dg-grid-editor');
+            if (dgRoot && dgRoot.getAttribute('data-dg-schema') === '2') return;
+            if (tr && dgRoot) dgGridRemoveOneRow(dgRoot, tr);
+            return;
+        }
+        if (act === 'append-row') {
+            e.preventDefault();
+            e.stopPropagation();
+            const dgRoot = btn.closest('.dg-grid-editor') || (function() {
+                const mid = btn.getAttribute('data-dg-target');
+                return mid ? document.querySelector('.dg-grid-editor[data-module-id="' + mid + '"]') : null;
+            }());
+            if (dgRoot && dgRoot.getAttribute('data-dg-schema') === '2') return;
+            if (dgRoot) dgGridAppendRowAtEnd(dgRoot);
+        }
+    });
+}
+
+function dgV2AddFeeRow(root, rowKind) {
+    const kind = (rowKind === 'subtotal') ? 'subtotal' : 'item';
+    const tb = root.querySelector('.dg-v2-fee-tbody');
+    if (!tb) return;
+    const tr = document.createElement('tr');
+    if (kind === 'subtotal') {
+        tr.className = 'dg-v2-fee-tr dg-v2-fee-tr--subtotal';
+        tr.setAttribute('data-fee-row-kind', 'subtotal');
+        tr.innerHTML = '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value=""></td>' +
+            '<td colspan="2" class="dg-v2-fee-td-merged"><input type="text" class="dg-v2-fee-inp" data-f="name" value="" placeholder="如 RMB合计"></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="amount" value=""></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="note" value=""></td>' +
+            '<td class="dg-v2-fee-td-act"><button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button></td>';
+    } else {
+        tr.className = 'dg-v2-fee-tr dg-v2-fee-tr--item';
+        tr.setAttribute('data-fee-row-kind', 'item');
+        tr.innerHTML = '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value=""></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="name" value=""></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="currency" value="RMB"></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="amount" value=""></td>' +
+            '<td><input type="text" class="dg-v2-fee-inp" data-f="note" value=""></td>' +
+            '<td class="dg-v2-fee-td-act"><button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button></td>';
+    }
+    tb.appendChild(tr);
+}
+
+function dgV2RemoveFeeRow(root, tr) {
+    const tb = root.querySelector('.dg-v2-fee-tbody');
+    if (!tb || !tr) return;
+    if (tb.querySelectorAll('tr').length <= 1) {
+        alert('费用表至少保留一行。');
+        return;
+    }
+    tr.remove();
+}
+
+function bindDgV2FeeActions() {
+    const el = document.getElementById('modulesContainer');
+    if (!el || el.dataset.dgV2Bound === '1') return;
+    el.dataset.dgV2Bound = '1';
+    el.addEventListener('click', function(e) {
+        const btn = e.target && e.target.closest && e.target.closest('[data-dg-v2-act]');
+        if (!btn || !el.contains(btn)) return;
+        const dg = btn.closest('.dg-grid-editor');
+        if (!dg || dg.getAttribute('data-dg-schema') !== '2') return;
+        e.preventDefault();
+        e.stopPropagation();
+        const act = btn.getAttribute('data-dg-v2-act');
+        if (act === 'add-fee') {
+            const fk = (btn.getAttribute('data-fee-row-kind') || 'item');
+            dgV2AddFeeRow(dg, fk);
+            return;
+        }
+        if (act === 'remove-fee') { dgV2RemoveFeeRow(dg, btn.closest('tr')); }
+    });
+}
+
+function getDgGridEditorDataV2(root) {
+    const titleEl = root.querySelector('.dg-v2-title-input');
+    const title = titleEl ? titleEl.value.trim() : '';
+    const hm = root.querySelector('.dg-v2-header-main');
+    const hs = root.querySelector('.dg-v2-header-sub');
+    const customer_rows = [];
+    root.querySelectorAll('tr.dg-v2-s-cust').forEach(function(tr) {
+        const thIn = tr.querySelectorAll('th .dg-v2-cust-label');
+        const tdIn = tr.querySelectorAll('td .dg-v2-cust-value');
+        for (let j = 0; j < 2; j++) {
+            if (thIn[j] && tdIn[j]) {
+                customer_rows.push({ label: thIn[j].value || '', value: tdIn[j].value || '' });
+            }
+        }
+    });
+    const logistics = {};
+    root.querySelectorAll('.dg-v2-loc').forEach(function(inp) {
+        const k = inp.getAttribute('data-loc');
+        if (k) { logistics[k] = inp.value || ''; }
+    });
+    const fee_items = Array.from(root.querySelectorAll('.dg-v2-fee-tbody tr')).map(function(tr) {
+        const rk = (tr.getAttribute('data-fee-row-kind') || 'item') === 'subtotal' ? 'subtotal' : 'item';
+        const o = {
+            row_kind: rk,
+            name: '',
+            currency: '',
+            amount: '',
+            note: '',
+            bl_no: '',
+            container_no: '',
+        };
+        tr.querySelectorAll('.dg-v2-fee-inp').forEach(function(ip) {
+            const f = ip.getAttribute('data-f');
+            if (f && Object.prototype.hasOwnProperty.call(o, f)) { o[f] = ip.value || ''; }
+        });
+        if (o.row_kind === 'subtotal') { o.currency = ''; }
+        return o;
+    });
+    const remarkEl = root.querySelector('.dg-grid-remark');
+    return {
+        schema: 2,
+        title: title,
+        header_main: hm ? hm.value.trim() : '',
+        header_sub: hs ? hs.value.trim() : '',
+        customer_rows: customer_rows,
+        logistics: logistics,
+        fee_items: fee_items,
+        footer_note: '',
+        template_file: (root.dataset.templateFile || '').trim(),
+        sheet_name: (root.dataset.sheetName || '').trim(),
+        remark: remarkEl ? remarkEl.value : '',
+    };
+}
+
+// DG 报价表（xlsx 网格 或 v2 分块）
 function getDgGridEditorData(root) {
     if (!root) {
         return { title: '', template_file: '', sheet_name: '', rows: 0, cols: 0, cells: [], remark: '' };
     }
+    if (root.getAttribute('data-dg-schema') === '2') {
+        return getDgGridEditorDataV2(root);
+    }
+    syncDgGridDatasetFromTextareas(root);
     const nR = parseInt(root.dataset.rows || '0', 10) || 0;
     const nC = parseInt(root.dataset.cols || '0', 10) || 0;
     const titleEl = root.querySelector('.dg-grid-title-input');
@@ -2542,20 +2986,75 @@ function getChannelFixedColCount(editor) {
     return (tableEditor && tableEditor.dataset.channelSimple === '1') ? 2 : 4;
 }
 
-// 更新重量列标题
+function getChannelDataTable(editor) {
+    if (!editor) return null;
+    return editor.querySelector('.channel-table-editor table');
+}
+
+/** 在 thead 中，插入到「到门时效」列之前；找不到则回退为倒数第 2 个 th 之前。 */
+function getInsertBeforeFeeColumnHeaderTh(headerRow) {
+    if (!headerRow) return null;
+    const ths = headerRow.querySelectorAll('th');
+    for (let i = 0; i < ths.length; i++) {
+        if ((ths[i].textContent || '').trim() === '到门时效') {
+            return ths[i];
+        }
+    }
+    return ths.length >= 2 ? ths[ths.length - 2] : null;
+}
+
+/** 在 tbody 行中，插入到「到门时效」格之前；不依赖 .delivery-time 时按倒数第 2 个 td。 */
+function getInsertBeforeFeeColumnDataCell(row) {
+    if (!row) return null;
+    const deliveryInput = row.querySelector('input.delivery-time');
+    if (deliveryInput) {
+        const td = deliveryInput.closest('td');
+        if (td) return td;
+    }
+    const tds = row.querySelectorAll('td');
+    return tds.length >= 2 ? tds[tds.length - 2] : null;
+}
+
+/**
+ * 渠道表「费用列 / 行」统一用 data-ch-act 在 #modulesContainer 上委托，避免内联 onclick 不触发或双表单问题。
+ */
+function bindChannelEditorDelegatedActions() {
+    const root = document.getElementById('modulesContainer');
+    if (!root || root.dataset.chEditorBound === '1') return;
+    root.dataset.chEditorBound = '1';
+    root.addEventListener('click', function(e) {
+        const act = e.target && e.target.closest && e.target.closest('[data-ch-act]');
+        if (!act || !root.contains(act)) return;
+        const v = act.getAttribute('data-ch-act');
+        if (v === 'add-weight' || v === 'remove-weight' || v === 'add-row' || v === 'row-delete' || v === 'row-copy') {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (v === 'add-weight') { addWeightColumn(act); return; }
+        if (v === 'remove-weight') { removeWeightColumn(act); return; }
+        if (v === 'add-row') { addTableRow(act); return; }
+        if (v === 'row-delete') { deleteRow(act); return; }
+        if (v === 'row-copy') { copyRow(act); return; }
+    });
+}
+
+// 更新费用项目表头
 function updateWeightColumnHeader(input) {
     const editor = input.closest('.channel-editor');
+    if (!editor) return;
     const weightEditor = editor.querySelector('.weight-editor');
+    if (!weightEditor) return;
     const allWeightItems = Array.from(weightEditor.querySelectorAll('.weight-item'));
     const currentWeightItem = input.closest('.weight-item');
     const index = allWeightItems.indexOf(currentWeightItem);
     const fixedCols = getChannelFixedColCount(editor);
-    const table = editor.querySelector('table');
+    const table = getChannelDataTable(editor);
+    if (!table) return;
     const headerRow = table.querySelector('thead tr');
     const headerCells = headerRow.querySelectorAll('th');
     if (headerCells[index + fixedCols]) {
         const value = input.value.trim();
-        headerCells[index + fixedCols].textContent = value || '新重量';
+        headerCells[index + fixedCols].textContent = value || '新费用项目';
     }
     syncInlinePriceAdjustPanel(editor);
 }
@@ -2569,11 +3068,28 @@ function initWeightInputListeners() {
     });
 }
 
-// 添加重量列
+// 添加费用项目列（与「添加行」一样可随时增删）
 function addWeightColumn(btn) {
-    const container = btn.parentElement;
-    
-    // 创建重量项（含拖拽手柄，与重量列设置顺序同步）
+    const editor = btn.closest('.channel-editor');
+    if (!editor) return;
+    const weightEditor = editor.querySelector('.weight-editor');
+    const addBtnInList = weightEditor && weightEditor.querySelector('.add-weight-btn');
+    if (!weightEditor || !addBtnInList) {
+        alert('未找到「费用项目」区域，请刷新页面后重试。');
+        return;
+    }
+    const table = getChannelDataTable(editor);
+    if (!table) {
+        alert('未找到价格表，请刷新页面后重试。');
+        return;
+    }
+    const headerRow = table.querySelector('thead tr');
+    const insertThBefore = getInsertBeforeFeeColumnHeaderTh(headerRow);
+    if (!insertThBefore) {
+        alert('表头结构异常，无法插入费用列。请刷新页面后重试。');
+        return;
+    }
+
     const weightItem = document.createElement('div');
     weightItem.className = 'weight-item';
     weightItem.setAttribute('draggable', 'false');
@@ -2582,31 +3098,32 @@ function addWeightColumn(btn) {
     weightItem.ondrop = weightDrop;
     weightItem.innerHTML = `
         <span class="weight-drag-handle" draggable="true" ondragstart="weightDragStart(event)" title="拖动可调整列顺序">⋮⋮</span>
-        <input type="text" class="weight-input" placeholder="重量" value="">
-        <button class="weight-delete-btn" onclick="removeWeightColumn(this)">×</button>
+        <input type="text" class="weight-input" placeholder="如 100KG、挂号费" value="">
+        <button type="button" class="weight-delete-btn" data-ch-act="remove-weight" title="删除此费用列">×</button>
     `;
-    container.insertBefore(weightItem, btn);
-    
-    // 同时在表格中添加列
-    const editor = btn.closest('.channel-editor');
-    const table = editor.querySelector('table');
-    
-    // 添加表头
-    const headerRow = table.querySelector('thead tr');
+    weightEditor.insertBefore(weightItem, addBtnInList);
+
     const th = document.createElement('th');
-    th.textContent = '新重量';
     th.className = 'weight-col';
-    headerRow.insertBefore(th, headerRow.querySelector('th:nth-last-child(2)'));
-    
-    // 添加数据列
-    table.querySelectorAll('tbody tr').forEach(row => {
+    th.textContent = '新费用项目';
+    headerRow.insertBefore(th, insertThBefore);
+
+    table.querySelectorAll('tbody tr').forEach(function(row) {
         const td = document.createElement('td');
         td.innerHTML = '<input type="text" class="price" value="">';
-        const deliveryTd = row.querySelector('.delivery-time').closest('td');
-        row.insertBefore(td, deliveryTd);
+        const beforeDelivery = getInsertBeforeFeeColumnDataCell(row);
+        if (beforeDelivery) {
+            row.insertBefore(td, beforeDelivery);
+        } else {
+            const ch = row.querySelector('input.channel');
+            if (ch && ch.closest('td')) {
+                row.insertBefore(td, ch.closest('td'));
+            } else {
+                row.appendChild(td);
+            }
+        }
     });
-    
-    // 绑定新添加的重量输入框的事件监听器
+
     const newInput = weightItem.querySelector('.weight-input');
     newInput.addEventListener('input', function() {
         updateWeightColumnHeader(this);
@@ -2614,7 +3131,8 @@ function addWeightColumn(btn) {
     syncInlinePriceAdjustPanel(editor);
     const focusNewWeightInput = function(retriesLeft) {
         weightItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        btn.blur();
+        if (btn && btn.blur) btn.blur();
+        if (addBtnInList && addBtnInList !== btn) addBtnInList.blur();
         newInput.focus();
         newInput.select();
         if (document.activeElement !== newInput && retriesLeft > 0) {
@@ -2720,16 +3238,13 @@ function removeWeightColumn(btn) {
     const allWeightItems = Array.from(weightEditor.querySelectorAll('.weight-item'));
     const index = allWeightItems.indexOf(weightItem);
     
-    // 至少保留一列
-    if (allWeightItems.length <= 1) {
-        alert('至少保留一个重量列');
-        return;
-    }
-    
-    // 删除重量输入框
+    // 删除费用项输入行（可删至 0 列，与删行一样灵活）
     weightItem.remove();
     
-    const table = editor.querySelector('table');
+    const table = getChannelDataTable(editor);
+    if (!table) {
+        return;
+    }
     const fixedCols = getChannelFixedColCount(editor);
     const headerRow = table.querySelector('thead tr');
     const headerCells = headerRow.querySelectorAll('th');
@@ -2747,18 +3262,26 @@ function removeWeightColumn(btn) {
 
 // 添加表格行（大件/纸箱简化表无目的港、区域，邮编默认 0000,0001）
 function addTableRow(btn) {
-    const tableEditor = btn.closest('.channel-table-editor');
     const editor = btn.closest('.channel-editor');
+    if (!editor) {
+        return;
+    }
+    const tableEditor = editor.querySelector('.channel-table-editor');
     const isSimple = tableEditor && tableEditor.dataset.channelSimple === '1';
     const weights = Array.from(editor.querySelectorAll('.weight-input')).map(input => input.value);
-    const tbody = editor.querySelector('tbody');
-    
+    const table = getChannelDataTable(editor);
+    const tbody = table ? table.querySelector('tbody') : null;
+    if (!tbody) {
+        alert('未找到表体，请刷新页面后重试。');
+        return;
+    }
     const tr = document.createElement('tr');
+    const rowActBtns = `<button type="button" class="delete-row-btn" data-ch-act="row-delete" aria-label="删除本行">×</button>
+            <button type="button" class="delete-row-btn" data-ch-act="row-copy" style="margin-left:4px;background:#4b9cff;" aria-label="复制本行">⧉</button>`;
     if (isSimple) {
         tr.innerHTML = `
         <td>
-            <button class="delete-row-btn" onclick="deleteRow(this)">×</button>
-            <button class="delete-row-btn" style="margin-left:4px;background:#4b9cff;" onclick="copyRow(this)">⧉</button>
+            ${rowActBtns}
         </td>
         <td><input type="text" class="postcode-range" value="0000,0001"></td>
         ${weights.map(() => '<td><input type="text" class="price" value=""></td>').join('')}
@@ -2768,8 +3291,7 @@ function addTableRow(btn) {
     } else {
         tr.innerHTML = `
         <td>
-            <button class="delete-row-btn" onclick="deleteRow(this)">×</button>
-            <button class="delete-row-btn" style="margin-left:4px;background:#4b9cff;" onclick="copyRow(this)">⧉</button>
+            ${rowActBtns}
         </td>
         <td><input type="text" class="state-name" value=""></td>
         <td><input type="text" class="postcode-range" value=""></td>
@@ -2787,20 +3309,11 @@ function deleteRow(btn) {
     btn.closest('tr').remove();
 }
 
-// 复制当前行到下方
+// 复制当前行到下方（#modulesContainer 委托处理 data-ch-act，无内联绑定）
 function copyRow(btn) {
     const row = btn.closest('tr');
     const tbody = row.parentElement;
     const clone = row.cloneNode(true);
-    // 重新绑定按钮上的事件（因为 cloneNode 不复制 inline 绑定以外的逻辑，这里主要是保证语义清晰）
-    const buttons = clone.querySelectorAll('button');
-    buttons.forEach(b => {
-        if (b.textContent === '×') {
-            b.setAttribute('onclick', 'deleteRow(this)');
-        } else {
-            b.setAttribute('onclick', 'copyRow(this)');
-        }
-    });
     tbody.insertBefore(clone, row.nextSibling);
 }
 
@@ -2865,7 +3378,7 @@ function syncInlinePriceAdjustPanel(editor) {
     updateInlinePriceAdjustColumnHighlight(editor, panel);
 
     if (!weights.length) {
-        weightList.innerHTML = '<div class="price-adjust-preview-empty" style="width:100%;">当前没有可用的公斤列</div>';
+        weightList.innerHTML = '<div class="price-adjust-preview-empty" style="width:100%;">没有可参与批量调价的费用列：请先在上方添加费用项目，或检查表头是否被标为说明类</div>';
         return;
     }
 
@@ -2943,7 +3456,10 @@ function commitInlinePriceAdjustmentPreview(panel) {
 
 function isAdjustableWeightLabel(value) {
     const normalized = String(value || '').trim();
-    return /^\d+(\.\d+)?$/i.test(normalized) || /kg/i.test(normalized);
+    if (!normalized) return false;
+    // 明显为说明类、非单价的列不参与批量调价勾选（单元格内仍只改纯数字）
+    if (/备注|标准|规则|说明|注意|澳洲小包|限定/.test(normalized)) return false;
+    return true;
 }
 
 function getPriceInputsByWeightIndex(editor, weightIndex) {
@@ -3029,7 +3545,7 @@ async function savePriceAdjustData(btn) {
     const selectedIndexes = getSelectedPriceAdjustIndexes(panel);
 
     if (!selectedIndexes.length) {
-        alert('请先选择至少一个公斤列');
+        alert('请先选择至少一列费用项目');
         return;
     }
 

@@ -1,0 +1,17 @@
+{# 文章详情中的单个 DG 报价表模块（article / article_dg 共用） #}
+{% set content = module.content | from_json %}
+<div class="module module-dg-grid{% if (content.schema|default(0))|int == 2 %} module-dg-grid--v2{% endif %}">
+    {% if content.title %}
+    <div class="dg-grid-title">{{ content.title }}</div>
+    {% endif %}
+    {% if (content.schema|default(0))|int == 2 %}
+    {{ content | dg_grid_render_table }}
+    {% else %}
+    <div class="dg-grid-scroll">
+        {{ content | dg_grid_render_table }}
+    </div>
+    {% endif %}
+    {% if content.remark %}
+    <div class="module-remark">{{ content.remark | safe_html }}</div>
+    {% endif %}
+</div>

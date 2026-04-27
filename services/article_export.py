@@ -211,13 +211,129 @@ def _write_channel_module(sheet, row, content):
     return row
 
 
+def _write_dg_grid_v2_module(sheet, row, c):
+    """DG v2：抬头、客户、单证、费用行、备注（简要导出）。"""
+    from openpyxl.styles import Alignment, Font
+
+    hm, hs = c.get("header_main") or "", c.get("header_sub") or ""
+    if hm or hs:
+        row = _write_merged_text(
+            sheet,
+            row,
+            (hm or "") + (" · " if hm and hs else "") + (hs or ""),
+            font=Font(name="Microsoft YaHei", size=15, bold=True, color="0F172A"),
+            alignment=Alignment(horizontal="center", vertical="center", wrap_text=True),
+            height=26,
+        )
+    for rowobj in c.get("customer_rows") or []:
+        lab, val = (rowobj.get("label") or ""), (rowobj.get("value") or "")
+        if not str(lab).strip() and not str(val).strip():
+            continue
+        row = _write_merged_text(
+            sheet,
+            row,
+            f"{lab} {val}".strip(),
+            font=Font(name="Microsoft YaHei", size=11, color="0F172A"),
+            alignment=TEXT_ALIGNMENT,
+            height=None,
+        )
+    log = c.get("logistics") or {}
+    log_pairs = [
+        ("起运港", "origin_port"),
+        ("中转港", "transit_port"),
+        ("目的港", "dest_port"),
+        ("海外仓", "dest_warehouse"),
+        ("船名航次", "vessel"),
+    ]
+    log_parts = [f"{lab}：{log.get(k) or ''}" for lab, k in log_pairs if (log.get(k) or "").strip()]
+    if log_parts:
+        row = _write_merged_text(
+            sheet,
+            row,
+            "　".join(log_parts),
+            font=BODY_FONT,
+            alignment=TEXT_ALIGNMENT,
+        )
+    row = _write_section_title(sheet, row, "费用项目")
+    headers = ["提单号", "柜号", "费用项目", "币别", "金额", "说明"]
+    for i, h in enumerate(headers, start=1):
+        cell = sheet.cell(row=row, column=i, value=h)
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.border = HEADER_BORDER
+        cell.alignment = CELL_ALIGNMENT
+    sheet.row_dimensions[row].height = 20
+    row += 1
+    for it in c.get("fee_items") or []:
+        is_sub = (it.get("row_kind") or "item") == "subtotal"
+        if is_sub:
+            for j, v in enumerate(
+                [it.get("bl_no", ""), it.get("container_no", "")], start=1
+            ):
+                cell = sheet.cell(row=row, column=j, value=str(v) if v is not None else "")
+                cell.font = BODY_FONT
+                cell.border = TABLE_BORDER
+                cell.alignment = TEXT_ALIGNMENT
+            sheet.merge_cells(start_row=row, start_column=3, end_row=row, end_column=4)
+            cname = sheet.cell(
+                row=row, column=3, value=str(it.get("name") or "")
+            )
+            cname.font = Font(name="Microsoft YaHei", size=12, color="0F172A", bold=True)
+            cname.border = TABLE_BORDER
+            cname.alignment = TEXT_ALIGNMENT
+            for j, v in ((5, it.get("amount", "")), (6, it.get("note", ""))):
+                cell = sheet.cell(
+                    row=row, column=j, value=str(v) if v is not None else ""
+                )
+                cell.font = BODY_FONT
+                cell.border = TABLE_BORDER
+                cell.alignment = TEXT_ALIGNMENT
+            line = [
+                it.get("bl_no", ""),
+                it.get("container_no", ""),
+                it.get("name", ""),
+                it.get("amount", ""),
+                it.get("note", ""),
+            ]
+        else:
+            line = [
+                it.get("bl_no", ""),
+                it.get("container_no", ""),
+                it.get("name", ""),
+                it.get("currency", ""),
+                it.get("amount", ""),
+                it.get("note", ""),
+            ]
+            for j, v in enumerate(line, start=1):
+                cell = sheet.cell(row=row, column=j, value=str(v) if v is not None else "")
+                cell.font = BODY_FONT
+                cell.border = TABLE_BORDER
+                cell.alignment = TEXT_ALIGNMENT
+        sheet.row_dimensions[row].height = max(
+            16, _estimate_row_height([str(x) for x in line])
+        )
+        row += 1
+    for cc in range(1, 7):
+        sheet.column_dimensions[get_column_letter(cc)].width = min(20, 10 + (cc * 0.3))
+    remark = c.get("remark")
+    if remark:
+        for block in _html_to_blocks(remark):
+            row = _write_merged_text(sheet, row, block, font=BODY_FONT, alignment=TEXT_ALIGNMENT)
+    return row
+
+
 def _write_dg_grid_module(sheet, row, content):
-    """与文章详情页 render_dg_table 一致：合并、提单号行橙底、标题为居中主标题（非蓝条分节）。"""
+    """v2 为分块报价；旧数据为合并矩阵表。"""
+    from services.dg_quote_grid import is_dg_content_v2, merge_dg_v2_content
+
+    c = content if isinstance(content, dict) else _loads_content(content)
+    c = c if isinstance(c, dict) else {}
+    if is_dg_content_v2(c):
+        return _write_dg_grid_v2_module(sheet, row, merge_dg_v2_content(c))
     from openpyxl.styles import Alignment, Font
 
     from services.dg_quote_grid import _prepare_dg_table_structure, prepare_dg_table_display
 
-    c = content if isinstance(content, dict) else _loads_content(content)
     title = (c or {}).get("title") or "DG 报价表"
     row = _write_merged_text(
         sheet,

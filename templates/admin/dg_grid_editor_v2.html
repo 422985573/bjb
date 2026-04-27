@@ -1,0 +1,123 @@
+{# DG 模块 schema v2 编辑器（4月25日DG周鹏版式：客户信息 + 起运/单证 + 费用表）#}
+{% set dgm = dg|dg_v2_merged %}
+<div class="dg-grid-editor dg-grid-editor--v2" data-module-id="{{ module.id }}" data-dg-schema="2"
+     data-sheet-name="{{ (dgm.sheet_name or '')|e }}"
+     data-template-file="{{ (dgm.template_file or '')|e }}">
+    <div class="dg-editor">
+        <div class="dg-grid-editor-section">
+            <h4>📋 模块标题（侧栏与列表用）</h4>
+            <input type="text" class="module-title-input dg-v2-title-input" data-module-id="{{ module.id }}"
+                   placeholder="如：DG 报价表"
+                   value="{{ dgm.title|e if dgm.title else '' }}"
+                   oninput="updateModuleTitle({{ module.id }}, this.value)">
+        </div>
+        <div class="dg-grid-editor-section dg-v2-metasheet-wrap">
+            <h4>报价抬头 / 客户 / 起运与单证</h4>
+            {% set log = dgm.logistics %}
+            <div class="dg-table-scroll">
+            <table class="dg-v2-metasheet-table" aria-label="抬头与客户及单证">
+                <tr class="dg-v2-s-main"><th colspan="4">
+                    <input type="text" class="dg-v2-metasheet-h1 dg-v2-header-main" placeholder="主标题" value="{{ dgm.header_main|e }}">
+                </th></tr>
+                <tr class="dg-v2-s-sub"><th colspan="4">
+                    <input type="text" class="dg-v2-metasheet-h2 dg-v2-header-sub" placeholder="副标题" value="{{ dgm.header_sub|e }}">
+                </th></tr>
+                {% for i in range(0, dgm.customer_rows|length) %}
+                {% if i % 2 == 0 %}
+                <tr class="dg-v2-s-cust">
+                {% set a = dgm.customer_rows[i] %}
+                    <th scope="row" class="dg-v2-ms-lab"><input type="text" class="dg-v2-cust-label" value="{{ a.label|e }}" placeholder="标签"></th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-cust-value" value="{{ a.value|e }}" placeholder="内容"></td>
+                    {% if i + 1 < dgm.customer_rows|length %}
+                    {% set b = dgm.customer_rows[i + 1] %}
+                    <th scope="row" class="dg-v2-ms-lab"><input type="text" class="dg-v2-cust-label" value="{{ b.label|e }}" placeholder="标签"></th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-cust-value" value="{{ b.value|e }}" placeholder="内容"></td>
+                    {% else %}
+                    <th scope="row" class="dg-v2-ms-lab"><input type="text" class="dg-v2-cust-label" value="" placeholder="标签"></th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-cust-value" value="" placeholder="内容"></td>
+                    {% endif %}
+                </tr>
+                {% endif %}
+                {% endfor %}
+                <tr class="dg-v2-s-log">
+                    <th scope="row" class="dg-v2-ms-lab">起运港</th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="origin_port" value="{{ log.origin_port|e }}"></td>
+                    <th scope="row" class="dg-v2-ms-lab">中转港</th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="transit_port" value="{{ log.transit_port|e }}"></td>
+                </tr>
+                <tr class="dg-v2-s-log">
+                    <th scope="row" class="dg-v2-ms-lab">目的港</th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="dest_port" value="{{ log.dest_port|e }}"></td>
+                    <th scope="row" class="dg-v2-ms-lab">海外仓</th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="dest_warehouse" value="{{ log.dest_warehouse|e }}"></td>
+                </tr>
+                <tr class="dg-v2-s-log">
+                    <th scope="row" class="dg-v2-ms-lab">船名航次</th>
+                    <td class="dg-v2-ms-val"><input type="text" class="dg-v2-loc" data-loc="vessel" value="{{ log.vessel|e }}"></td>
+                    <th scope="row" class="dg-v2-ms-lab"></th>
+                    <td class="dg-v2-ms-val"></td>
+                </tr>
+            </table>
+            </div>
+        </div>
+        <div class="dg-grid-editor-section">
+            <div class="channel-section-header">
+                <h4>💰 费用项目</h4>
+            </div>
+            <div class="dg-v2-fee-table-editor">
+                <div class="dg-table-scroll">
+                    <table class="dg-v2-fee-table">
+                        <thead>
+                            <tr>
+                                <th>提单号</th>
+                                <th>柜号</th>
+                                <th>费用项目</th>
+                                <th>币别</th>
+                                <th>金额</th>
+                                <th>说明</th>
+                                <th class="dg-v2-fee-th-act">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dg-v2-fee-tbody">
+                            {% for it in dgm.fee_items %}
+                            {% set fee_rk = it.row_kind|default('item') %}
+                            {% if fee_rk == 'subtotal' %}
+                            <tr class="dg-v2-fee-tr dg-v2-fee-tr--subtotal" data-fee-row-kind="subtotal">
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value="{{ it.bl_no|default('')|e }}"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value="{{ it.container_no|default('')|e }}"></td>
+                                <td colspan="2" class="dg-v2-fee-td-merged"><input type="text" class="dg-v2-fee-inp" data-f="name" value="{{ it.name|e }}" placeholder="如 RMB合计"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="amount" value="{{ it.amount|e }}"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="note" value="{{ it.note|e }}"></td>
+                                <td class="dg-v2-fee-td-act">
+                                    <button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr class="dg-v2-fee-tr dg-v2-fee-tr--item" data-fee-row-kind="item">
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value="{{ it.bl_no|default('')|e }}"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value="{{ it.container_no|default('')|e }}"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="name" value="{{ it.name|e }}"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="currency" value="{{ it.currency|e }}"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="amount" value="{{ it.amount|e }}"></td>
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="note" value="{{ it.note|e }}"></td>
+                                <td class="dg-v2-fee-td-act">
+                                    <button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="dg-v2-fee-add-bar">
+                    <button type="button" class="ch-tool-btn add-row-btn" data-dg-v2-act="add-fee" data-fee-row-kind="item" data-dg-target="{{ module.id }}">+ 项目行</button>
+                    <button type="button" class="ch-tool-btn add-row-btn" data-dg-v2-act="add-fee" data-fee-row-kind="subtotal" data-dg-target="{{ module.id }}">+ 合计行</button>
+                </div>
+            </div>
+        </div>
+        <div class="remark-section">
+            <label>📌 模块备注（显示在模块下方，支持HTML）</label>
+            <textarea class="remark-editor dg-grid-remark" style="min-height: 80px;">{{ dgm.remark if dgm.remark else '' }}</textarea>
+        </div>
+    </div>
+</div>

@@ -177,17 +177,7 @@
                 </div>
 
                 {% elif module.type == 'dg_grid' %}
-                <div class="module module-dg-grid">
-                    {% if content.title %}
-                    <div class="dg-grid-title">{{ content.title }}</div>
-                    {% endif %}
-                    <div class="dg-grid-scroll">
-                        {{ content | dg_grid_render_table }}
-                    </div>
-                    {% if content.remark %}
-                    <div class="module-remark">{{ content.remark | safe_html }}</div>
-                    {% endif %}
-                </div>
+                {% include 'partials/dg_grid_article_block.html' %}
                 {% endif %}
             {% endfor %}
         </div>

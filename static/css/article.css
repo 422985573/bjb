@@ -1,3 +1,8 @@
+/* 仅含 DG 模块的文章（article_dg.html） */
+.article-container--dg-page .article-content {
+    padding-top: 0.25rem;
+}
+
 /* DG 报价表模块（xlsx 网格，前台只读） */
 .module-dg-grid {
     margin: 1rem 0;
@@ -48,6 +53,76 @@
     font-weight: 600;
     color: #0f172a;
 }
+
+/* DG 报价 schema v2：抬头+客户+单证 同一张四列表（对齐 xlsx） */
+.dg-quote-v2 {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0.75rem 0.5rem 1rem;
+    overflow: hidden;
+}
+.dg-quote-v2-meta {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    table-layout: fixed;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    margin-bottom: 0.75rem;
+}
+.dg-quote-v2-meta th,
+.dg-quote-v2-meta td {
+    border: 1px solid #cbd5e1;
+    padding: 0.4rem 0.5rem;
+    vertical-align: top;
+    word-break: break-word;
+}
+.dg-quote-v2-meta .dg-c-main th,
+.dg-quote-v2-meta .dg-c-sub th {
+    text-align: center;
+    font-weight: 700;
+    color: #0f172a;
+    background: #f8fafc;
+    padding: 0.55rem 0.5rem;
+}
+.dg-quote-v2-meta .dg-c-main th { font-size: 1.05rem; }
+.dg-quote-v2-meta .dg-c-sub th {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #334155;
+}
+/* 数据区整表统一：标签列灰底左对齐、值列白底左对齐（客户行与起运/单证行一致） */
+.dg-quote-v2-meta .dg-c-lab {
+    width: 18%;
+    font-weight: 500;
+    color: #334155;
+    background: #f1f5f9;
+    text-align: left;
+    white-space: normal;
+}
+.dg-quote-v2-meta .dg-c-val {
+    width: 32%;
+    color: #0f172a;
+    text-align: left;
+    background: #fff;
+}
+.dg-quote-v2-sec-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    margin: 0.75rem 0 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #e0e7ff;
+}
+.dg-quote-v2-section { margin: 0 0.4rem; }
+.dg-quote-v2-fee-block .dg-quote-v2-fee-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 0.35rem; }
+.dg-quote-v2-fee { table-layout: auto; width: 100%; border-collapse: collapse; font-size: 12px; }
+.dg-quote-v2-fee th, .dg-quote-v2-fee td { border: 1px solid #cbd5e1; padding: 0.35rem 0.4rem; text-align: left; vertical-align: top; }
+.dg-quote-v2-fee thead th { background: #eff6ff; color: #1e3a5f; font-weight: 600; }
+.dg-quote-v2-fee tr.dg-quote-v2-fee-tr--subtotal td { background: #f8fafc; font-weight: 600; color: #0f172a; }
+.dg-quote-v2-fee tr.dg-quote-v2-fee-tr--subtotal .dg-c-fee-merged-lab { background: #f1f5f9; }
+.module-dg-grid--v2 .dg-grid-title { margin-bottom: 0.5rem; }
 
 .module-remark {
     white-space: pre-wrap;

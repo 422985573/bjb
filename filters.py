@@ -203,11 +203,25 @@ def dg_grid_normalize_filter(cells):
     return normalize_dg_grid_cells(cells or [])
 
 
+def dg_v2_merged_filter(module_content):
+    """后台编辑：补全 DG v2 缺省字段。"""
+    from services.dg_quote_grid import merge_dg_v2_content
+
+    c = module_content
+    if c is None:
+        c = {}
+    if isinstance(c, str):
+        c = from_json_filter(c)
+    if not isinstance(c, dict):
+        c = {}
+    return merge_dg_v2_content(c)
+
+
 def dg_grid_render_table_filter(module_content):
-    """DG 报价表：按合并区渲染 <table>；无 merges 时与 normalize 后平铺一致。含提单号行橙色底。"""
+    """DG 报价表：v2 为分块版式；旧数据为合并 <table>。"""
     from markupsafe import Markup
 
-    from services.dg_quote_grid import prepare_dg_table_display, render_dg_table_html
+    from services.dg_quote_grid import is_dg_content_v2, prepare_dg_table_display, render_dg_quote_v2_html, render_dg_table_html
 
     c = module_content
     if c is None:
@@ -216,6 +230,9 @@ def dg_grid_render_table_filter(module_content):
         c = from_json_filter(c)
     if not isinstance(c, dict):
         return Markup('')
+
+    if is_dg_content_v2(c):
+        return render_dg_quote_v2_html(c)
 
     cells, merges, hr = prepare_dg_table_display(c)
     return Markup(render_dg_table_html(cells, merges, hr))
@@ -247,6 +264,7 @@ def register_filters(app):
     app.jinja_env.filters['format_datetime_beijing'] = format_datetime_beijing_filter
     app.jinja_env.filters['dg_grid_trim_leading'] = dg_grid_trim_leading_filter
     app.jinja_env.filters['dg_grid_normalize'] = dg_grid_normalize_filter
+    app.jinja_env.filters['dg_v2_merged'] = dg_v2_merged_filter
     app.jinja_env.filters['dg_grid_render_table'] = dg_grid_render_table_filter
     app.jinja_env.filters['dg_grid_editable_table'] = dg_grid_editable_table_filter
 

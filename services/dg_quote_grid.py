@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""从 DG 报价 xlsx 加载默认可编辑网格（用于 dg_grid 模块）。"""
+"""DG 报价表模块：新模块默认用 empty_dg_grid_content() 空白网格外加；仍保留从 xlsx 读表的工具函数。"""
 from datetime import date, datetime
 import html
 import os
@@ -321,9 +321,356 @@ def render_dg_table_editable_html(cells, merges=None, header_orange_row=None):
                 f'<td{attr}><textarea class="dg-grid-cell-input" data-r="{r}" data-c="{c}" '
                 f'rows="1" spellcheck="false" autocomplete="off">{text}</textarea></td>'
             )
+        parts.append(
+            '<td class="dg-grid-cell dg-grid-cell--row-action" data-dg-side="actions">'
+            '<button type="button" class="dg-row-del-btn" data-dg-act="remove-row" title="删除本行">'
+            "删除</button></td>"
+        )
         parts.append('</tr>')
     parts.append('</tbody></table>')
     return ''.join(parts)
+
+
+# --- DG 模块 schema v2：对齐「4月25日DG周鹏.xlsx」结构（上：客户与单证，下：费用表）---
+DG_SCHEMA_V2 = 2
+
+
+def default_dg_v2_customer_rows():
+    """与项目根目录「4月25日DG周鹏.xlsx」Sheet1 客户区一致（5 行 × 两列键值对）。"""
+    return [
+        {"label": "客户ID编码：", "value": "周鹏"},
+        {"label": "报价日期：", "value": "2026-04-25"},
+        {"label": "客户地址：", "value": ""},
+        {
+            "label": "公司地址：",
+            "value": "深圳市宝安区福永街道翠岗西路怀德国际大厦1801",
+        },
+        {"label": "联系人/职位：", "value": ""},
+        {"label": "联系人：", "value": ""},
+        {"label": "电话/分机：", "value": ""},
+        {"label": "电话：", "value": ""},
+        {"label": "Email：", "value": ""},
+        {"label": "Email：", "value": ""},
+    ]
+
+
+def default_dg_v2_logistics():
+    """起运/目的/船名；提单号与柜号在费用表各列，不在此表。与 4月25日DG周鹏.xlsx 起运/单证区一致。"""
+    return {
+        "origin_port": "深圳",
+        "transit_port": "",
+        "dest_port": "SYD海外仓",
+        "dest_warehouse": "",
+        "vessel": "",
+    }
+
+
+def _dg_v2_fee_subtotal(name, amount, note=""):
+    """与 xlsx 一致：「费用项目」+「币别」合并为同一格（row_kind=subtotal）。"""
+    amt = ""
+    if amount is not None and amount != "":
+        amt = str(amount)
+    return {
+        "row_kind": "subtotal",
+        "bl_no": "",
+        "container_no": "",
+        "name": name,
+        "currency": "",
+        "amount": amt,
+        "note": note or "",
+    }
+
+
+def default_dg_v2_fee_items():
+    """与 4月25日DG周鹏.xlsx 费用行一致（含 RMB 小计、汇率说明行、总合计，合并格同表）。"""
+    z = {"row_kind": "item", "bl_no": "", "container_no": ""}
+    return [
+        {
+            "name": "Container loading fee/装箱费",
+            "currency": "RMB",
+            "amount": "800",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "customs clearance fee/报关费",
+            "currency": "RMB",
+            "amount": "500",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "Maritime declaration fee/海事申报费",
+            "currency": "RMB",
+            "amount": "不确定项",
+            "note": "400/个un",
+            **z,
+        },
+        {
+            "name": "supervision fee for loading/危险品监装费",
+            "currency": "RMB",
+            "amount": "不确定项",
+            "note": "低消1500，超出550/小时",
+            **z,
+        },
+        {
+            "name": "container stuffing charge/提箱费",
+            "currency": "RMB",
+            "amount": "2000",
+            "note": "",
+            **z,
+        },
+        _dg_v2_fee_subtotal("RMB合计", 3300),
+        {
+            "name": "B/L surrender fee/电放费",
+            "currency": "RMB",
+            "amount": "450",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "Sealing fee/封条费",
+            "currency": "RMB",
+            "amount": "50",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "THC/码头操作费",
+            "currency": "RMB",
+            "amount": "900",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "DOC/文件",
+            "currency": "RMB",
+            "amount": "450",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "ocean freight/海运费",
+            "currency": "USD",
+            "amount": "1750",
+            "note": "20GP",
+            **z,
+        },
+        _dg_v2_fee_subtotal("RMB合计", 14450),
+        {
+            "name": "码头杂费",
+            "currency": "AUD",
+            "amount": "850",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "DOC/文件费",
+            "currency": "AUD",
+            "amount": "300",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "Custom Clearance清关费+税金",
+            "currency": "AUD",
+            "amount": "180",
+            "note": "税金实报实销",
+            **z,
+        },
+        {
+            "name": "Devanning/拆柜",
+            "currency": "AUD",
+            "amount": "",
+            "note": "",
+            **z,
+        },
+        {
+            "name": "Delivery fee/派送费",
+            "currency": "AUD",
+            "amount": "1100",
+            "note": "",
+            **z,
+        },
+        _dg_v2_fee_subtotal("RMB合计", 11907),
+        _dg_v2_fee_subtotal("美金/澳币兑换人民币汇率", "", "参考即时汇率"),
+        _dg_v2_fee_subtotal("总合计", 29657, "不包含不确定项"),
+    ]
+
+
+def is_dg_content_v2(c):
+    """新结构：schema=2。旧数据无此字段，仍为合并单元格矩阵。"""
+    if not c or not isinstance(c, dict):
+        return False
+    try:
+        return int(c.get("schema") or 0) == DG_SCHEMA_V2
+    except (TypeError, ValueError):
+        return False
+
+
+def merge_dg_v2_content(d):
+    """补全 v2 缺省键，供后台/渲染使用。"""
+    d = dict(d) if d else {}
+    if not d.get("customer_rows") or not isinstance(d.get("customer_rows"), list):
+        d["customer_rows"] = default_dg_v2_customer_rows()
+    else:
+        # 与默认条数不一致时只保留已有，不强制补齐
+        pass
+    if not d.get("logistics") or not isinstance(d.get("logistics"), dict):
+        d["logistics"] = default_dg_v2_logistics()
+    else:
+        base = default_dg_v2_logistics()
+        base.update(d["logistics"])
+        d["logistics"] = base
+    # 旧数据：提单/柜在 logistics 时迁入费用行
+    mbl = (d.get("logistics") or {}).get("bl_no") or ""
+    mct = (d.get("logistics") or {}).get("container_no") or ""
+    if "logistics" in d and isinstance(d["logistics"], dict):
+        d["logistics"].pop("bl_no", None)
+        d["logistics"].pop("container_no", None)
+    if not d.get("fee_items") or not isinstance(d.get("fee_items"), list):
+        d["fee_items"] = default_dg_v2_fee_items()
+    elif len(d["fee_items"]) == 0:
+        d["fee_items"] = default_dg_v2_fee_items()
+    any_bl = any(
+        (isinstance(x, dict) and (x.get("bl_no") or "").strip()) for x in (d.get("fee_items") or [])
+    )
+    any_cn = any(
+        (isinstance(x, dict) and (x.get("container_no") or "").strip()) for x in (d.get("fee_items") or [])
+    )
+    for it in d.get("fee_items") or []:
+        if not isinstance(it, dict):
+            continue
+        it.setdefault("bl_no", "")
+        it.setdefault("container_no", "")
+        rk = it.get("row_kind") or "item"
+        it["row_kind"] = rk if rk in ("item", "subtotal") else "item"
+        if it["row_kind"] == "subtotal":
+            it["currency"] = ""
+        if it["row_kind"] != "subtotal":
+            if mbl and not any_bl and not (it.get("bl_no") or "").strip():
+                it["bl_no"] = mbl
+            if mct and not any_cn and not (it.get("container_no") or "").strip():
+                it["container_no"] = mct
+    d.setdefault("header_main", "中海豹国际")
+    d.setdefault("header_sub", "报价单")
+    d.pop("footer_note", None)
+    d.setdefault("title", "DG 报价表")
+    d.setdefault("template_file", "")
+    d.setdefault("sheet_name", "")
+    d.setdefault("remark", "")
+    d["schema"] = DG_SCHEMA_V2
+    return d
+
+
+def render_dg_quote_v2_html(c):
+    """文章页 v2 模块 HTML（抬头+客户+单证与 Excel 同一张四列表，不含模块标题与 remark 外层）。"""
+    from markupsafe import Markup, escape
+
+    c = merge_dg_v2_content(c if isinstance(c, dict) else {})
+    parts = ['<div class="dg-quote-v2">']
+    # 与 xlsx 一致：大标题、副标题、客户两列一组、起运/单证两列一组，合并在同一 <table> 内
+    parts.append(
+        '<table class="dg-quote-v2-meta" role="presentation" aria-label="报价抬头与客户及单证">'
+    )
+    parts.append(
+        f'<tr class="dg-c-main"><th colspan="4" scope="col">{escape(c.get("header_main") or "")}</th></tr>'
+    )
+    parts.append(
+        f'<tr class="dg-c-sub"><th colspan="4" scope="col">{escape(c.get("header_sub") or "")}</th></tr>'
+    )
+    cust = c.get("customer_rows") or []
+    for i in range(0, len(cust), 2):
+        a, b = cust[i], (cust[i + 1] if i + 1 < len(cust) else None)
+        parts.append(
+            f'<tr class="dg-c-kv">'
+            f'<th scope="row" class="dg-c-lab">{escape(str(a.get("label") or ""))}</th>'
+            f'<td class="dg-c-val">{escape(str(a.get("value") or ""))}</td>'
+        )
+        if b is not None:
+            parts.append(
+                f'<th scope="row" class="dg-c-lab">{escape(str(b.get("label") or ""))}</th>'
+                f'<td class="dg-c-val">{escape(str(b.get("value") or ""))}</td></tr>'
+            )
+        else:
+            parts.append('<th scope="row" class="dg-c-lab"></th><td class="dg-c-val"></td></tr>')
+    log = c.get("logistics") or {}
+    log_quads = [
+        (
+            ("起运港", "origin_port"),
+            ("中转港", "transit_port"),
+        ),
+        (
+            ("目的港", "dest_port"),
+            ("海外仓", "dest_warehouse"),
+        ),
+    ]
+    for quad in log_quads:
+        left, right = quad[0], quad[1]
+        parts.append(
+            f'<tr class="dg-c-log">'
+            f'<th scope="row" class="dg-c-lab">{escape(left[0])}</th>'
+            f'<td class="dg-c-val">{escape(str(log.get(left[1]) or ""))}</td>'
+            f'<th scope="row" class="dg-c-lab">{escape(right[0])}</th>'
+            f'<td class="dg-c-val">{escape(str(log.get(right[1]) or ""))}</td></tr>'
+        )
+    # 提单号、柜号在下方费用表各列
+    parts.append(
+        f'<tr class="dg-c-log">'
+        f'<th scope="row" class="dg-c-lab">船名航次</th>'
+        f'<td class="dg-c-val">{escape(str(log.get("vessel") or ""))}</td>'
+        f'<th scope="row" class="dg-c-lab"></th><td class="dg-c-val"></td></tr>'
+    )
+    parts.append("</table>")
+    parts.append(
+        '<div class="dg-quote-v2-section dg-quote-v2-fee-block">'
+        '<h3 class="dg-quote-v2-sec-title">费用项目</h3>'
+        '<div class="dg-quote-v2-fee-wrap"><table class="dg-quote-v2-fee">'
+        "<thead><tr><th>提单号</th><th>柜号</th><th>费用项目</th><th>币别</th><th>金额</th><th>说明</th></tr></thead><tbody>"
+    )
+    for it in c.get("fee_items") or []:
+        is_sub = (it.get("row_kind") or "item") == "subtotal"
+        cl = "dg-quote-v2-fee-tr" + (
+            " dg-quote-v2-fee-tr--subtotal" if is_sub else " dg-quote-v2-fee-tr--item"
+        )
+        parts.append(f'<tr class="{cl}">')
+        if is_sub:
+            parts.append(f"<td>{escape(str(it.get('bl_no') or ''))}</td>")
+            parts.append(f"<td>{escape(str(it.get('container_no') or ''))}</td>")
+            parts.append(
+                f'<td colspan="2" class="dg-c-fee-merged-lab">'
+                f"{escape(str(it.get('name') or ''))}</td>"
+            )
+            parts.append(f"<td>{escape(str(it.get('amount') or ''))}</td>")
+            parts.append(f"<td>{escape(str(it.get('note') or ''))}</td>")
+        else:
+            for k in ("bl_no", "container_no", "name", "currency", "amount", "note"):
+                parts.append(f"<td>{escape(str(it.get(k) or ''))}</td>")
+        parts.append("</tr>")
+    parts.append("</tbody></table></div></div>")
+    parts.append("</div>")
+    return Markup("".join(parts))
+
+
+def empty_dg_grid_content():
+    """
+    新建「DG 报价表」：schema v2，结构对齐 4月25日DG周鹏.xlsx（客户信息 + 费用表，可增删行）。
+    """
+    return {
+        "schema": DG_SCHEMA_V2,
+        "title": "DG 报价表",
+        "header_main": "中海豹国际",
+        "header_sub": "报价单",
+        "customer_rows": default_dg_v2_customer_rows(),
+        "logistics": default_dg_v2_logistics(),
+        "fee_items": default_dg_v2_fee_items(),
+        "template_file": "",
+        "sheet_name": "",
+        "remark": (
+            "PS:如果遇到海关查验，查验费用实报实销。\n\n"
+            "备注：2620"
+        ),
+    }
 
 
 def build_default_dg_grid_content():
