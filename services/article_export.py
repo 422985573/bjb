@@ -32,6 +32,8 @@ THIN_SIDE = Side(style='thin', color='CBD5E1')
 HEADER_SIDE = Side(style='medium', color='93C5FD')
 TABLE_BORDER = Border(left=THIN_SIDE, right=THIN_SIDE, top=THIN_SIDE, bottom=THIN_SIDE)
 HEADER_BORDER = Border(left=HEADER_SIDE, right=HEADER_SIDE, top=HEADER_SIDE, bottom=HEADER_SIDE)
+# 与文章页 .dg-grid-tr-tidan-header 一致（#FFC000）
+DG_TIDAN_FILL = PatternFill("solid", fgColor="FFC000")
 HEADER_FILL = PatternFill('solid', fgColor='1D4ED8')
 HEADER_FONT = Font(name='Microsoft YaHei', size=11, bold=True, color='FFFFFF')
 CELL_ALIGNMENT = Alignment(horizontal='center', vertical='center', wrap_text=True)
@@ -48,27 +50,21 @@ QUICK_LINKS = [
 
 
 def build_article_workbook(article, modules, exported_at_text):
+    """生成工作簿。不含页头（文章标题/分类/导出时间/快捷链接），从各模块表格与正文起写。
+
+    article、exported_at_text 仍由 /export-xlsx 传入以保持接口稳定，表中不再写入。
+    """
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = SHEET_NAME
     sheet.sheet_view.showGridLines = False
-    sheet.freeze_panes = 'A3'
+    sheet.freeze_panes = None
     sheet.sheet_format.defaultRowHeight = DEFAULT_ROW_HEIGHT_PT
 
     for idx in range(1, TOTAL_COLUMNS + 1):
         sheet.column_dimensions[get_column_letter(idx)].width = 14
 
     row = 1
-    row = _write_main_title(sheet, row, article.get('title') or '文章详情')
-    meta_text = '分类：{category}    导出时间：{time}'.format(
-        category=article.get('category_name') or '未分类',
-        time=exported_at_text,
-    )
-    row = _write_merged_text(sheet, row, meta_text, font=META_FONT, alignment=TEXT_ALIGNMENT, height=22)
-    row += 1
-    row = _write_quick_links(sheet, row)
-    row += 1
-
     for module in modules:
         content = _loads_content(module.get('content'))
         module_type = (module.get('type') or '').strip().lower()
@@ -78,6 +74,8 @@ def build_article_workbook(article, modules, exported_at_text):
             row = _write_image_module(sheet, row, content)
         elif module_type == 'channel':
             row = _write_channel_module(sheet, row, content)
+        elif module_type == 'dg_grid':
+            row = _write_dg_grid_module(sheet, row, content)
         else:
             row = _write_unknown_module(sheet, row, content)
         row += 1
@@ -210,6 +208,77 @@ def _write_channel_module(sheet, row, content):
         row += 1
 
     _autosize_channel_columns(sheet, header_row, row - 1, headers)
+    return row
+
+
+def _write_dg_grid_module(sheet, row, content):
+    """与文章详情页 render_dg_table 一致：合并、提单号行橙底、标题为居中主标题（非蓝条分节）。"""
+    from openpyxl.styles import Alignment, Font
+
+    from services.dg_quote_grid import _prepare_dg_table_structure, prepare_dg_table_display
+
+    c = content if isinstance(content, dict) else _loads_content(content)
+    title = (c or {}).get("title") or "DG 报价表"
+    row = _write_merged_text(
+        sheet,
+        row,
+        title,
+        font=Font(name="Microsoft YaHei", size=16, bold=True, color="0F172A"),
+        alignment=Alignment(horizontal="center", vertical="center", wrap_text=True),
+        height=28,
+    )
+
+    cells, merges, hr_in = prepare_dg_table_display(c or {})
+    cells, merges, n, m, omit, header_orange_row = _prepare_dg_table_structure(
+        cells, merges, hr_in
+    )
+    base_row = row
+    dg_font = Font(name="Microsoft YaHei", size=11, color="0F172A")
+    dg_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for r in range(n):
+        for cc in range(m):
+            op = omit[r][cc]
+            if op is True:
+                continue
+            val = cells[r][cc] if cc < len(cells[r]) else ""
+            st = str(val) if val is not None else ""
+            cell = sheet.cell(row=base_row + r, column=1 + cc, value=st)
+            cell.font = dg_font
+            cell.alignment = dg_align
+            cell.border = TABLE_BORDER
+            if header_orange_row is not None and r == header_orange_row:
+                cell.fill = DG_TIDAN_FILL
+        visible = [
+            str(cells[r][cc] or "")
+            for cc in range(m)
+            if omit[r][cc] is not True
+        ]
+        sheet.row_dimensions[base_row + r].height = _estimate_row_height(visible)
+
+    for mg in merges:
+        r, c, rs, cs = int(mg["r"]), int(mg["c"]), int(mg["rs"]), int(mg["cs"])
+        if r < 0 or c < 0 or r + rs > n or c + cs > m:
+            continue
+        if rs == 1 and cs == 1:
+            continue
+        sheet.merge_cells(
+            start_row=base_row + r,
+            start_column=1 + c,
+            end_row=base_row + r + rs - 1,
+            end_column=1 + c + cs - 1,
+        )
+
+    for cc in range(min(m, TOTAL_COLUMNS)):
+        sheet.column_dimensions[get_column_letter(1 + cc)].width = 11.5
+
+    row = base_row + n
+    remark = (c or {}).get("remark")
+    if remark:
+        for block in _html_to_blocks(remark):
+            row = _write_merged_text(
+                sheet, row, block, font=BODY_FONT, alignment=TEXT_ALIGNMENT
+            )
     return row
 
 

@@ -1440,7 +1440,6 @@ async function globalSearchPostcode() {
     const main = (mainInput && mainInput.value.trim()) || '';
     var postcode = main.length === 4 && /^\d{4}$/.test(main) ? main : '';
     const resultSpan = document.getElementById('globalSearchResult');
-    if (!resultSpan) return;
 
     document.querySelectorAll('.channel-table tbody tr').forEach(tr => {
         tr.classList.remove('highlight');
@@ -1457,8 +1456,10 @@ async function globalSearchPostcode() {
     if (postcode.length === 0) {
         unmergeAllChannelTables();
         mergeAllChannelTables();
-        resultSpan.textContent = '';
-        resultSpan.className = 'search-result';
+        if (resultSpan) {
+            resultSpan.textContent = '';
+            resultSpan.className = 'search-result';
+        }
         if (typeof window._syncChannelNavWithSearch === 'function') window._syncChannelNavWithSearch();
         if (typeof LAST_STICKY_REFRESH === 'function') LAST_STICKY_REFRESH();
         return;
@@ -1467,7 +1468,9 @@ async function globalSearchPostcode() {
     // 生成本次查询的 token，防止上一次请求晚返回覆盖结果
     const queryToken = ++GLOBAL_POSTCODE_QUERY_TOKEN;
 
-    resultSpan.textContent = '查询中...';
+    if (resultSpan) {
+        resultSpan.textContent = '查询中...';
+    }
 
     // 按邮编匹配渠道表：匹配才高亮，不匹配不高亮（兼容所有渠道类型）
     function renderMatchedRowsForCode(code) {
@@ -1516,8 +1519,10 @@ async function globalSearchPostcode() {
         }
         const evaluateData = evaluate.data;
         if (!evaluateData || !evaluateData.data) {
-            resultSpan.textContent = getPostcodeEvaluateMessage(evaluateData, evaluate.error);
-            resultSpan.className = 'search-result error';
+            if (resultSpan) {
+                resultSpan.textContent = getPostcodeEvaluateMessage(evaluateData, evaluate.error);
+                resultSpan.className = 'search-result error';
+            }
             renderMatchedRowsForCode(postcode);
             return;
         }
@@ -1528,18 +1533,24 @@ async function globalSearchPostcode() {
         const distanceText = hasDistance ? ('距离：' + payload.distance + unitText) : '';
 
         if (!hasDistance) {
-            resultSpan.textContent = getPostcodeEvaluateMessage(evaluateData, evaluate.error);
-            resultSpan.className = 'search-result error';
+            if (resultSpan) {
+                resultSpan.textContent = getPostcodeEvaluateMessage(evaluateData, evaluate.error);
+                resultSpan.className = 'search-result error';
+            }
             renderMatchedRowsForCode(postcode);
             return;
         }
 
-        resultSpan.textContent = prefix && distanceText ? (prefix + ';' + distanceText) : (prefix || distanceText);
-        resultSpan.className = 'search-result success';
+        if (resultSpan) {
+            resultSpan.textContent = prefix && distanceText ? (prefix + ';' + distanceText) : (prefix || distanceText);
+            resultSpan.className = 'search-result success';
+        }
         renderMatchedRowsForCode(postcode);
     } catch (error) {
-        resultSpan.textContent = error && error.name === 'AbortError' ? '网络不佳，请稍后重试' : '查询服务暂时不可用，请稍后再试';
-        resultSpan.className = 'search-result error';
+        if (resultSpan) {
+            resultSpan.textContent = error && error.name === 'AbortError' ? '网络不佳，请稍后重试' : '查询服务暂时不可用，请稍后再试';
+            resultSpan.className = 'search-result error';
+        }
     }
 }
 

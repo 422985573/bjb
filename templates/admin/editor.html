@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ static_with_version('css/admin-editor.css') }}">
+<link rel="stylesheet" href="{{ static_with_version('css/article.css') }}">
 <style>
 .editor-container {
     display: flex;
@@ -880,6 +881,78 @@
     outline: 1px solid var(--primary);
 }
 
+/* DG 报价表（xlsx 全表可编辑） */
+.dg-grid-editor {
+    padding-bottom: 8px;
+}
+/* 与文章页 module-dg-grid 同结构；标题为可编辑 input */
+.module-dg-grid--in-editor {
+    max-width: 100%;
+    margin: 0;
+}
+.module-dg-grid--in-editor .dg-grid-title {
+    display: block;
+    padding: 0 4px 8px 4px;
+}
+.module-dg-grid--in-editor .dg-grid-title .dg-grid-title-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #0f172a;
+    border: 1px dashed #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    padding: 8px 10px;
+    font-family: inherit;
+    margin: 0;
+}
+.module-dg-grid--in-editor .dg-grid-title .dg-grid-title-input:focus {
+    border-color: var(--primary, #2563eb);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+/* 可编辑表：textarea 充满单元格，与前台表视觉一致 */
+.module-dg-grid--in-editor .dg-grid-table--editable .dg-grid-cell {
+    padding: 0;
+    vertical-align: top;
+}
+.module-dg-grid--in-editor .dg-grid-table--editable .dg-grid-cell .dg-grid-cell-input {
+    display: block;
+    width: 100%;
+    min-height: 2rem;
+    box-sizing: border-box;
+    margin: 0;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #0f172a;
+    resize: vertical;
+    padding: 4px 6px;
+    font-family: inherit;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.module-dg-grid--in-editor .dg-grid-table--editable .dg-grid-cell--fullrow .dg-grid-cell-input {
+    text-align: center;
+    font-size: 1.05em;
+    font-weight: 600;
+    min-height: 2.4rem;
+    padding: 8px 6px;
+}
+.module-dg-grid--in-editor .dg-grid-tr-tidan-header .dg-grid-cell-input {
+    background: transparent !important;
+    color: #0f172a;
+    font-weight: 600;
+}
+.module-dg-grid--in-editor .dg-grid-cell-input:focus {
+    background: #f0f9ff !important;
+    outline: 1px solid #93c5fd;
+    outline-offset: -1px;
+}
 .add-row-btn {
     background: var(--primary);
     color: white;
@@ -1243,6 +1316,7 @@
             <button class="module-btn" onclick="addModule('text')">📝 添加文本</button>
             <button class="module-btn" onclick="addModule('image')">🖼️ 添加图片</button>
             <button class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
+            <button class="module-btn" onclick="addModule('dg_grid')">📋 添加 DG 报价表</button>
         </div>
         
         <div class="module-list-sidebar">
@@ -1255,6 +1329,7 @@
                         {% if module.type == 'text' %}📝{% endif %}
                         {% if module.type == 'image' %}🖼️{% endif %}
                         {% if module.type == 'channel' %}📊{% endif %}
+                        {% if module.type == 'dg_grid' %}📋{% endif %}
                     </span>
                     <span class="module-list-item-title {% if not content or not content.title %}empty{% endif %}" 
                           data-module-id="{{ module.id }}"
@@ -1310,6 +1385,7 @@
                         {% if module.type == 'text' %}📝 文本模块{% endif %}
                         {% if module.type == 'image' %}🖼️ 图片模块{% endif %}
                         {% if module.type == 'channel' %}📊 渠道模块{% endif %}
+                        {% if module.type == 'dg_grid' %}📋 DG 报价表{% endif %}
                     </span>
                     <div class="module-actions">
                         <button class="btn-delete" onclick="deleteModule({{ module.id }})">删除</button>
@@ -1490,6 +1566,34 @@
                             <div class="remark-section">
                                 <label>📌 模块备注（显示在模块下方，支持HTML）</label>
                                 <textarea class="remark-editor" style="min-height: 120px;">{{ content.remark if content else '' }}</textarea>
+                            </div>
+                        </div>
+                    {% elif module.type == 'dg_grid' %}
+                        {% set dg = module.content | from_json %}
+                        {% set dg_cells = (dg.cells if dg and dg.cells else [])|dg_grid_normalize %}
+                        {% set dg_rows = (dg_cells|length) if dg_cells else 1 %}
+                        {% set dg_cols = ((dg.cols if dg and dg.cols else (dg_cells[0]|length if dg_cells else 1))|int) %}
+                        <div class="dg-grid-editor" data-module-id="{{ module.id }}"
+                             data-rows="{{ dg_rows }}"
+                             data-cols="{{ dg_cols }}"
+                             data-sheet-name="{{ (dg.sheet_name or '')|e }}"
+                             data-template-file="{{ (dg.template_file or '')|e }}">
+                            <script type="application/json" class="dg-grid-struct">{{ {'merges': (dg or {}).get('merges', []), 'header_orange_row': (dg or {}).get('header_orange_row') }|tojson }}</script>
+                            {# 布局与文章详情页 module-dg-grid 一致：标题 + dg-grid-scroll + 合并表可编辑 + 备注 #}
+                            <div class="module module-dg-grid module-dg-grid--in-editor">
+                                <div class="dg-grid-title">
+                                    <input type="text" class="module-title-input dg-grid-title-input" data-module-id="{{ module.id }}"
+                                           placeholder="模块标题（与前台大标题一致）"
+                                           value="{{ dg.title if dg and dg.title else '' }}"
+                                           oninput="updateModuleTitle({{ module.id }}, this.value)">
+                                </div>
+                                <div class="dg-grid-scroll">
+                                    {{ (dg or {})|dg_grid_editable_table }}
+                                </div>
+                                <div class="remark-section" style="margin-top: 12px;">
+                                    <label>📌 模块备注（显示在模块下方，支持HTML）</label>
+                                    <textarea class="remark-editor dg-grid-remark" style="min-height: 80px;">{{ dg.remark if dg else '' }}</textarea>
+                                </div>
                             </div>
                         </div>
                     {% endif %}
@@ -1790,6 +1894,8 @@ function getModuleContentFromItem(moduleItem) {
         if (!content.title && title) {
             content.title = title;
         }
+    } else if (moduleBody.querySelector('.dg-grid-editor')) {
+        content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
     } else {
         content = { title: '' };
     }
@@ -1892,6 +1998,8 @@ async function addModule(type) {
         content = { title: '', text: '', remark: '' };
     } else if (type === 'image') {
         content = { title: '', url: '', alt: '', caption: '', remark: '' };
+    } else if (type === 'dg_grid') {
+        content = { from_template: true };
     } else if (type === 'channel') {
         if (isChannelSimple) {
             // 大件/纸箱编辑页：表头只有「邮编」，默认一行 0000,0001
@@ -1969,6 +2077,75 @@ async function saveModule(moduleId) {
     } else {
         alert('保存失败，请重试');
     }
+}
+
+// DG 报价表（xlsx 网格）
+function getDgGridEditorData(root) {
+    if (!root) {
+        return { title: '', template_file: '', sheet_name: '', rows: 0, cols: 0, cells: [], remark: '' };
+    }
+    const nR = parseInt(root.dataset.rows || '0', 10) || 0;
+    const nC = parseInt(root.dataset.cols || '0', 10) || 0;
+    const titleEl = root.querySelector('.dg-grid-title-input');
+    const title = titleEl ? titleEl.value.trim() : '';
+    const sheetName = (root.dataset.sheetName || '').trim();
+    const templateFile = (root.dataset.templateFile || '').trim();
+    const remarkEl = root.querySelector('.dg-grid-remark');
+    const remark = remarkEl ? remarkEl.value : '';
+    const cells = [];
+    for (let r = 0; r < nR; r++) {
+        const line = [];
+        for (let c = 0; c < nC; c++) {
+            const ta = root.querySelector('textarea.dg-grid-cell-input[data-r="' + r + '"][data-c="' + c + '"]');
+            line.push(ta ? ta.value : '');
+        }
+        cells.push(line);
+    }
+    while (cells.length > 0 && cells[0].every(function(v) { return !String(v || '').trim(); })) {
+        cells.shift();
+    }
+    if (cells.length === 0) {
+        cells.push(new Array(nC).fill(''));
+    }
+    let merges = [];
+    let header_orange_row = null;
+    const structEl = root.querySelector('script.dg-grid-struct');
+    if (structEl && structEl.textContent) {
+        try {
+            const o = JSON.parse(structEl.textContent);
+            if (Array.isArray(o.merges)) { merges = o.merges; }
+            if (o.header_orange_row != null && o.header_orange_row !== '') {
+                const h = parseInt(o.header_orange_row, 10);
+                if (!Number.isNaN(h)) { header_orange_row = h; }
+            }
+        } catch (e) { /* 保留空 */ }
+    }
+    const lost = nR - cells.length;
+    if (header_orange_row != null) {
+        header_orange_row = header_orange_row - lost;
+        if (header_orange_row < 0) { header_orange_row = null; }
+    }
+    if (merges && merges.length) {
+        merges = merges.map(function(mg) {
+            return {
+                r: (parseInt(mg.r, 10) || 0) - lost,
+                c: parseInt(mg.c, 10) || 0,
+                rs: parseInt(mg.rs, 10) || 1,
+                cs: parseInt(mg.cs, 10) || 1
+            };
+        }).filter(function(mg) { return mg.r >= 0; });
+    }
+    return {
+        title: title,
+        template_file: templateFile,
+        sheet_name: sheetName,
+        rows: cells.length,
+        cols: nC,
+        cells: cells,
+        merges: merges,
+        header_orange_row: header_orange_row,
+        remark: remark
+    };
 }
 
 // 获取渠道编辑器数据（兼容大件/纸箱简化表：无目的港、区域）
@@ -2279,6 +2456,8 @@ async function copyModule(moduleId) {
         moduleType = 'image';
     } else if (moduleBody.querySelector('.channel-editor')) {
         moduleType = 'channel';
+    } else if (moduleBody.querySelector('.dg-grid-editor')) {
+        moduleType = 'dg_grid';
     } else {
         alert('无法识别模块类型');
         return;
@@ -2317,6 +2496,8 @@ async function copyModule(moduleId) {
         if (!content.title && title) {
             content.title = title;
         }
+    } else if (moduleType === 'dg_grid') {
+        content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
     }
     
     // 创建新模块

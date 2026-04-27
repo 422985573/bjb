@@ -284,6 +284,12 @@ def module_add():
     article_id = data.get('article_id')
     module_type = data.get('type')
     content = data.get('content', '')
+    if module_type == 'dg_grid':
+        c = content if isinstance(content, dict) else {}
+        if c.get('from_template') or not c.get('cells'):
+            from services.dg_quote_grid import build_default_dg_grid_content
+
+            content = build_default_dg_grid_content()
     with db.get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT MAX(sort_order) FROM modules WHERE article_id = ?', (article_id,))

@@ -73,4 +73,12 @@ def article_detail(article_code):
             (article['id'],)
         )
         modules = [dict(r) for r in cursor.fetchall()]
-        return render_template('article.html', article=article, modules=modules)
+        has_dg_grid = any(
+            (m.get('type') or '').strip().lower() == 'dg_grid' for m in modules
+        )
+        return render_template(
+            'article.html',
+            article=article,
+            modules=modules,
+            has_dg_grid=has_dg_grid,
+        )

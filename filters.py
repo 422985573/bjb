@@ -187,12 +187,68 @@ def _static_with_version(filename):
     return base
 
 
+def dg_grid_trim_leading_filter(cells):
+    """DG 报价表：去掉数据矩阵顶部全空行（模板展示/编辑用）。"""
+    if not cells:
+        return cells or []
+    from services.dg_quote_grid import trim_leading_empty_rows
+
+    return trim_leading_empty_rows(cells)
+
+
+def dg_grid_normalize_filter(cells):
+    """DG 报价表：去顶空行 + 去掉第 1 列与最后 3 列（与后台默认导入一致）。"""
+    from services.dg_quote_grid import normalize_dg_grid_cells
+
+    return normalize_dg_grid_cells(cells or [])
+
+
+def dg_grid_render_table_filter(module_content):
+    """DG 报价表：按合并区渲染 <table>；无 merges 时与 normalize 后平铺一致。含提单号行橙色底。"""
+    from markupsafe import Markup
+
+    from services.dg_quote_grid import prepare_dg_table_display, render_dg_table_html
+
+    c = module_content
+    if c is None:
+        return Markup('')
+    if isinstance(c, str):
+        c = from_json_filter(c)
+    if not isinstance(c, dict):
+        return Markup('')
+
+    cells, merges, hr = prepare_dg_table_display(c)
+    return Markup(render_dg_table_html(cells, merges, hr))
+
+
+def dg_grid_editable_table_filter(module_content):
+    """DG 模块后台编辑：与文章页同合并布局，单元格为 textarea。"""
+    from markupsafe import Markup
+
+    from services.dg_quote_grid import prepare_dg_table_display, render_dg_table_editable_html
+
+    c = module_content
+    if c is None:
+        return Markup('')
+    if isinstance(c, str):
+        c = from_json_filter(c)
+    if not isinstance(c, dict):
+        return Markup('')
+
+    cells, merges, hr = prepare_dg_table_display(c)
+    return Markup(render_dg_table_editable_html(cells, merges, hr))
+
+
 def register_filters(app):
     """在 Flask 应用上注册上述过滤器与上下文"""
     app.jinja_env.filters['from_json'] = from_json_filter
     app.jinja_env.filters['safe_html'] = safe_html_filter
     app.jinja_env.filters['format_postcode'] = format_postcode_filter
     app.jinja_env.filters['format_datetime_beijing'] = format_datetime_beijing_filter
+    app.jinja_env.filters['dg_grid_trim_leading'] = dg_grid_trim_leading_filter
+    app.jinja_env.filters['dg_grid_normalize'] = dg_grid_normalize_filter
+    app.jinja_env.filters['dg_grid_render_table'] = dg_grid_render_table_filter
+    app.jinja_env.filters['dg_grid_editable_table'] = dg_grid_editable_table_filter
 
     @app.context_processor
     def inject_static_version():

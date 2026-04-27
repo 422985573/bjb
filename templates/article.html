@@ -28,6 +28,7 @@
         <div class="article-content">
             <!-- 全局邮编搜索 -->
             <div class="global-postcode-search">
+                {% if not (has_dg_grid | default(false)) %}
                 <div class="article-toolbar">
                     <div class="search-box search-box-center">
                         <img src="{{ static_with_version('css/xb.jpg') }}" alt="Search" class="search-icon-img">
@@ -36,6 +37,7 @@
                         <span id="globalSearchResult" class="search-result" aria-live="polite"></span>
                     </div>
                 </div>
+                {% endif %}
                 <div class="article-links-bar">
                     <div class="article-links-group" aria-label="快捷链接">
                         <span class="article-links-hint" aria-hidden="true">👉🏻</span>
@@ -169,6 +171,19 @@
                         <span class="distance-result"></span>
                     </div>
                     
+                    {% if content.remark %}
+                    <div class="module-remark">{{ content.remark | safe_html }}</div>
+                    {% endif %}
+                </div>
+
+                {% elif module.type == 'dg_grid' %}
+                <div class="module module-dg-grid">
+                    {% if content.title %}
+                    <div class="dg-grid-title">{{ content.title }}</div>
+                    {% endif %}
+                    <div class="dg-grid-scroll">
+                        {{ content | dg_grid_render_table }}
+                    </div>
                     {% if content.remark %}
                     <div class="module-remark">{{ content.remark | safe_html }}</div>
                     {% endif %}

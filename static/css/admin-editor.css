@@ -1,1 +1,2 @@
-/* 管理后台编辑器共用样式（可从 editor.html / editor_channel.html 内联样式中逐步迁移） */
+/* 管理后台编辑器共用样式（可从 editor.html 内联样式中逐步迁移） */
+/* DG 表合并编辑样式见 editor.html 内联 .module-dg-grid--in-editor，前台同类样式在 article.css */

@@ -1,3 +1,54 @@
+/* DG 报价表模块（xlsx 网格，前台只读） */
+.module-dg-grid {
+    margin: 1rem 0;
+}
+.dg-grid-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+.dg-grid-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+}
+.dg-grid-table {
+    border-collapse: collapse;
+    min-width: 100%;
+    font-size: 11px;
+}
+.dg-grid-table td.dg-grid-cell {
+    border: 1px solid #cbd5e1;
+    padding: 4px 6px;
+    vertical-align: top;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-width: 2.5rem;
+    max-width: 16rem;
+}
+/* 与 xlsx 同：标题行 B2:J2 等整行合并，占满表宽、居中 */
+.dg-grid-table td.dg-grid-cell--fullrow {
+    max-width: none;
+    width: 100%;
+    text-align: center;
+    font-size: 1.05em;
+    font-weight: 600;
+    vertical-align: middle;
+    padding: 8px 6px;
+}
+/* 与 xlsx 提单号表头行一致：整行橙底 */
+.dg-grid-tr.dg-grid-tr-tidan-header,
+.dg-grid-tr.dg-grid-tr-tidan-header .dg-grid-cell {
+    background: #FFC000 !important;
+    font-weight: 600;
+    color: #0f172a;
+}
+
 .module-remark {
     white-space: pre-wrap;
     word-wrap: break-word;
