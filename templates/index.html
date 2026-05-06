@@ -9,14 +9,14 @@
         <div class="sidebar-card">
             <div class="sidebar-header">分类目录</div>
             <ul class="category-list">
-                <li class="{% if show_all_articles %}active{% endif %}">
-                    <a href="{{ url_for('front.index', all=1) }}">全部</a>
-                </li>
                 {% for category in categories %}
-                <li class="{% if not show_all_articles and current_category == category['id'] %}active{% endif %}">
+                <li class="{% if not show_all_articles and current_category is not none and current_category == category['id'] %}active{% endif %}">
                     <a href="{{ url_for('front.category_articles', category_id=category['id']) }}">{{ category['name'] }}</a>
                 </li>
                 {% endfor %}
+                <li class="{% if show_all_articles %}active{% endif %}">
+                    <a href="{{ url_for('front.index', all=1) }}">全部</a>
+                </li>
             </ul>
         </div>
     </div>

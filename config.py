@@ -18,8 +18,6 @@ POSTCODE_CSV_PATH = os.environ.get('POSTCODE_CSV_PATH') or os.path.join(_BASE_DI
 # DG 报价表 xlsx 默认文件（可覆盖为其他路径；用于管理后台「DG 报价表」模块的初始数据）
 DG_QUOTE_XLSX_PATH = os.environ.get('DG_QUOTE_XLSX_PATH') or os.path.join(_BASE_DIR, '4月25日DG周鹏.xlsx')
 PER_PAGE = int(os.environ.get('PER_PAGE', '20'))
-# 首页默认展示的分类名称（可通过环境变量覆盖）；无此分类时回退为展示全部文章
-DEFAULT_HOME_CATEGORY_NAME = (os.environ.get('DEFAULT_HOME_CATEGORY_NAME') or '专线报价').strip()
 APP_ENV = (os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'development').strip().lower()
 DEBUG = (os.environ.get('DEBUG') or os.environ.get('FLASK_DEBUG') or '').strip() in {'1', 'true', 'True'}
 CHANNEL_REJECT_POSTCODE_FILES = {'纸箱': '纸箱.txt', '大件': '大件.txt'}

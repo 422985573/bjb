@@ -10,24 +10,17 @@ front_bp = Blueprint('front', __name__)
 
 @front_bp.route('/')
 def index():
-    """首页（分页）；默认仅展示「专线报价」分类，?all=1 查看全部"""
-    categories = models.get_all_categories()
+    """首页（分页）；侧栏分类按排序；默认展示排序第一的分类下的文章；?all=1 查看全部"""
     show_all = request.args.get('all', type=int) == 1
+    all_categories = models.get_all_categories()
+    first_category_id = all_categories[0]['id'] if all_categories else None
+
+    show_all_articles = show_all or first_category_id is None
+    use_index_route_for_pages = bool(not show_all_articles)
+    current_category = first_category_id if not show_all_articles else None
+
     with db.get_db() as conn:
         cursor = conn.cursor()
-        default_cat_id = None
-        if not show_all and config.DEFAULT_HOME_CATEGORY_NAME:
-            cursor.execute(
-                'SELECT id FROM categories WHERE name = ?',
-                (config.DEFAULT_HOME_CATEGORY_NAME,),
-            )
-            row = cursor.fetchone()
-            if row:
-                default_cat_id = row[0]
-
-        show_all_articles = show_all or default_cat_id is None
-        use_index_route_for_pages = bool(not show_all_articles)
-
         if show_all_articles:
             cursor.execute('SELECT COUNT(*) FROM articles WHERE is_published = 1')
             total = cursor.fetchone()[0]
@@ -43,7 +36,7 @@ def index():
         else:
             cursor.execute(
                 'SELECT COUNT(*) FROM articles WHERE category_id = ? AND is_published = 1',
-                (default_cat_id,),
+                (first_category_id,),
             )
             total = cursor.fetchone()[0]
             total_pages = max(1, (total + config.PER_PAGE - 1) // config.PER_PAGE)
@@ -54,19 +47,19 @@ def index():
                 LEFT JOIN categories c ON a.category_id = c.id
                 WHERE a.category_id = ? AND a.is_published = 1
                 ORDER BY a.created_at DESC LIMIT ? OFFSET ?
-            ''', (default_cat_id, config.PER_PAGE, offset))
+            ''', (first_category_id, config.PER_PAGE, offset))
 
         articles = cursor.fetchall()
         return render_template(
             'index.html',
-            categories=categories,
+            categories=all_categories,
             articles=articles,
             page=page,
             total_pages=total_pages,
             total=total,
             per_page=config.PER_PAGE,
             show_all_articles=show_all_articles,
-            current_category=default_cat_id if not show_all_articles else None,
+            current_category=current_category,
             use_index_route_for_pages=use_index_route_for_pages,
         )
 

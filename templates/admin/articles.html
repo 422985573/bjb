@@ -18,12 +18,19 @@
     <div class="admin-content">
         <div class="section">
             <h2>分类管理</h2>
+            <p class="section-hint">排序数字越小越靠前。网站首页左侧按此顺序列出分类；打开首页时默认显示<strong>排序第一</strong>的分类下的文章（「全部」可查看所有文章）。</p>
             <div class="category-manager">
                 <div class="category-list-admin">
                     {% for category in categories %}
                     <div class="category-item-admin" data-category-id="{{ category['id'] }}">
                         <span class="category-name">{{ category['name'] }}</span>
                         <input type="text" class="category-edit-input" value="{{ category['name'] }}" style="display:none;">
+                        <label class="category-sort-wrap" title="数字越小越靠前">
+                            <span class="category-sort-label">排序</span>
+                            <input type="number" class="category-sort-input" step="1" value="{{ category.get('sort_order', 0) }}"
+                                data-initial-sort="{{ category.get('sort_order', 0) }}"
+                                onchange="saveCategorySort({{ category['id'] }}, this)">
+                        </label>
                         <button type="button" class="btn btn-small btn-edit-cat" data-id="{{ category['id'] }}" data-name="{{ category['name'] }}">编辑</button>
                         <button class="btn-icon btn-delete" onclick="deleteCategory({{ category['id'] }})">✕</button>
                     </div>
@@ -144,6 +151,36 @@ async function togglePublishStatus(articleId, nextStatus, buttonEl) {
     }
     buttonEl.disabled = false;
     buttonEl.textContent = originalText;
+}
+async function saveCategorySort(categoryId, inputEl) {
+    let v = parseInt(inputEl.value, 10);
+    if (Number.isNaN(v)) {
+        v = parseInt(inputEl.getAttribute('data-initial-sort'), 10) || 0;
+        inputEl.value = v;
+    }
+    const prev = parseInt(inputEl.getAttribute('data-initial-sort'), 10);
+    if (!Number.isNaN(prev) && prev === v) return;
+    inputEl.disabled = true;
+    try {
+        const response = await fetch('/api/category/' + categoryId + '/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sort_order: v })
+        });
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.success !== false) {
+            inputEl.setAttribute('data-initial-sort', String(v));
+            location.reload();
+            return;
+        }
+        inputEl.value = inputEl.getAttribute('data-initial-sort');
+        alert(data.message || '保存失败');
+    } catch (e) {
+        inputEl.value = inputEl.getAttribute('data-initial-sort');
+        alert('保存失败');
+    } finally {
+        inputEl.disabled = false;
+    }
 }
 document.querySelectorAll('.btn-edit-cat').forEach(function(btn) {
     btn.addEventListener('click', function() {

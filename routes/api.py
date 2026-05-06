@@ -422,7 +422,10 @@ def category_add():
         cursor = conn.cursor()
         cursor.execute('SELECT MAX(sort_order) FROM categories')
         max_order = cursor.fetchone()[0] or 0
-        cursor.execute('INSERT INTO categories (name, sort_order) VALUES (?, ?)', (name, max_order + 1))
+        cursor.execute(
+            'INSERT INTO categories (name, sort_order) VALUES (?, ?)',
+            (name, max_order + 1),
+        )
         category_id = cursor.lastrowid
         conn.commit()
         return jsonify({'success': True, 'category_id': category_id})

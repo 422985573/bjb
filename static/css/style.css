@@ -991,6 +991,30 @@ a:hover {
     padding: 4px 8px;
     margin-right: 6px;
 }
+.section-hint {
+    font-size: 13px;
+    color: var(--text-light);
+    margin: -6px 0 14px;
+    line-height: 1.5;
+}
+.category-sort-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 6px;
+    font-size: 12px;
+    color: var(--text-light);
+}
+.category-sort-label {
+    white-space: nowrap;
+}
+.category-sort-input {
+    width: 56px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+}
 .btn-edit-cat { margin-right: 4px; }
 
 .add-category-form {
