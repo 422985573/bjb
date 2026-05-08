@@ -367,7 +367,7 @@
 :root {
     --nav-height: 60px;
     --channel-title-height: 54px; /* padding(14px*2) + font-size(16px) + line-height ≈ 54px */
-    --floating-right-edge: max(calc((100vw - var(--container-max)) / 2), 0px);
+    --floating-right-edge: max(calc((var(--app-vw) - var(--container-max)) / 2), 0px);
     --main-wrapper-inner-right: calc(var(--floating-right-edge) + max(20px, env(safe-area-inset-right)));
     --channel-nav-collapsed-width: 62px;
     --back-to-top-size: 72px;
@@ -562,7 +562,7 @@
 }
 /* ── Expanded state ── */
 .channel-nav-panel[open] {
-    width: min(360px, calc(100vw - 20px));
+    width: min(360px, calc(var(--app-vw) - 20px));
 }
 .channel-nav-panel[open] summary {
     flex-direction: row;
@@ -1061,7 +1061,7 @@ white-space: pre-line !important;
         padding: 9px 12px;
     }
     .postcode-popover {
-        max-width: calc(100vw - 14px);
+        max-width: calc(var(--app-vw) - 14px);
         font-size: 13px;
         line-height: 1.55;
     }
@@ -1082,7 +1082,7 @@ white-space: pre-line !important;
         bottom: calc(var(--floating-bottom-gap) + var(--floating-safe-bottom) + var(--back-to-top-size) + var(--floating-nav-offset-above-top));
         transform: none;
         border-radius: 14px 0 0 14px;
-        max-width: calc(100vw - 16px);
+        max-width: calc(var(--app-vw) - 16px);
     }
     .channel-nav-panel:hover {
         transform: none;
@@ -1090,7 +1090,7 @@ white-space: pre-line !important;
     .channel-nav-panel[open] {
         right: max(8px, env(safe-area-inset-right));
         left: auto;
-        width: min(320px, calc(100vw - 16px));
+        width: min(320px, calc(var(--app-vw) - 16px));
     }
     .channel-nav-panel-body {
         max-height: 55vh;

@@ -5,15 +5,6 @@
     box-sizing: border-box;
 }
 
-html {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-    overflow-x: clip;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-}
-
 :root {
     --primary: #2563eb;
     --primary-dark: #1d4ed8;
@@ -29,6 +20,23 @@ html {
     --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
     /* 响应式断点：极小屏 320 | 小屏 480 | 平板 768 | 小桌面 1024 | 桌面 1280 | FHD 1920 | 2K 2560 | 4K 3840 */
     --container-max: 1200px;
+    /* 避免 100vw 含滚动条宽度导致整页横向微溢出；支持 dvw 的浏览器用动态视口宽度 */
+    --app-vw: 100vw;
+}
+
+@supports (width: 100dvw) {
+    :root {
+        --app-vw: 100dvw;
+    }
+}
+
+html {
+    width: 100%;
+    max-width: min(100%, var(--app-vw));
+    overflow-x: hidden;
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 body {
@@ -38,7 +46,7 @@ body {
     line-height: 1.6;
     font-size: 14px;
     width: 100%;
-    max-width: 100%;
+    max-width: min(100%, var(--app-vw));
     overflow-x: hidden;
     overflow-x: clip;
     -webkit-text-size-adjust: 100%;
@@ -69,7 +77,6 @@ a:hover {
 }
 
 .nav-container {
-    max-width: var(--container-max);
     margin: 0 auto;
     min-height: 60px;
     display: flex;
@@ -77,6 +84,8 @@ a:hover {
     justify-content: space-between;
     padding: 0 20px 0 10px;
     min-width: 0;
+    width: 100%;
+    max-width: min(var(--container-max), var(--app-vw));
 }
 
 .nav-brand {
@@ -153,7 +162,8 @@ a:hover {
 /* ==================== 页面布局 ==================== */
 .main-wrapper {
     width: 100%;
-    max-width: var(--container-max);
+    max-width: min(var(--container-max), var(--app-vw));
+    min-width: 0;
     margin: 0 auto;
     padding: 20px;
     padding-left: max(20px, env(safe-area-inset-left));
@@ -280,6 +290,7 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 5px;
+    min-width: 0;
 }
 
 .article-card-desc {
@@ -318,7 +329,8 @@ a:hover {
 /* ==================== 文章详情页 ==================== */
 .article-container {
     width: 100%;
-    max-width: var(--container-max);
+    max-width: min(var(--container-max), 100%);
+    min-width: 0;
     margin: 0 auto;
     box-sizing: border-box;
 }
@@ -528,6 +540,28 @@ a:hover {
 .text-content {
     line-height: 1.8;
     color: var(--text-dark);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.text-content img,
+.text-content video,
+.text-content iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+.text-content pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+
+.text-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* 图片模块 */
