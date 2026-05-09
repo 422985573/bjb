@@ -1600,25 +1600,97 @@
         gap: 10px;
     }
 
-    .weight-editor {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .weight-input {
-        width: 100%;
+    /* 渠道「费用项目」：单行横向滚动，保持列输入框原有宽度 */
+    .channel-editor .weight-editor {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
         max-width: 100%;
+    }
+
+    .channel-editor .weight-editor .weight-item {
+        flex-shrink: 0;
+    }
+
+    .channel-editor .weight-input {
+        width: 100px;
+        min-width: 100px;
+        max-width: none;
         box-sizing: border-box;
     }
 
-    .weight-item {
-        width: 100%;
-        box-sizing: border-box;
-    }
-
+    /* 渠道价格表：不强制压满屏幕，横向滚动编辑 */
     .channel-table-editor {
         -webkit-overflow-scrolling: touch;
         max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .channel-table-editor table {
+        width: max-content;
+        max-width: none;
+        table-layout: auto;
+    }
+
+    .channel-table-editor th,
+    .channel-table-editor td {
+        min-width: 3rem;
+        white-space: nowrap;
+    }
+
+    /* DG：抬头表 / 费用表（v2）与旧版网格 — 同理横向滚动 */
+    .dg-editor .dg-table-scroll {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .dg-table-scroll > .dg-v2-metasheet-table {
+        width: max-content;
+        min-width: 520px;
+        table-layout: auto;
+        max-width: none;
+    }
+
+    .dg-table-scroll > .dg-v2-metasheet-table tbody th.dg-v2-ms-lab {
+        width: auto;
+        min-width: 6rem;
+    }
+
+    .dg-table-scroll > .dg-v2-metasheet-table tbody td.dg-v2-ms-val {
+        min-width: 8.5rem;
+    }
+
+    .dg-table-scroll .dg-v2-fee-table {
+        width: max-content;
+        min-width: 700px;
+        max-width: none;
+    }
+
+    .dg-table-scroll .dg-v2-fee-table th,
+    .dg-table-scroll .dg-v2-fee-table td {
+        white-space: nowrap;
+    }
+
+    .dg-table-scroll .dg-v2-fee-table .dg-v2-fee-inp {
+        min-width: 4rem;
+        width: 7.25rem;
+        max-width: none;
+    }
+
+    .dg-table-scroll .dg-v2-fee-table .dg-v2-fee-td-merged .dg-v2-fee-inp {
+        min-width: 10rem;
+        width: 12rem;
+    }
+
+    /* 旧 schema 合并大表：按内容铺开，格子有下限宽度 */
+    .dg-editor .dg-table-scroll table.dg-grid-table {
+        width: max-content !important;
+        max-width: none;
+        table-layout: auto !important;
+    }
+
+    .dg-editor .dg-table-scroll .dg-grid-table--editable .dg-grid-cell {
+        min-width: 3.25rem;
     }
 }
 </style>
