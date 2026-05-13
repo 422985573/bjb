@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import json
+
 from flask import Blueprint, render_template, request, redirect, url_for, abort
 
 import config
@@ -118,6 +120,39 @@ def article_edit(article_id):
             (article_id,)
         )
         modules = [dict(r) for r in cursor.fetchall()]
+        # DG：PS/海关查验说明迁出表格并入备注；GET 时若规范化结果变化则写回库（含 Excel 栅格非 v2）
+        from services.dg_quote_grid import (
+            normalize_dg_v2_ps_rows_to_remark,
+            normalize_excel_grid_content_storage,
+        )
+
+        _dg_dirty = False
+        for m in modules:
+            if m.get('type') != 'dg_grid':
+                continue
+            raw = m.get('content')
+            if not raw:
+                continue
+            try:
+                c = json.loads(raw)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                continue
+            if not isinstance(c, dict):
+                continue
+            sch = int(c.get('schema') or 0)
+            if sch == 2:
+                new_c = normalize_dg_v2_ps_rows_to_remark(dict(c))
+            else:
+                new_c = normalize_excel_grid_content_storage(dict(c))
+            old_s = json.dumps(c, ensure_ascii=False, sort_keys=True)
+            new_s = json.dumps(new_c, ensure_ascii=False, sort_keys=True)
+            if new_s != old_s:
+                blob = json.dumps(new_c, ensure_ascii=False)
+                cursor.execute('UPDATE modules SET content = ? WHERE id = ?', (blob, m['id']))
+                m['content'] = blob
+                _dg_dirty = True
+        if _dg_dirty:
+            conn.commit()
         return render_template('admin/editor.html', article=article, categories=categories, modules=modules,
                               back_url=url_for('admin.articles'), fixed_category_id=None, fixed_category_name=None)
 

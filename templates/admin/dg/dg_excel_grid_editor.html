@@ -1,0 +1,46 @@
+{# Excel 严格栅格编辑器：9类电池柜 / 普柜报价表共用同一套 UI、排版与交互（仅导入模板不同）；扩展见 dg_excel_template_registry #}
+{% set dg = module.content | from_json %}
+{% set shape = (dg or {})|dg_grid_content_dimensions %}
+<div class="dg-grid-editor dg-excel-grid-editor--cabinet" data-module-id="{{ module.id }}"
+     data-dg-schema="1"
+     data-dg-variant="{{ (dg.variant or 'excel_grid')|e }}"
+     data-dg-template-id="{{ (dg.template_id or '')|e }}"
+     data-rows="{{ shape.rows }}"
+     data-cols="{{ shape.cols }}"
+     data-dg-fee-merge-default-rows="4"
+     data-sheet-name="{{ (dg.sheet_name or '')|e }}"
+     data-template-file="{{ (dg.template_file or '')|e }}">
+    <script type="application/json" class="dg-grid-struct">{{ {'merges': (dg or {}).get('merges', []), 'header_orange_row': (dg or {}).get('header_orange_row') }|tojson }}</script>
+    <div class="dg-editor">
+        <div class="dg-grid-editor-section">
+            <h4>📋 模块标题</h4>
+            <input type="text" class="module-title-input dg-grid-title-input" data-module-id="{{ module.id }}"
+                   placeholder="如：9类电池柜报价表或普柜报价表"
+                   value="{{ dg.title if dg and dg.title else '' }}"
+                   oninput="updateModuleTitle({{ module.id }}, this.value)">
+        </div>
+        <div class="dg-grid-editor-section">
+            <div class="channel-section-header">
+                <h4>📊 报价表</h4>
+            </div>
+            <div class="dg-table-editor">
+                <div class="dg-quote-v2 dg-quote-v2--grid dg-excel-quote-layout">
+                    <div class="dg-quote-v2-section dg-quote-v2-fee-block">
+                        <div class="dg-quote-v2-fee-wrap">
+                            {{ (dg or {})|dg_grid_editable_table }}
+                        </div>
+                    </div>
+                </div>
+                <div class="dg-excel-fee-toolbar-btns">
+                    <button type="button" class="ch-tool-btn add-row-btn" data-dg-act="append-fee-merge" data-dg-target="{{ module.id }}" title="在总合计前新增一个费用大类（首列纵向合并）">新增费用</button>
+                    <button type="button" class="ch-tool-btn add-row-btn dg-excel-toolbar-secondary-btn" data-dg-act="append-subtotal-like-row" data-dg-target="{{ module.id }}" title="在表格末尾（汇率等说明行之后）追加一行，合并版式与「总合计」行一致">添加行</button>
+                </div>
+                <p class="dg-excel-fee-hint">普柜与 9类电池柜共用上述规则：「新增费用」插在「总合计」行之前；「添加行」在表格末尾追加（汇率说明等行之下），版式与「总合计」行一致，若无总合计则参照其它含「合计」的行；删除整个大类在左侧大类合并格内点「删类别」。</p>
+            </div>
+        </div>
+        <div class="remark-section">
+            <label>📌 模块备注（显示在模块下方，支持HTML）</label>
+            <textarea class="remark-editor dg-grid-remark" style="min-height: 80px;">{{ dg.remark if dg else '' }}</textarea>
+        </div>
+    </div>
+</div>

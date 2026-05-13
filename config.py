@@ -15,7 +15,7 @@ ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or '999888777a'
 DB_PATH = os.environ.get('DB_PATH') or os.path.join(_BASE_DIR, 'data', 'database.db')
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(_BASE_DIR, 'uploads')
 POSTCODE_CSV_PATH = os.environ.get('POSTCODE_CSV_PATH') or os.path.join(_BASE_DIR, 'data', 'postcode_distance_final.csv')
-# DG 报价表 xlsx 默认文件（可覆盖为其他路径；用于管理后台「DG 报价表」模块的初始数据）
+# DG 整柜参考 xlsx（config.DG_QUOTE_XLSX_PATH）；柜类 Excel 模板清单见 services/dg_excel_template_registry.py
 DG_QUOTE_XLSX_PATH = os.environ.get('DG_QUOTE_XLSX_PATH') or os.path.join(_BASE_DIR, '4月25日DG周鹏.xlsx')
 PER_PAGE = int(os.environ.get('PER_PAGE', '20'))
 APP_ENV = (os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'development').strip().lower()

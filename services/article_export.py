@@ -255,7 +255,15 @@ def _write_dg_grid_v2_module(sheet, row, c):
             alignment=TEXT_ALIGNMENT,
         )
     row = _write_section_title(sheet, row, "费用项目")
-    headers = ["提单号", "柜号", "费用项目", "币别", "金额", "说明"]
+    dual = bool(c.get("fee_dual_amount"))
+    if dual:
+        h1 = str(c.get("fee_amount_label_1") or "20GP/金额")
+        h2 = str(c.get("fee_amount_label_2") or "40HQ/金额")
+        headers = ["提单号", "柜号", "费用项目", "币别", h1, h2, "说明"]
+        ncol = 7
+    else:
+        headers = ["提单号", "柜号", "费用项目", "币别", "金额", "说明"]
+        ncol = 6
     for i, h in enumerate(headers, start=1):
         cell = sheet.cell(row=row, column=i, value=h)
         cell.font = HEADER_FONT
@@ -281,7 +289,14 @@ def _write_dg_grid_v2_module(sheet, row, c):
             cname.font = Font(name="Microsoft YaHei", size=12, color="0F172A", bold=True)
             cname.border = TABLE_BORDER
             cname.alignment = TEXT_ALIGNMENT
-            for j, v in ((5, it.get("amount", "")), (6, it.get("note", ""))):
+            cols_write = [(5, it.get("amount", "")), (6, it.get("note", ""))]
+            if dual:
+                cols_write = [
+                    (5, it.get("amount", "")),
+                    (6, it.get("amount_alt", "")),
+                    (7, it.get("note", "")),
+                ]
+            for j, v in cols_write:
                 cell = sheet.cell(
                     row=row, column=j, value=str(v) if v is not None else ""
                 )
@@ -293,8 +308,11 @@ def _write_dg_grid_v2_module(sheet, row, c):
                 it.get("container_no", ""),
                 it.get("name", ""),
                 it.get("amount", ""),
-                it.get("note", ""),
             ]
+            if dual:
+                line.extend([it.get("amount_alt", ""), it.get("note", "")])
+            else:
+                line.append(it.get("note", ""))
         else:
             line = [
                 it.get("bl_no", ""),
@@ -302,8 +320,11 @@ def _write_dg_grid_v2_module(sheet, row, c):
                 it.get("name", ""),
                 it.get("currency", ""),
                 it.get("amount", ""),
-                it.get("note", ""),
             ]
+            if dual:
+                line.extend([it.get("amount_alt", ""), it.get("note", "")])
+            else:
+                line.append(it.get("note", ""))
             for j, v in enumerate(line, start=1):
                 cell = sheet.cell(row=row, column=j, value=str(v) if v is not None else "")
                 cell.font = BODY_FONT
@@ -313,7 +334,7 @@ def _write_dg_grid_v2_module(sheet, row, c):
             16, _estimate_row_height([str(x) for x in line])
         )
         row += 1
-    for cc in range(1, 7):
+    for cc in range(1, ncol + 1):
         sheet.column_dimensions[get_column_letter(cc)].width = min(20, 10 + (cc * 0.3))
     remark = c.get("remark")
     if remark:
@@ -332,9 +353,21 @@ def _write_dg_grid_module(sheet, row, content):
         return _write_dg_grid_v2_module(sheet, row, merge_dg_v2_content(c))
     from openpyxl.styles import Alignment, Font
 
-    from services.dg_quote_grid import _prepare_dg_table_structure, prepare_dg_table_display
+    from services.dg_quote_grid import (
+        _prepare_dg_table_structure,
+        canonical_excel_grid_module_content,
+        prepare_dg_table_display,
+    )
 
-    title = (c or {}).get("title") or "DG 报价表"
+    c = canonical_excel_grid_module_content(dict(c))
+    tid = ((c or {}).get("template_id") or "").strip()
+    if tid == "普柜":
+        fb = "普柜报价表"
+    elif tid == "9类电池柜":
+        fb = "9类电池柜报价表"
+    else:
+        fb = "报价表"
+    title = (c or {}).get("title") or fb
     row = _write_merged_text(
         sheet,
         row,

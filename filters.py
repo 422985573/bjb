@@ -188,7 +188,7 @@ def _static_with_version(filename):
 
 
 def dg_grid_trim_leading_filter(cells):
-    """DG 报价表：去掉数据矩阵顶部全空行（模板展示/编辑用）。"""
+    """dg_grid：去掉数据矩阵顶部全空行（模板展示/编辑用）。"""
     if not cells:
         return cells or []
     from services.dg_quote_grid import trim_leading_empty_rows
@@ -197,7 +197,7 @@ def dg_grid_trim_leading_filter(cells):
 
 
 def dg_grid_normalize_filter(cells):
-    """DG 报价表：去顶空行 + 去掉第 1 列与最后 3 列（与后台默认导入一致）。"""
+    """dg_grid：去顶空行 + 去掉第 1 列与最后 3 列（与后台默认导入一致）。"""
     from services.dg_quote_grid import normalize_dg_grid_cells
 
     return normalize_dg_grid_cells(cells or [])
@@ -217,11 +217,32 @@ def dg_v2_merged_filter(module_content):
     return merge_dg_v2_content(c)
 
 
+def dg_excel_grid_canonical_filter(content):
+    """Excel 栅格（非 v2）：前台展示用规范化副本（表格裁列/免责并入备注），不写库。"""
+    from services.dg_quote_grid import canonical_excel_grid_module_content
+
+    c = content
+    if c is None:
+        return {}
+    if isinstance(c, str):
+        c = from_json_filter(c)
+    if not isinstance(c, dict):
+        return {}
+    return canonical_excel_grid_module_content(c)
+
+
 def dg_grid_render_table_filter(module_content):
-    """DG 报价表：v2 为分块版式；旧数据为合并 <table>。"""
+    """dg_grid：v2 为分块版式；旧数据为合并 <table>。"""
     from markupsafe import Markup
 
-    from services.dg_quote_grid import is_dg_content_v2, prepare_dg_table_display, render_dg_quote_v2_html, render_dg_table_html
+    from services.dg_quote_grid import (
+        find_excel_quote_fee_header_row,
+        prepare_dg_table_display,
+        render_dg_excel_grid_split_document_html,
+        render_dg_quote_v2_html,
+        render_dg_table_html,
+        is_dg_content_v2,
+    )
 
     c = module_content
     if c is None:
@@ -235,14 +256,28 @@ def dg_grid_render_table_filter(module_content):
         return render_dg_quote_v2_html(c)
 
     cells, merges, hr = prepare_dg_table_display(c)
-    return Markup(render_dg_table_html(cells, merges, hr))
+    fee_split_row = find_excel_quote_fee_header_row(cells)
+    if fee_split_row is not None:
+        return render_dg_excel_grid_split_document_html(cells, merges, hr, fee_split_row)
+
+    inner = render_dg_table_html(cells, merges, hr)
+    return Markup(
+        '<div class="dg-quote-v2 dg-quote-v2--grid dg-excel-quote-layout">'
+        '<div class="dg-quote-v2-section dg-quote-v2-fee-block"><div class="dg-quote-v2-fee-wrap">'
+        f'{inner}</div></div></div>'
+    )
 
 
 def dg_grid_editable_table_filter(module_content):
-    """DG 模块后台编辑：与文章页同合并布局，单元格为 textarea。"""
+    """DG 模块后台编辑：Excel 栅格分段（抬头 / 费用）；其余为合并表格。"""
     from markupsafe import Markup
 
-    from services.dg_quote_grid import prepare_dg_table_display, render_dg_table_editable_html
+    from services.dg_quote_grid import (
+        find_excel_quote_fee_header_row,
+        prepare_dg_table_display,
+        render_dg_excel_grid_editable_split_html,
+        render_dg_table_editable_html,
+    )
 
     c = module_content
     if c is None:
@@ -253,7 +288,27 @@ def dg_grid_editable_table_filter(module_content):
         return Markup('')
 
     cells, merges, hr = prepare_dg_table_display(c)
+    variant = str((c.get('variant') or '')).strip().lower()
+    if variant == 'excel_grid' and find_excel_quote_fee_header_row(cells) is not None:
+        return Markup(render_dg_excel_grid_editable_split_html(cells, merges, hr))
     return Markup(render_dg_table_editable_html(cells, merges, hr))
+
+
+def dg_grid_content_dimensions_filter(module_content):
+    """与 prepare_dg_table_display 一致裁剪后的行数、列数（后台 dg-grid-editor dataset）。"""
+    from services.dg_quote_grid import prepare_dg_table_display
+
+    c = module_content
+    if c is None:
+        return {"rows": 1, "cols": 1}
+    if isinstance(c, str):
+        c = from_json_filter(c)
+    if not isinstance(c, dict):
+        return {"rows": 1, "cols": 1}
+    cells, _merges, _hr = prepare_dg_table_display(c)
+    n = len(cells)
+    m = max((len(r) for r in cells), default=1) if n else 1
+    return {"rows": n, "cols": m}
 
 
 def register_filters(app):
@@ -265,8 +320,10 @@ def register_filters(app):
     app.jinja_env.filters['dg_grid_trim_leading'] = dg_grid_trim_leading_filter
     app.jinja_env.filters['dg_grid_normalize'] = dg_grid_normalize_filter
     app.jinja_env.filters['dg_v2_merged'] = dg_v2_merged_filter
+    app.jinja_env.filters['dg_excel_grid_canonical'] = dg_excel_grid_canonical_filter
     app.jinja_env.filters['dg_grid_render_table'] = dg_grid_render_table_filter
     app.jinja_env.filters['dg_grid_editable_table'] = dg_grid_editable_table_filter
+    app.jinja_env.filters['dg_grid_content_dimensions'] = dg_grid_content_dimensions_filter
 
     @app.context_processor
     def inject_static_version():

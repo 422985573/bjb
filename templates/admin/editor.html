@@ -173,7 +173,7 @@
 }
 .dg-grid-editor-section {
     margin-bottom: 20px;
-    padding: 15px;
+    padding: 15px 0;
     background: var(--bg-gray);
     border-radius: 8px;
 }
@@ -359,7 +359,7 @@
 }
 
 .module-body {
-    padding: 15px;
+    padding: 5px;
 }
 
 /* 备注区域 */
@@ -1081,6 +1081,9 @@
     border-left: 1px solid #e2e8f0;
     box-sizing: border-box;
 }
+.dg-editor .dg-grid-table--editable .dg-grid-cell--row-action.dg-grid-cell--row-action--static {
+    background: transparent;
+}
 .dg-editor .dg-row-del-btn {
     font-size: 12px;
     padding: 4px 8px;
@@ -1123,11 +1126,8 @@
     font-size: 11px;
     line-height: 1.35;
     color: #0f172a;
-    resize: vertical;
     padding: 4px 6px;
     font-family: inherit;
-    white-space: pre-wrap;
-    word-break: break-word;
 }
 .dg-editor .dg-grid-table--editable .dg-grid-cell--fullrow .dg-grid-cell-input {
     text-align: center;
@@ -1141,11 +1141,169 @@
     color: #0f172a;
     font-weight: 600;
 }
+.dg-editor .dg-grid-table--editable .dg-grid-cell-split {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+/* 非卡片包裹时的兜底（一般不出现） */
+.dg-editor .dg-grid-table--editable .dg-grid-cell-split .dg-grid-cell-input--label {
+    flex: 0 0 18%;
+    min-width: 5rem;
+    max-width: 42%;
+    border-right: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 500;
+    text-align: left;
+}
+.dg-editor .dg-grid-table--editable .dg-grid-cell-split .dg-grid-cell-input--value {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: #fff;
+    color: #0f172a;
+    font-weight: 400;
+    text-align: left;
+}
+/* 与 DG v2 抬头/客户四列表一致：标签灰底 + 值白底、中间竖线、无额外间距 */
+.dg-editor .dg-quote-v2--grid .dg-grid-table--editable .dg-grid-cell-split .dg-grid-cell-input--label {
+    flex: 0 0 18%;
+    min-width: 5.5rem;
+    max-width: 40%;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    border-right: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: left;
+    padding: 0.35rem 0.4rem;
+}
+.dg-editor .dg-quote-v2--grid .dg-grid-table--editable .dg-grid-cell-split .dg-grid-cell-input--value {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: #fff;
+    color: #0f172a;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: left;
+    padding: 0.35rem 0.4rem;
+}
+.dg-editor .dg-quote-v2--grid .dg-grid-table--editable .dg-grid-cell-split .dg-grid-cell-input--label:focus,
+.dg-editor .dg-quote-v2--grid .dg-grid-table--editable .dg-grid-cell-split .dg-grid-cell-input--value:focus {
+    outline: 1px solid #93c5fd;
+    outline-offset: -1px;
+    border-radius: 2px;
+}
 .dg-editor .dg-grid-cell-input:focus {
     background: #f0f9ff !important;
     outline: 1px solid #93c5fd;
     outline-offset: -1px;
 }
+
+/* 后台 Excel 栅格（dg-excel-quote-layout）：居中留白排版，不用固定 nth-child 对齐 Excel 行号 */
+.dg-editor .dg-quote-v2.dg-quote-v2--grid.dg-excel-quote-layout {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+}
+.dg-editor .dg-excel-quote-layout .dg-quote-v2-fee-wrap {
+    margin-top: 0;
+    margin-left: auto;
+    margin-right: auto;
+}
+.dg-editor .dg-excel-quote-layout .dg-quote-v2-fee-wrap table.dg-grid-table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: auto;
+}
+.dg-editor .dg-excel-quote-layout .dg-grid-table.dg-quote-v2-fee td.dg-grid-cell {
+    border-color: #cbd5e1;
+    max-width: none;
+    vertical-align: middle;
+}
+.dg-editor .dg-excel-quote-layout .dg-grid-table--editable .dg-grid-cell .dg-grid-cell-input {
+    font-size: 12px;
+    line-height: 1.45;
+    padding: 0.4rem 0.5rem;
+}
+.dg-editor .dg-excel-quote-layout .dg-quote-v2-fee-wrap:not(.dg-excel-editor-fee-wrap) .dg-grid-tr:first-child .dg-grid-cell--fullrow .dg-grid-cell-input,
+.dg-editor .dg-excel-quote-layout .dg-excel-editor-meta-wrap .dg-grid-tr:first-child .dg-grid-cell--fullrow .dg-grid-cell-input {
+    font-size: 1.06rem;
+    font-weight: 700;
+    text-align: center;
+}
+.dg-editor .dg-excel-quote-layout .dg-quote-v2-fee-wrap:not(.dg-excel-editor-fee-wrap) .dg-grid-tr:first-child .dg-grid-cell--fullrow,
+.dg-editor .dg-excel-quote-layout .dg-excel-editor-meta-wrap .dg-grid-tr:first-child .dg-grid-cell--fullrow {
+    background: #f8fafc;
+}
+.dg-editor .dg-excel-quote-layout .dg-excel-editor-fee-heading {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    margin: 0.55rem auto 0.4rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #e0e7ff;
+    max-width: 52rem;
+}
+.dg-editor .dg-excel-quote-layout .dg-grid-tr:not(:first-child) .dg-grid-cell--fullrow .dg-grid-cell-input {
+    text-align: left;
+    font-weight: 400;
+    font-size: 12px;
+}
+/* 抬头 KV 行配对：两字段并排显示 */
+.dg-editor .dg-excel-editor-meta-wrap .dg-grid-table--excel-meta {
+    table-layout: fixed;
+    width: 100%;
+}
+.dg-editor .dg-excel-editor-meta-wrap .dg-meta-kv-paired {
+    display: table-row;
+}
+.dg-editor .dg-excel-editor-meta-wrap .dg-meta-kv-half {
+    width: 50%;
+    vertical-align: middle;
+}
+.dg-editor .dg-excel-editor-meta-wrap .dg-meta-kv-half .dg-grid-cell-input {
+    width: 100%;
+}
+.dg-editor .dg-excel-editor-meta-wrap .dg-meta-kv-half .dg-grid-cell-split {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+.dg-editor .dg-excel-editor-meta-wrap .dg-meta-kv-half .dg-grid-cell-input--label {
+    flex: 0 0 auto;
+    width: 40%;
+    min-width: 0;
+}
+.dg-editor .dg-excel-editor-meta-wrap .dg-meta-kv-half .dg-grid-cell-input--value {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* DG schema v2 编辑器：抬头 + 费用表置于前台同款 dg-quote-v2 卡片内 */
+.dg-editor .dg-quote-v2.dg-quote-v2--editor-v2 {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0.65rem 0.4rem 0.85rem;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.dg-editor .dg-quote-v2--editor-v2 .dg-grid-editor-section.dg-v2-metasheet-wrap > h4 {
+    margin-top: 0;
+}
+
 .add-row-btn {
     background: var(--primary);
     color: white;
@@ -1159,6 +1317,178 @@
 
 .add-row-btn:hover {
     background: var(--primary-dark);
+}
+
+.dg-excel-fee-toolbar-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.dg-excel-fee-toolbar-btns .add-row-btn {
+    margin-top: 0;
+}
+
+.dg-excel-fee-toolbar-btns .dg-excel-toolbar-secondary-btn {
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+.dg-excel-fee-toolbar-btns .dg-excel-toolbar-secondary-btn:hover {
+    background: #eff6ff;
+}
+
+/* 费用子表：表头只读行 */
+.dg-editor .dg-grid-table--excel-fee .dg-grid-tr--readonly .dg-grid-cell {
+    background: #eff6ff;
+}
+.dg-editor .dg-grid-cell-input--ro {
+    background: transparent !important;
+    border: none !important;
+    color: #1e3a5f !important;
+    font-weight: 600 !important;
+    cursor: default !important;
+    pointer-events: none;
+    text-align: center;
+}
+
+/* 费用子表：本组添加行按钮（与「删」按钮同列） */
+.dg-fee-add-row-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 4px;
+    display: block;
+}
+.dg-fee-add-row-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* 整块删除费用类别（默认显示在大类左侧合并格底部） */
+.dg-fee-del-group-btn {
+    background: #fff;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 4px;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+.dg-fee-del-group-btn:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+}
+
+/* 「删类别」在左侧大类合并格内 */
+.dg-editor .dg-fee-div-merged-category {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: 8px;
+    box-sizing: border-box;
+}
+.dg-editor .dg-fee-div-cell--merged-category .dg-grid-cell-input,
+.dg-editor .dg-fee-div-cell--merged-category .dg-grid-cell-split {
+    flex: 0 0 auto;
+}
+.dg-editor .dg-fee-del-group-btn--merged-cell {
+    margin-top: auto;
+    align-self: stretch;
+}
+
+.dg-editor .dg-grid-table td .dg-fee-td-merged-category {
+    display: flex;
+    flex-direction: column;
+    min-height: 48px;
+    gap: 8px;
+    box-sizing: border-box;
+}
+.dg-editor .dg-grid-table td .dg-fee-td-merged-category .dg-fee-del-group-btn--merged-cell {
+    margin-top: auto;
+    align-self: stretch;
+}
+
+.dg-excel-fee-hint {
+    margin-top: 8px;
+    margin-bottom: 0;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.55;
+}
+
+/* Excel 费用子表：div 栅格（非 table） */
+.dg-editor .dg-fee-div-editor {
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+.dg-editor .dg-fee-div-head {
+    border-bottom: 1px solid #bfdbfe;
+    background: #eff6ff;
+}
+.dg-editor .dg-fee-div-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.dg-editor .dg-fee-div-group {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fafafa;
+}
+.dg-editor .dg-fee-div-group-grid .dg-fee-div-cell,
+.dg-editor .dg-fee-div-row-grid .dg-fee-div-cell {
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 4px 6px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: stretch;
+}
+.dg-editor .dg-fee-div-group-grid .dg-fee-div-cell:last-child,
+.dg-editor .dg-fee-div-row-grid .dg-fee-div-cell:last-child {
+    border-right: none;
+}
+.dg-editor .dg-fee-div-cell .dg-grid-cell-input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+.dg-editor .dg-fee-div-cell .dg-grid-cell-input:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+.dg-editor .dg-fee-div-cell--action {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+    align-items: stretch;
+}
+.dg-editor .dg-fee-div-cell--action .dg-row-del-btn {
+    align-self: flex-start;
+}
+.dg-editor .dg-fee-div-standalone .dg-fee-div-row-grid {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
 }
 
 .delete-row-btn {
@@ -1579,7 +1909,7 @@
     }
 
     .module-body {
-        padding: 12px;
+        padding: 5px;
     }
 
     .image-selector-content {
@@ -1682,14 +2012,14 @@
         width: 12rem;
     }
 
-    /* 旧 schema 合并大表：按内容铺开，格子有下限宽度 */
-    .dg-editor .dg-table-scroll table.dg-grid-table {
+    /* Excel 栅格编排版：小屏宽表横向滚动 */
+    .dg-editor .dg-quote-v2--grid.dg-excel-quote-layout .dg-quote-v2-fee-wrap table.dg-grid-table {
         width: max-content !important;
         max-width: none;
         table-layout: auto !important;
     }
 
-    .dg-editor .dg-table-scroll .dg-grid-table--editable .dg-grid-cell {
+    .dg-editor .dg-quote-v2--grid.dg-excel-quote-layout .dg-quote-v2-fee-wrap .dg-grid-table--editable .dg-grid-cell {
         min-width: 3.25rem;
     }
 }
@@ -1722,7 +2052,10 @@
             <button type="button" class="module-btn" onclick="addModule('image')">🖼️ 添加图片</button>
             <button type="button" class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
             <p class="sidebar-hint-channel" style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">含「费用项目」与表格增删行</p>
-            <button type="button" class="module-btn" onclick="addModule('dg_grid')">📋 添加 DG 报价表</button>
+            <button type="button" class="module-btn" onclick="addModule('dg_grid_v2')">📋 添加 DG报价表</button>
+            <button type="button" class="module-btn" onclick="addModule('dg_excel_9battery')">📊 添加 9类电池柜报价表</button>
+            <button type="button" class="module-btn" onclick="addModule('dg_excel_pucabinet')">📊 添加 普柜报价表</button>
+            <p class="sidebar-hint-dg" style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">普柜与 9类电池柜：同一套 Excel 分段编辑器、工具栏与对外文章页排版；仅导入模板数据不同（与 DG报价表 分块版式无关）。</p>
         </div>
         
         <div class="module-list-sidebar">
@@ -1735,7 +2068,9 @@
                         {% if module.type == 'text' %}📝{% endif %}
                         {% if module.type == 'image' %}🖼️{% endif %}
                         {% if module.type == 'channel' %}📊{% endif %}
-                        {% if module.type == 'dg_grid' %}📋{% endif %}
+                        {% if module.type == 'dg_grid' %}
+                            {% if (content.schema|default(0))|int == 2 %}📋{% else %}📊{% endif %}
+                        {% endif %}
                     </span>
                     <span class="module-list-item-title {% if not content or not content.title %}empty{% endif %}" 
                           data-module-id="{{ module.id }}"
@@ -1791,7 +2126,10 @@
                         {% if module.type == 'text' %}📝 文本模块{% endif %}
                         {% if module.type == 'image' %}🖼️ 图片模块{% endif %}
                         {% if module.type == 'channel' %}📊 渠道模块{% endif %}
-                        {% if module.type == 'dg_grid' %}📋 DG 报价表{% endif %}
+                        {% if module.type == 'dg_grid' %}
+                            {% set dg_ic = module.content | from_json %}
+                            {% if (dg_ic.schema|default(0))|int == 2 %}📋 DG报价表{% else %}📊 {{ dg_ic.title or 'Excel栅格' }}{% endif %}
+                        {% endif %}
                     </span>
                     <div class="module-actions">
                         <button type="button" class="btn-delete" onclick="deleteModule({{ module.id }})">删除</button>
@@ -1947,48 +2285,9 @@
                     {% elif module.type == 'dg_grid' %}
                         {% set dg = module.content | from_json %}
                         {% if (dg.schema|default(0))|int == 2 %}
-                            {% include 'admin/dg_grid_editor_v2.html' %}
+                            {% include 'admin/dg/dg_quote_editor_v2.html' %}
                         {% else %}
-                        {% set dg_cells = (dg.cells if dg and dg.cells else [])|dg_grid_normalize %}
-                        {% set dg_rows = (dg_cells|length) if dg_cells else 1 %}
-                        {% set dg_cols = ((dg.cols if dg and dg.cols else (dg_cells[0]|length if dg_cells else 1))|int) %}
-                        <div class="dg-grid-editor" data-module-id="{{ module.id }}"
-                             data-dg-schema="1"
-                             data-rows="{{ dg_rows }}"
-                             data-cols="{{ dg_cols }}"
-                             data-sheet-name="{{ (dg.sheet_name or '')|e }}"
-                             data-template-file="{{ (dg.template_file or '')|e }}">
-                            <script type="application/json" class="dg-grid-struct">{{ {'merges': (dg or {}).get('merges', []), 'header_orange_row': (dg or {}).get('header_orange_row') }|tojson }}</script>
-                            <div class="dg-editor">
-                                <div class="dg-grid-toolbar-actions" aria-label="DG 操作（旧版合并表）">
-                                    <button type="button" class="ch-tool-btn" data-dg-act="append-row" data-dg-target="{{ module.id }}">+ 添加费用项目</button>
-                                    <p class="dg-grid-toolbar-hint">旧版：合并单元格大表。新建模块已改为客户信息+费用行版式。编辑后点「保存信息」。</p>
-                                </div>
-                                <div class="dg-grid-editor-section">
-                                    <h4>📋 模块标题</h4>
-                                    <input type="text" class="module-title-input dg-grid-title-input" data-module-id="{{ module.id }}"
-                                           placeholder="与前台大标题一致"
-                                           value="{{ dg.title if dg and dg.title else '' }}"
-                                           oninput="updateModuleTitle({{ module.id }}, this.value)">
-                                </div>
-                                <div class="dg-grid-editor-section">
-                                    <div class="channel-section-header">
-                                        <h4>📊 报价表</h4>
-                                    </div>
-                                    <p class="channel-fee-items-hint">与 xlsx 合并布局一致；可横向滚动。</p>
-                                    <div class="dg-table-editor">
-                                        <div class="dg-table-scroll">
-                                            {{ (dg or {})|dg_grid_editable_table }}
-                                        </div>
-                                        <button type="button" class="ch-tool-btn add-row-btn" data-dg-act="append-row" data-dg-target="{{ module.id }}">+ 添加行</button>
-                                    </div>
-                                </div>
-                                <div class="remark-section">
-                                    <label>📌 模块备注（显示在模块下方，支持HTML）</label>
-                                    <textarea class="remark-editor dg-grid-remark" style="min-height: 80px;">{{ dg.remark if dg else '' }}</textarea>
-                                </div>
-                            </div>
-                        </div>
+                            {% include 'admin/dg/dg_excel_grid_editor.html' %}
                         {% endif %}
                     {% endif %}
                 </div>
@@ -2392,12 +2691,29 @@ async function addModule(type) {
     
     let content = {};
     
+    let apiType = type;
+    if (type === 'dg_grid_v2' || type === 'dg_excel_9battery' || type === 'dg_excel_pucabinet') {
+        apiType = 'dg_grid';
+    }
+
     if (type === 'text') {
         content = { title: '', text: '', remark: '' };
     } else if (type === 'image') {
         content = { title: '', url: '', alt: '', caption: '', remark: '' };
-    } else if (type === 'dg_grid') {
+    } else if (type === 'dg_grid_v2') {
         content = {};
+    } else if (type === 'dg_excel_9battery') {
+        content = {
+            variant: 'excel_grid',
+            template_id: '9类电池柜',
+            title: '9类电池柜报价表'
+        };
+    } else if (type === 'dg_excel_pucabinet') {
+        content = {
+            variant: 'excel_grid',
+            template_id: '普柜',
+            title: '普柜报价表'
+        };
     } else if (type === 'channel') {
         if (isChannelSimple) {
             // 大件/纸箱编辑页：表头只有「邮编」，默认一行 0000,0001
@@ -2432,7 +2748,7 @@ async function addModule(type) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             article_id: articleId,
-            type: type,
+            type: apiType,
             content: content
         })
     });
@@ -2477,15 +2793,15 @@ async function saveModule(moduleId) {
     }
 }
 
-// DG 报价表：根据页面上的 textarea 同步 data-rows / data-cols（增删行后保持与 getDgGridEditorData 一致）
+// DG 报价表：根据单元格 input 同步 data-rows / data-cols（增删行后保持与 getDgGridEditorData 一致）
 function syncDgGridDatasetFromTextareas(root) {
     if (!root) return;
-    const tas = root.querySelectorAll('textarea.dg-grid-cell-input');
+    const inputs = root.querySelectorAll('.dg-grid-cell-input[data-r][data-c]');
     let maxR = -1;
     let maxC = -1;
-    tas.forEach(function(ta) {
-        const r = parseInt(ta.getAttribute('data-r'), 10);
-        const c = parseInt(ta.getAttribute('data-c'), 10);
+    inputs.forEach(function(inp) {
+        const r = parseInt(inp.getAttribute('data-r'), 10);
+        const c = parseInt(inp.getAttribute('data-c'), 10);
         if (!Number.isNaN(r)) maxR = Math.max(maxR, r);
         if (!Number.isNaN(c)) maxC = Math.max(maxC, c);
     });
@@ -2493,36 +2809,751 @@ function syncDgGridDatasetFromTextareas(root) {
     if (maxC >= 0) root.dataset.cols = String(maxC + 1);
 }
 
-function dgGridAppendRowAtEnd(root) {
-    const table = root.querySelector('table.dg-grid-table');
-    const tbody = table && table.querySelector('tbody');
+function dgGridStructPushMerge(root, merge) {
+    const el = root.querySelector('script.dg-grid-struct');
+    if (!el) return;
+    var o;
+    try { o = JSON.parse(el.textContent || '{}'); } catch (err) { o = {}; }
+    if (!Array.isArray(o.merges)) o.merges = [];
+    o.merges.push({
+        r: parseInt(merge.r, 10) || 0,
+        c: parseInt(merge.c, 10) || 0,
+        rs: parseInt(merge.rs, 10) || 1,
+        cs: parseInt(merge.cs, 10) || 1
+    });
+    el.textContent = JSON.stringify(o);
+}
+
+/** Excel 费用子表：推断「费用项目」所在列（与柜类报价表头一致），用于新增纵向合并费用块 */
+function inferDgFeeNameColumn(root, nC) {
+    const clamp = function(cc) {
+        return Math.min(Math.max(cc, 0), Math.max(0, nC - 1));
+    };
+    const feeDiv = root.querySelector('.dg-fee-div-editor');
+    const scanLabels = function(candidates) {
+        for (let i = 0; i < candidates.length; i++) {
+            const node = candidates[i];
+            const c = parseInt(node.getAttribute('data-c'), 10);
+            if (Number.isNaN(c)) continue;
+            let raw = '';
+            if (node.classList && node.classList.contains('dg-grid-cell-split')) {
+                const lab = node.querySelector('.dg-grid-cell-input--label');
+                const val = node.querySelector('.dg-grid-cell-input--value');
+                raw = ((lab && lab.value) || '') + ((val && val.value) || '');
+            } else {
+                raw = node.value || '';
+            }
+            raw = String(raw).replace(/\s+/g, ' ').trim();
+            if (!raw) continue;
+            if (raw.indexOf('费用项目') >= 0 || raw.indexOf('费用明细') >= 0) {
+                return clamp(c);
+            }
+        }
+        return null;
+    };
+    if (feeDiv) {
+        const head = feeDiv.querySelector('.dg-fee-div-head');
+        if (head) {
+            const candidates = head.querySelectorAll('.dg-grid-cell-input[data-c], .dg-grid-cell-split[data-c]');
+            const hit = scanLabels(candidates);
+            if (hit !== null) return hit;
+        }
+    }
+    const feeTable = root.querySelector('table.dg-grid-table--excel-fee');
+    const tbody = feeTable && feeTable.querySelector('tbody');
     if (!tbody) {
-        alert('未找到 DG 表格，请刷新后重试。');
+        return clamp(nC >= 6 ? 2 : 1);
+    }
+    const trs = tbody.querySelectorAll('tr');
+    for (let ri = 0; ri < Math.min(trs.length, 18); ri++) {
+        const tr = trs[ri];
+        const candidates = tr.querySelectorAll('.dg-grid-cell-input[data-c], .dg-grid-cell-split[data-c]');
+        for (let i = 0; i < candidates.length; i++) {
+            const node = candidates[i];
+            const c = parseInt(node.getAttribute('data-c'), 10);
+            if (Number.isNaN(c)) continue;
+            let raw = '';
+            if (node.classList.contains('dg-grid-cell-split')) {
+                const lab = node.querySelector('.dg-grid-cell-input--label');
+                const val = node.querySelector('.dg-grid-cell-input--value');
+                raw = ((lab && lab.value) || '') + ((val && val.value) || '');
+            } else {
+                raw = node.value || '';
+            }
+            raw = String(raw).replace(/\s+/g, ' ').trim();
+            if (!raw) continue;
+            if (raw.indexOf('费用项目') >= 0 || raw.indexOf('费用明细') >= 0) {
+                return clamp(c);
+            }
+        }
+    }
+    return clamp(nC >= 6 ? 2 : 1);
+}
+
+function dgFeeMergeAnchorColumn(root, nC) {
+    const feeDiv = root.querySelector('.dg-fee-div-editor');
+    if (feeDiv) {
+        const ac = parseInt(feeDiv.getAttribute('data-dg-fee-anchor-col'), 10);
+        if (!Number.isNaN(ac)) return Math.min(Math.max(ac, 0), Math.max(0, nC - 1));
+    }
+    let fb = inferDgFeeNameColumn(root, nC);
+    if (fb >= nC) fb = Math.max(0, nC - 2);
+    return fb;
+}
+
+function dgNormalizeMerges(merges) {
+    return (merges || []).map(function(mg) {
+        return {
+            r: parseInt(mg.r, 10) || 0,
+            c: parseInt(mg.c, 10) || 0,
+            rs: parseInt(mg.rs, 10) || 1,
+            cs: parseInt(mg.cs, 10) || 1
+        };
+    });
+}
+
+function dgCloneCells(cells) {
+    return (cells || []).map(function(row) { return (row || []).slice(); });
+}
+
+/** 删一行后调整 merges：落在纵向合并区内则 rs 减 1（保留大类合并），勿整块丢弃 */
+function dgAdjustMergesAfterRowDelete(mergesIn, deletedIndex) {
+    return dgNormalizeMerges(mergesIn).map(function(mg) {
+        const r0 = mg.r;
+        const rs = mg.rs;
+        const c0 = mg.c;
+        const cs = mg.cs;
+        const last = r0 + rs - 1;
+        if (deletedIndex < r0) {
+            return { r: r0 - 1, c: c0, rs: rs, cs: cs };
+        }
+        if (deletedIndex > last) {
+            return { r: r0, c: c0, rs: rs, cs: cs };
+        }
+        var newRs = rs - 1;
+        if (newRs < 1) {
+            return null;
+        }
+        return { r: r0, c: c0, rs: newRs, cs: cs };
+    }).filter(function(x) { return x != null; });
+}
+
+function dgApplyMergeAndHeaderAfterRowDelete(mergesIn, headerOrangeIn, deletedIndex) {
+    let header_orange_row = headerOrangeIn;
+    if (header_orange_row != null && header_orange_row !== '') {
+        const h = parseInt(header_orange_row, 10);
+        if (!Number.isNaN(h)) {
+            if (h === deletedIndex) { header_orange_row = null; }
+            else if (h > deletedIndex) { header_orange_row = h - 1; }
+        }
+    }
+    const merges = dgAdjustMergesAfterRowDelete(mergesIn, deletedIndex);
+    return { merges: merges, header_orange_row: header_orange_row };
+}
+
+function dgAdjustHeaderOrangeAfterSliceRemove(headerOrangeIn, rowLo, rowHiExcl) {
+    if (rowLo >= rowHiExcl) return headerOrangeIn;
+    let hr = headerOrangeIn;
+    if (hr == null || hr === '') return hr;
+    const h = parseInt(hr, 10);
+    if (Number.isNaN(h)) return hr;
+    const nDel = rowHiExcl - rowLo;
+    if (h >= rowLo && h < rowHiExcl) return null;
+    if (h >= rowHiExcl) return h - nDel;
+    return h;
+}
+
+/** 删除连续多行（与后台 _dg_remove_rows_slice 一致），用于整块删掉费用类别 */
+function dgCellsSliceRemoveRows(cellsIn, mergesIn, headerOrangeIn, rowLo, rowHiExcl) {
+    const cells = dgCloneCells(cellsIn);
+    const merges = dgNormalizeMerges(mergesIn);
+    if (!cells.length || rowLo >= rowHiExcl || rowLo < 0 || rowHiExcl > cells.length) {
+        return {
+            cells: cells,
+            merges: merges,
+            header_orange_row: headerOrangeIn,
+        };
+    }
+    const nDel = rowHiExcl - rowLo;
+    const newCells = cells.slice(0, rowLo).concat(cells.slice(rowHiExcl));
+    const newMerges = [];
+    merges.forEach(function(mg) {
+        const r0 = mg.r;
+        const rs = mg.rs;
+        const r1 = r0 + rs - 1;
+        if (r1 < rowLo) {
+            newMerges.push({ r: r0, c: mg.c, rs: rs, cs: mg.cs });
+        } else if (r0 >= rowHiExcl) {
+            newMerges.push({ r: r0 - nDel, c: mg.c, rs: rs, cs: mg.cs });
+        }
+    });
+    const hrOut = dgAdjustHeaderOrangeAfterSliceRemove(headerOrangeIn, rowLo, rowHiExcl);
+    return { cells: newCells, merges: newMerges, header_orange_row: hrOut };
+}
+
+async function dgGridRemoveFeeGroup(root, anchorR, anchorC) {
+    if (!root.querySelector('.dg-excel-editor-split')) {
+        alert('当前布局不支持整块删除费用类别，请在该类别内逐行点「删」。');
         return;
     }
+    const d = getDgGridEditorData(root);
+    const merges = dgNormalizeMerges(d.merges);
+    let target = null;
+    for (let i = 0; i < merges.length; i++) {
+        const mg = merges[i];
+        if (mg.c !== anchorC || mg.rs <= 1) continue;
+        if (mg.r === anchorR) {
+            target = mg;
+            break;
+        }
+    }
+    if (!target) {
+        alert('未找到该费用类别合并块。');
+        return;
+    }
+    const r0 = target.r;
+    const rs = target.rs;
+    const slice = dgCellsSliceRemoveRows(d.cells, d.merges, d.header_orange_row, r0, r0 + rs);
+    await dgExcelEditorReload(root, slice);
+}
+
+async function dgExcelEditorReload(root, override) {
+    let cells;
+    let merges;
+    let header_orange_row;
+    if (override) {
+        cells = dgCloneCells(override.cells);
+        merges = dgNormalizeMerges(override.merges);
+        header_orange_row = override.header_orange_row;
+    } else {
+        const d = getDgGridEditorData(root);
+        cells = d.cells;
+        merges = dgNormalizeMerges(d.merges);
+        header_orange_row = d.header_orange_row;
+    }
+    let resp;
+    try {
+        resp = await fetch('/api/dg/excel_editor_reload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cells: cells,
+                merges: merges,
+                header_orange_row: header_orange_row
+            })
+        });
+    } catch (err) {
+        alert('刷新报价栅格失败，请检查网络后重试。');
+        return;
+    }
+    let j;
+    try {
+        j = await resp.json();
+    } catch (err) {
+        j = null;
+    }
+    if (!resp.ok || !j || !j.success) {
+        alert((j && j.message) || '刷新报价栅格失败，请重试。');
+        return;
+    }
+    const split = root.querySelector('.dg-excel-editor-split');
+    if (split) {
+        split.outerHTML = j.html;
+    }
+    const structEl = root.querySelector('script.dg-grid-struct');
+    if (structEl) {
+        structEl.textContent = JSON.stringify({
+            merges: j.merges,
+            header_orange_row: j.header_orange_row
+        });
+    }
+    if (j.rows != null) root.dataset.rows = String(j.rows);
+    if (j.cols != null) root.dataset.cols = String(j.cols);
+}
+
+/** 与后台 find_excel_quote_fee_header_row 一致（cells 为当前编辑器矩阵） */
+function dgFindExcelFeeHeaderRow(cells) {
+    if (!cells || !cells.length) return null;
+    const scan = Math.min(cells.length, 48);
+    const currencyMarkers = { '币别': true, '币种': true };
+    for (let i = 0; i < scan; i++) {
+        const row = cells[i] || [];
+        const labels = row.map(function(x) { return String(x || '').trim(); });
+        const flat = labels.join('');
+        if (flat.indexOf('提单号') >= 0) return i;
+        const hasFeeProj = labels.some(function(l) { return l === '费用项目'; });
+        const hasCur = labels.some(function(l) { return currencyMarkers[l]; });
+        if (hasFeeProj && hasCur) return i;
+    }
+    return null;
+}
+
+/** 单元格文本规范化（匹配合计、汇率等，减轻空格与兼容字形影响） */
+function dgNormCellGlueForMatch(s) {
+    try {
+        return String(s || '').normalize('NFKC').replace(/\s+/g, '').trim();
+    } catch (e) {
+        return String(s || '').replace(/\s+/g, '').trim();
+    }
+}
+
+/** 行拼接后是否含「总合计」类关键字 */
+function dgRowLooksLikeGrandTotal(row) {
+    const glued = (row || []).map(function(x) { return dgNormCellGlueForMatch(x); }).join('');
+    if (glued.indexOf('总合计') >= 0 || glued.indexOf('费用总合计') >= 0) return true;
+    if (/grand\s*total/i.test(glued)) return true;
+    return false;
+}
+
+/** 行是否为汇总尾部说明（总合计之下常见），用于总合计缺字时的插入锚点 */
+function dgRowLooksLikeFooterTail(row) {
+    const glued = (row || []).map(function(x) { return dgNormCellGlueForMatch(x); }).join('');
+    if (glued.indexOf('兑换人民币汇率') >= 0) return true;
+    if (glued.indexOf('澳币兑换') >= 0 || glued.indexOf('美金兑换') >= 0) return true;
+    if (glued.indexOf('参考即时汇率') >= 0) return true;
+    if (glued.indexOf('不包含不确定') >= 0) return true;
+    return false;
+}
+
+/**
+ * 插入「添加行 / 新增费用大类」的目标行：首个「总合计」行；若无则首个汇率说明等尾行；
+ * 皆无则 cells.length（表末尾）。
+ */
+function dgFindFirstGrandTotalRow(cells, feeHdr) {
+    const lo = feeHdr != null && feeHdr >= 0 ? feeHdr + 1 : 0;
+    let weakFooter = cells.length;
+    for (let r = lo; r < cells.length; r++) {
+        const row = cells[r] || [];
+        if (dgRowLooksLikeGrandTotal(row)) return r;
+        if (dgRowLooksLikeFooterTail(row)) weakFooter = Math.min(weakFooter, r);
+    }
+    return weakFooter;
+}
+
+/**
+ * 合计样板行：总合计行之前、单元格文字含「合计」且不含「总合计」的最后一行；
+ * 若无则取插入锚点行的上一行。
+ */
+function dgFindSubtotalTemplateRow(cells, feeHdr, grandRow) {
+    let best = -1;
+    const lo = feeHdr != null && feeHdr >= 0 ? feeHdr + 1 : 0;
+    const hi = grandRow < cells.length ? grandRow : cells.length;
+    for (let r = lo; r < hi; r++) {
+        const row = cells[r] || [];
+        let hit = false;
+        for (let ci = 0; ci < row.length; ci++) {
+            const t = dgNormCellGlueForMatch(row[ci]);
+            if (!t || t.indexOf('总合计') >= 0) continue;
+            if (t.indexOf('合计') >= 0) {
+                hit = true;
+                break;
+            }
+        }
+        if (hit) best = r;
+    }
+    if (best >= 0) return best;
+    if (grandRow > lo) return grandRow - 1;
+    return -1;
+}
+
+function dgShiftHeaderOrangeAfterInsert(headerOrangeIn, insertR, nInsert) {
+    if (!nInsert || nInsert <= 0) return headerOrangeIn;
+    let hr = headerOrangeIn;
+    if (hr == null || hr === '') return hr;
+    const h = parseInt(hr, 10);
+    if (Number.isNaN(h)) return hr;
+    if (h >= insertR) return h + nInsert;
+    return hr;
+}
+
+/** 在 insertR 处插入 nInsert 个空行后，调整 merges（与插入行逻辑一致） */
+function dgShiftMergesForInsertRowsAt(mergesIn, insertR, nInsert) {
+    return dgNormalizeMerges(mergesIn).map(function(mg) {
+        const r0 = mg.r;
+        const rs0 = mg.rs;
+        const end = r0 + rs0 - 1;
+        if (r0 >= insertR) {
+            return { r: r0 + nInsert, c: mg.c, rs: rs0, cs: mg.cs };
+        }
+        if (end < insertR) {
+            return mg;
+        }
+        return { r: r0, c: mg.c, rs: rs0 + nInsert, cs: mg.cs };
+    });
+}
+
+/** 在 insertR 插入纵向合并费用块（rs 行），并同步 merges / header_orange_row */
+function dgInsertFeeCategoryBlockAt(cellsIn, mergesIn, hrIn, insertR, rs, nC, feeCol) {
+    const newRows = [];
+    for (let i = 0; i < rs; i++) newRows.push(new Array(nC).fill(''));
+    let cells = dgCloneCells(cellsIn);
+    const safeInsert = Math.max(0, Math.min(insertR, cells.length));
+    cells = cells.slice(0, safeInsert).concat(newRows).concat(cells.slice(safeInsert));
+    let merges = dgShiftMergesForInsertRowsAt(dgNormalizeMerges(mergesIn), safeInsert, rs);
+    merges.push({ r: safeInsert, c: feeCol, rs: rs, cs: 1 });
+    const hr = dgShiftHeaderOrangeAfterInsert(hrIn, safeInsert, rs);
+    return { cells: cells, merges: merges, header_orange_row: hr };
+}
+
+async function dgGridAppendSubtotalLikeRow(root) {
+    if (!root.querySelector('.dg-fee-div-editor')) {
+        alert('当前表格不支持该操作。');
+        return;
+    }
+    if (!root.querySelector('.dg-excel-editor-split')) {
+        alert('当前布局不支持「添加行」，请刷新后重试。');
+        return;
+    }
+    const d = getDgGridEditorData(root);
+    const cells = d.cells;
+    const feeHdr = dgFindExcelFeeHeaderRow(cells);
+    const lo = feeHdr != null && feeHdr >= 0 ? feeHdr + 1 : 0;
+    let templateRow = -1;
+    for (let r = lo; r < cells.length; r++) {
+        if (dgRowLooksLikeGrandTotal(cells[r])) {
+            templateRow = r;
+            break;
+        }
+    }
+    if (templateRow < 0) {
+        templateRow = dgFindSubtotalTemplateRow(cells, feeHdr, cells.length);
+    }
+    if (templateRow < 0) {
+        alert('未找到可参考的合计行（如「总合计」或含「合计」的行），无法复制版式。');
+        return;
+    }
+    const tplMerges = dgNormalizeMerges(d.merges).filter(function(m) {
+        return m.r === templateRow && m.rs === 1;
+    });
+    const insertR = cells.length;
+    const newCells = dgCloneCells(cells);
+    newCells.splice(insertR, 0, new Array(d.cols).fill(''));
+    let merges = dgShiftMergesForInsertRowsAt(d.merges, insertR, 1);
+    tplMerges.forEach(function(tm) {
+        merges.push({ r: insertR, c: tm.c, rs: 1, cs: tm.cs });
+    });
+    const hr = dgShiftHeaderOrangeAfterInsert(d.header_orange_row, insertR, 1);
+    await dgExcelEditorReload(root, {
+        cells: newCells,
+        merges: merges,
+        header_orange_row: hr,
+    });
+}
+
+async function dgGridRemoveFeeDivRow(root, actionCell) {
+    if (!actionCell) return;
+    const absR = parseInt(actionCell.getAttribute('data-dg-abs-r'), 10);
+    if (Number.isNaN(absR) || absR < 0) return;
+    const d = getDgGridEditorData(root);
+    if (!d.cells || d.cells.length <= 1) {
+        alert('至少保留一行表格。');
+        return;
+    }
+    const cells = dgCloneCells(d.cells);
+    cells.splice(absR, 1);
+    const adj = dgApplyMergeAndHeaderAfterRowDelete(d.merges, d.header_orange_row, absR);
+    await dgExcelEditorReload(root, {
+        cells: cells,
+        merges: adj.merges,
+        header_orange_row: adj.header_orange_row
+    });
+}
+
+/** 新增纵向合并费用大类：费用 div 插在「总合计」行之前；纯 table DOM 模式仍为表末尾追加 */
+async function dgGridAppendMergedFeeBlockAtEnd(root) {
+    if (root && root.querySelector('.dg-fee-div-editor')) {
+        const d = getDgGridEditorData(root);
+        const nC = d.cols || parseInt(root.dataset.cols || '0', 10) || 0;
+        if (nC <= 0) return;
+        let rs = parseInt(root.getAttribute('data-dg-fee-merge-default-rows') || '4', 10);
+        if (Number.isNaN(rs) || rs < 2) rs = 4;
+        if (rs > 30) rs = 30;
+        const feeCol = dgFeeMergeAnchorColumn(root, nC);
+        const feeHdr = dgFindExcelFeeHeaderRow(d.cells);
+        const insertR = dgFindFirstGrandTotalRow(d.cells, feeHdr);
+        const block = dgInsertFeeCategoryBlockAt(
+            d.cells,
+            d.merges,
+            d.header_orange_row,
+            insertR,
+            rs,
+            nC,
+            feeCol
+        );
+        await dgExcelEditorReload(root, block);
+        return;
+    }
+    const feeTable = root.querySelector('table.dg-grid-table--excel-fee');
+    const table = feeTable || root.querySelector('table.dg-grid-table');
+    const tbody = table && table.querySelector('tbody');
+    if (!tbody) {
+        alert('未找到报价表格，请刷新后重试。');
+        return;
+    }
+    let maxR = -1;
+    root.querySelectorAll('table.dg-grid-table .dg-grid-cell-input[data-r]').forEach(function(inp) {
+        const r = parseInt(inp.getAttribute('data-r'), 10);
+        if (!Number.isNaN(r)) maxR = Math.max(maxR, r);
+    });
     let nC = parseInt(root.dataset.cols || '0', 10) || 0;
-    const nR = parseInt(root.dataset.rows || '0', 10) || 0;
     if (nC <= 0) {
-        root.querySelectorAll('textarea.dg-grid-cell-input').forEach(function(ta) {
-            const c = parseInt(ta.getAttribute('data-c'), 10);
+        root.querySelectorAll('table.dg-grid-table .dg-grid-cell-input[data-c]').forEach(function(inp) {
+            const c = parseInt(inp.getAttribute('data-c'), 10);
+            if (!Number.isNaN(c)) nC = Math.max(nC, c + 1);
+        });
+    }
+    if (nC <= 0) nC = 8;
+    let rs = parseInt(root.getAttribute('data-dg-fee-merge-default-rows') || '4', 10);
+    if (Number.isNaN(rs) || rs < 2) rs = 4;
+    if (rs > 30) rs = 30;
+    let feeCol = inferDgFeeNameColumn(root, nC);
+    if (feeCol >= nC) feeCol = Math.max(0, nC - 2);
+    const startR = maxR + 1;
+
+    for (let kr = 0; kr < rs; kr++) {
+        const tr = document.createElement('tr');
+        tr.className = 'dg-grid-tr';
+        const rowAbs = startR + kr;
+        for (let c = 0; c < nC; c++) {
+            if (c === feeCol && kr > 0) continue;
+            const td = document.createElement('td');
+            td.className = 'dg-grid-cell';
+            if (c === feeCol && kr === 0) td.rowSpan = rs;
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'dg-grid-cell-input';
+            const cellR = (c === feeCol) ? startR : rowAbs;
+            inp.setAttribute('data-r', String(cellR));
+            inp.setAttribute('data-c', String(c));
+            inp.setAttribute('spellcheck', 'false');
+            inp.setAttribute('autocomplete', 'off');
+            inp.value = '';
+            td.appendChild(inp);
+            tr.appendChild(td);
+        }
+        const actionTd = document.createElement('td');
+        actionTd.className = 'dg-grid-cell dg-grid-cell--row-action';
+        actionTd.setAttribute('data-dg-side', 'actions');
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'dg-row-del-btn';
+        delBtn.setAttribute('data-dg-act', 'remove-row');
+        delBtn.setAttribute('title', '删本行');
+        delBtn.textContent = '删';
+        actionTd.appendChild(delBtn);
+        tr.appendChild(actionTd);
+        tbody.appendChild(tr);
+    }
+    dgGridStructPushMerge(root, { r: startR, c: feeCol, rs: rs, cs: 1 });
+    syncDgGridDatasetFromTextareas(root);
+}
+
+/** 在指定费用类别（rowspan 块）末尾追加一行明细 */
+async function dgGridAppendRowInFeeGroup(root, anchorR, anchorC) {
+    if (root && root.querySelector('.dg-fee-div-editor')) {
+        const d = getDgGridEditorData(root);
+        const merges = dgNormalizeMerges(d.merges);
+        let anchorIdx = -1;
+        for (let mi = 0; mi < merges.length; mi++) {
+            const mg = merges[mi];
+            if (mg.r === anchorR && mg.c === anchorC && mg.rs > 1) {
+                anchorIdx = mi;
+                break;
+            }
+        }
+        if (anchorIdx < 0) {
+            alert('未找到对应费用类别合并区。');
+            return;
+        }
+        const oldRs = merges[anchorIdx].rs;
+        const oldLastR = anchorR + oldRs - 1;
+        const cells = dgCloneCells(d.cells);
+        const newRow = new Array(d.cols).fill('');
+        const headPart = cells.slice(0, oldLastR + 1);
+        const tailPart = cells.slice(oldLastR + 1);
+        const newCells = headPart.concat([newRow]).concat(tailPart);
+        const nextMerges = merges.map(function(mg, idx) {
+            if (idx === anchorIdx) return { r: mg.r, c: mg.c, rs: mg.rs + 1, cs: mg.cs };
+            if (mg.r > oldLastR) return { r: mg.r + 1, c: mg.c, rs: mg.rs, cs: mg.cs };
+            return mg;
+        });
+        let header_orange_row = d.header_orange_row;
+        if (header_orange_row != null && header_orange_row !== '') {
+            const h = parseInt(header_orange_row, 10);
+            if (!Number.isNaN(h) && h > oldLastR) header_orange_row = h + 1;
+        }
+        await dgExcelEditorReload(root, {
+            cells: newCells,
+            merges: nextMerges,
+            header_orange_row: header_orange_row
+        });
+        return;
+    }
+    const feeTable = root.querySelector('table.dg-grid-table--excel-fee');
+    const tbody = feeTable && feeTable.querySelector('tbody');
+    if (!tbody) {
+        alert('未找到费用表。');
+        return;
+    }
+    const structEl = root.querySelector('script.dg-grid-struct');
+    if (!structEl) return;
+    let o;
+    try { o = JSON.parse(structEl.textContent || '{}'); } catch (e) { return; }
+    if (!Array.isArray(o.merges)) o.merges = [];
+    let anchorIdx = -1;
+    for (let mi = 0; mi < o.merges.length; mi++) {
+        const mg = o.merges[mi];
+        if (parseInt(mg.r, 10) === anchorR && parseInt(mg.c, 10) === anchorC && parseInt(mg.rs, 10) > 1) {
+            anchorIdx = mi;
+            break;
+        }
+    }
+    if (anchorIdx < 0) {
+        alert('未找到对应费用类别合并区。');
+        return;
+    }
+    const oldRs = parseInt(o.merges[anchorIdx].rs, 10);
+    const oldLastR = anchorR + oldRs - 1;
+    const newR = oldLastR + 1;
+
+    root.querySelectorAll('table.dg-grid-table .dg-grid-cell-input[data-r], table.dg-grid-table .dg-grid-cell-split[data-r]').forEach(function(el) {
+        const r = parseInt(el.getAttribute('data-r'), 10);
+        if (!Number.isNaN(r) && r > oldLastR) {
+            el.setAttribute('data-r', String(r + 1));
+        }
+    });
+    o.merges = o.merges.map(function(mg, idx) {
+        const r0 = parseInt(mg.r, 10) || 0;
+        const rs0 = parseInt(mg.rs, 10) || 1;
+        const c0 = parseInt(mg.c, 10) || 0;
+        const cs0 = parseInt(mg.cs, 10) || 1;
+        if (idx === anchorIdx) return { r: r0, c: c0, rs: rs0 + 1, cs: cs0 };
+        if (r0 > oldLastR) return { r: r0 + 1, c: c0, rs: rs0, cs: cs0 };
+        return { r: r0, c: c0, rs: rs0, cs: cs0 };
+    });
+    if (o.header_orange_row != null && o.header_orange_row !== '') {
+        const h = parseInt(o.header_orange_row, 10);
+        if (!Number.isNaN(h) && h > oldLastR) o.header_orange_row = h + 1;
+    }
+    structEl.textContent = JSON.stringify(o);
+
+    let lastTr = null;
+    tbody.querySelectorAll('tr').forEach(function(tr) {
+        if (lastTr) return;
+        const probe = tr.querySelector('.dg-grid-cell-input[data-r], .dg-grid-cell-split[data-r]');
+        if (probe) {
+            const r = parseInt(probe.getAttribute('data-r'), 10);
+            if (r === oldLastR) lastTr = tr;
+        }
+    });
+
+    let nC = parseInt(root.dataset.cols || '0', 10) || 0;
+    if (nC <= 0) {
+        root.querySelectorAll('table.dg-grid-table .dg-grid-cell-input[data-c]').forEach(function(inp) {
+            const c = parseInt(inp.getAttribute('data-c'), 10);
+            if (!Number.isNaN(c)) nC = Math.max(nC, c + 1);
+        });
+    }
+    if (nC <= 0) nC = 8;
+
+    const newTr = document.createElement('tr');
+    newTr.className = 'dg-grid-tr';
+    for (let c = 0; c < nC; c++) {
+        if (c === anchorC) continue;
+        const td = document.createElement('td');
+        td.className = 'dg-grid-cell';
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'dg-grid-cell-input';
+        inp.setAttribute('data-r', String(newR));
+        inp.setAttribute('data-c', String(c));
+        inp.setAttribute('spellcheck', 'false');
+        inp.setAttribute('autocomplete', 'off');
+        inp.value = '';
+        td.appendChild(inp);
+        newTr.appendChild(td);
+    }
+    const actionTd = document.createElement('td');
+    actionTd.className = 'dg-grid-cell dg-grid-cell--row-action';
+    actionTd.setAttribute('data-dg-side', 'actions');
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'dg-row-del-btn';
+    delBtn.setAttribute('data-dg-act', 'remove-row');
+    delBtn.setAttribute('title', '删本行');
+    delBtn.textContent = '删';
+    actionTd.appendChild(delBtn);
+    const oldAddBtn = lastTr ? lastTr.querySelector('.dg-fee-add-row-btn') : null;
+    if (oldAddBtn) {
+        actionTd.appendChild(oldAddBtn);
+    } else {
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'dg-fee-add-row-btn';
+        addBtn.setAttribute('data-dg-act', 'append-row-in-group');
+        addBtn.setAttribute('data-dg-group-anchor-r', String(anchorR));
+        addBtn.setAttribute('data-dg-group-anchor-c', String(anchorC));
+        addBtn.setAttribute('title', '本组添加行');
+        addBtn.textContent = '+行';
+        actionTd.appendChild(addBtn);
+    }
+    newTr.appendChild(actionTd);
+
+    if (lastTr && lastTr.parentNode) {
+        lastTr.parentNode.insertBefore(newTr, lastTr.nextSibling);
+    } else {
+        tbody.appendChild(newTr);
+    }
+    syncDgGridDatasetFromTextareas(root);
+}
+
+async function dgGridAppendRowAtEnd(root) {
+    if (root && root.querySelector('.dg-fee-div-editor')) {
+        const d = getDgGridEditorData(root);
+        const cells = dgCloneCells(d.cells);
+        cells.push(new Array(d.cols).fill(''));
+        await dgExcelEditorReload(root, {
+            cells: cells,
+            merges: dgNormalizeMerges(d.merges),
+            header_orange_row: d.header_orange_row
+        });
+        return;
+    }
+    const feeTable = root.querySelector('table.dg-grid-table--excel-fee');
+    const table = feeTable || root.querySelector('table.dg-grid-table');
+    const tbody = table && table.querySelector('tbody');
+    if (!tbody) {
+        alert('未找到报价表格，请刷新后重试。');
+        return;
+    }
+    let maxR = -1;
+    root.querySelectorAll('table.dg-grid-table .dg-grid-cell-input[data-r]').forEach(function(inp) {
+        const r = parseInt(inp.getAttribute('data-r'), 10);
+        if (!Number.isNaN(r)) maxR = Math.max(maxR, r);
+    });
+    let nC = parseInt(root.dataset.cols || '0', 10) || 0;
+    if (nC <= 0) {
+        root.querySelectorAll('table.dg-grid-table .dg-grid-cell-input[data-c]').forEach(function(inp) {
+            const c = parseInt(inp.getAttribute('data-c'), 10);
             if (!Number.isNaN(c)) nC = Math.max(nC, c + 1);
         });
     }
     if (nC <= 0) nC = 6;
-    const newR = nR;
+    const newR = maxR + 1;
     const tr = document.createElement('tr');
     tr.className = 'dg-grid-tr';
     for (let c = 0; c < nC; c++) {
         const td = document.createElement('td');
         td.className = 'dg-grid-cell';
-        const ta = document.createElement('textarea');
-        ta.className = 'dg-grid-cell-input';
-        ta.setAttribute('data-r', String(newR));
-        ta.setAttribute('data-c', String(c));
-        ta.setAttribute('rows', '1');
-        ta.setAttribute('spellcheck', 'false');
-        ta.setAttribute('autocomplete', 'off');
-        td.appendChild(ta);
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'dg-grid-cell-input';
+        inp.setAttribute('data-r', String(newR));
+        inp.setAttribute('data-c', String(c));
+        inp.setAttribute('spellcheck', 'false');
+        inp.setAttribute('autocomplete', 'off');
+        inp.value = '';
+        td.appendChild(inp);
         tr.appendChild(td);
     }
     const actionTd = document.createElement('td');
@@ -2532,12 +3563,12 @@ function dgGridAppendRowAtEnd(root) {
     delBtn.type = 'button';
     delBtn.className = 'dg-row-del-btn';
     delBtn.setAttribute('data-dg-act', 'remove-row');
-    delBtn.setAttribute('title', '删除本行');
-    delBtn.textContent = '删除';
+    delBtn.setAttribute('title', '删本行');
+    delBtn.textContent = '删';
     actionTd.appendChild(delBtn);
     tr.appendChild(actionTd);
     tbody.appendChild(tr);
-    root.dataset.rows = String(nR + 1);
+    root.dataset.rows = String(newR + 1);
     root.dataset.cols = String(nC);
 }
 
@@ -2545,8 +3576,8 @@ function renumberDgGridTextareaRowsInTbody(tbody) {
     if (!tbody) return;
     const trs = tbody.querySelectorAll('tr');
     trs.forEach(function(tr, idx) {
-        tr.querySelectorAll('textarea.dg-grid-cell-input').forEach(function(ta) {
-            ta.setAttribute('data-r', String(idx));
+        tr.querySelectorAll('.dg-grid-cell-input').forEach(function(inp) {
+            inp.setAttribute('data-r', String(idx));
         });
     });
 }
@@ -2564,32 +3595,48 @@ function adjustDgGridStructAfterRowDelete(root, deletedIndex) {
         }
     }
     if (Array.isArray(o.merges)) {
-        o.merges = o.merges.map(function(mg) {
-            const r0 = parseInt(mg.r, 10) || 0;
-            const rs = parseInt(mg.rs, 10) || 1;
-            if (deletedIndex >= r0 && deletedIndex < r0 + rs) { return null; }
-            if (r0 > deletedIndex) { return { r: r0 - 1, c: mg.c, rs: rs, cs: mg.cs }; }
-            return { r: r0, c: mg.c, rs: rs, cs: mg.cs };
-        }).filter(function(x) { return x != null; });
+        o.merges = dgAdjustMergesAfterRowDelete(o.merges, deletedIndex);
     }
     el.textContent = JSON.stringify(o);
 }
 
+function dgGridShiftRowIndicesAfterDelete(root, deletedAbsR) {
+    if (deletedAbsR < 0 || Number.isNaN(deletedAbsR)) return;
+    root.querySelectorAll(
+        '.dg-grid-cell-split[data-r], .dg-grid-cell-input[data-r]'
+    ).forEach(function(el) {
+        if (el.classList.contains('dg-grid-cell-input') && el.closest('.dg-grid-cell-split')) {
+            return;
+        }
+        const r = parseInt(el.getAttribute('data-r'), 10);
+        if (!Number.isNaN(r) && r > deletedAbsR) {
+            el.setAttribute('data-r', String(r - 1));
+        }
+    });
+}
+
 function dgGridRemoveOneRow(root, tr) {
+    const table = tr && tr.closest('table.dg-grid-table');
+    if (!table || !root.contains(table)) return;
     const tbody = tr && tr.parentElement;
     if (!tbody || !tbody.tagName || tbody.tagName.toUpperCase() !== 'TBODY') return;
-    const table = root.querySelector('table.dg-grid-table');
-    if (!table || tr.closest('table') !== table) return;
     const allTr = tbody.querySelectorAll('tr');
     if (allTr.length <= 1) {
         alert('至少保留一行表格。');
         return;
     }
-    const deletedIndex = Array.prototype.indexOf.call(allTr, tr);
-    if (deletedIndex < 0) return;
+    const probe = tr.querySelector('.dg-grid-cell-input[data-r], .dg-grid-cell-split[data-r]');
+    const deletedAbsR = probe ? parseInt(probe.getAttribute('data-r'), 10) : NaN;
+    const deletedIndexInTbody = Array.prototype.indexOf.call(allTr, tr);
+    if (deletedIndexInTbody < 0) return;
     tr.remove();
-    renumberDgGridTextareaRowsInTbody(tbody);
-    adjustDgGridStructAfterRowDelete(root, deletedIndex);
+    if (!Number.isNaN(deletedAbsR) && deletedAbsR >= 0) {
+        adjustDgGridStructAfterRowDelete(root, deletedAbsR);
+        dgGridShiftRowIndicesAfterDelete(root, deletedAbsR);
+    } else {
+        renumberDgGridTextareaRowsInTbody(tbody);
+        adjustDgGridStructAfterRowDelete(root, deletedIndexInTbody);
+    }
     syncDgGridDatasetFromTextareas(root);
 }
 
@@ -2604,9 +3651,16 @@ function bindDgGridToolbarActions() {
         if (act === 'remove-row') {
             e.preventDefault();
             e.stopPropagation();
-            const tr = btn.closest('tr');
             const dgRoot = btn.closest('.dg-grid-editor');
             if (dgRoot && dgRoot.getAttribute('data-dg-schema') === '2') return;
+            const feeAct = btn.closest('.dg-fee-div-cell--action');
+            if (feeAct && dgRoot && dgRoot.querySelector('.dg-fee-div-editor')) {
+                dgGridRemoveFeeDivRow(dgRoot, feeAct).catch(function() {
+                    alert('删除行失败，请重试。');
+                });
+                return;
+            }
+            const tr = btn.closest('tr');
             if (tr && dgRoot) dgGridRemoveOneRow(dgRoot, tr);
             return;
         }
@@ -2618,7 +3672,69 @@ function bindDgGridToolbarActions() {
                 return mid ? document.querySelector('.dg-grid-editor[data-module-id="' + mid + '"]') : null;
             }());
             if (dgRoot && dgRoot.getAttribute('data-dg-schema') === '2') return;
-            if (dgRoot) dgGridAppendRowAtEnd(dgRoot);
+            if (dgRoot) {
+                dgGridAppendRowAtEnd(dgRoot).catch(function() {
+                    alert('添加行失败，请重试。');
+                });
+            }
+            return;
+        }
+        if (act === 'append-fee-merge') {
+            e.preventDefault();
+            e.stopPropagation();
+            const dgRoot = btn.closest('.dg-grid-editor') || (function() {
+                const mid = btn.getAttribute('data-dg-target');
+                return mid ? document.querySelector('.dg-grid-editor[data-module-id="' + mid + '"]') : null;
+            }());
+            if (dgRoot && dgRoot.getAttribute('data-dg-schema') === '2') return;
+            if (dgRoot) {
+                dgGridAppendMergedFeeBlockAtEnd(dgRoot).catch(function() {
+                    alert('新增费用类别失败，请重试。');
+                });
+            }
+            return;
+        }
+        if (act === 'append-subtotal-like-row') {
+            e.preventDefault();
+            e.stopPropagation();
+            const dgRoot = btn.closest('.dg-grid-editor') || (function() {
+                const mid = btn.getAttribute('data-dg-target');
+                return mid ? document.querySelector('.dg-grid-editor[data-module-id="' + mid + '"]') : null;
+            }());
+            if (dgRoot && dgRoot.getAttribute('data-dg-schema') === '2') return;
+            if (dgRoot) {
+                dgGridAppendSubtotalLikeRow(dgRoot).catch(function() {
+                    alert('添加合计版式行失败，请重试。');
+                });
+            }
+            return;
+        }
+        if (act === 'append-row-in-group') {
+            e.preventDefault();
+            e.stopPropagation();
+            const dgRoot = btn.closest('.dg-grid-editor');
+            if (!dgRoot || dgRoot.getAttribute('data-dg-schema') === '2') return;
+            const aR = parseInt(btn.getAttribute('data-dg-group-anchor-r'), 10);
+            const aC = parseInt(btn.getAttribute('data-dg-group-anchor-c'), 10);
+            if (Number.isNaN(aR) || Number.isNaN(aC)) return;
+            dgGridAppendRowInFeeGroup(dgRoot, aR, aC).catch(function() {
+                alert('添加明细行失败，请重试。');
+            });
+            return;
+        }
+        if (act === 'remove-fee-group') {
+            e.preventDefault();
+            e.stopPropagation();
+            const dgRoot = btn.closest('.dg-grid-editor');
+            if (!dgRoot || dgRoot.getAttribute('data-dg-schema') === '2') return;
+            const aR = parseInt(btn.getAttribute('data-dg-group-anchor-r'), 10);
+            const aC = parseInt(btn.getAttribute('data-dg-group-anchor-c'), 10);
+            if (Number.isNaN(aR) || Number.isNaN(aC)) return;
+            if (!window.confirm('确定删除该费用类别及其下全部明细行吗？')) return;
+            dgGridRemoveFeeGroup(dgRoot, aR, aC).catch(function() {
+                alert('删除费用类别失败，请重试。');
+            });
+            return;
         }
     });
 }
@@ -2646,6 +3762,7 @@ function dgV2FeeRowDragCellHtml() {
 
 function dgV2AddFeeRow(root, rowKind) {
     const kind = (rowKind === 'subtotal') ? 'subtotal' : 'item';
+    const dual = root.getAttribute('data-dg-fee-dual') === '1';
     const tb = root.querySelector('.dg-v2-fee-tbody');
     if (!tb) return;
     const tr = document.createElement('tr');
@@ -2653,22 +3770,30 @@ function dgV2AddFeeRow(root, rowKind) {
     if (kind === 'subtotal') {
         tr.className = 'dg-v2-fee-tr dg-v2-fee-tr--subtotal';
         tr.setAttribute('data-fee-row-kind', 'subtotal');
+        let midAmt = '<td><input type="text" class="dg-v2-fee-inp" data-f="amount" value=""></td>';
+        if (dual) {
+            midAmt += '<td><input type="text" class="dg-v2-fee-inp" data-f="amount_alt" value=""></td>';
+        }
         tr.innerHTML = dragTd +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value=""></td>' +
             '<td colspan="2" class="dg-v2-fee-td-merged"><input type="text" class="dg-v2-fee-inp" data-f="name" value="" placeholder="如 RMB合计"></td>' +
-            '<td><input type="text" class="dg-v2-fee-inp" data-f="amount" value=""></td>' +
+            midAmt +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="note" value=""></td>' +
             '<td class="dg-v2-fee-td-act"><button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button></td>';
     } else {
         tr.className = 'dg-v2-fee-tr dg-v2-fee-tr--item';
         tr.setAttribute('data-fee-row-kind', 'item');
+        let midAmt = '<td><input type="text" class="dg-v2-fee-inp" data-f="amount" value=""></td>';
+        if (dual) {
+            midAmt += '<td><input type="text" class="dg-v2-fee-inp" data-f="amount_alt" value=""></td>';
+        }
         tr.innerHTML = dragTd +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="bl_no" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="name" value=""></td>' +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="currency" value="RMB"></td>' +
-            '<td><input type="text" class="dg-v2-fee-inp" data-f="amount" value=""></td>' +
+            midAmt +
             '<td><input type="text" class="dg-v2-fee-inp" data-f="note" value=""></td>' +
             '<td class="dg-v2-fee-td-act"><button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button></td>';
     }
@@ -2772,6 +3897,9 @@ function getDgGridEditorDataV2(root) {
     const title = titleEl ? titleEl.value.trim() : '';
     const hm = root.querySelector('.dg-v2-header-main');
     const hs = root.querySelector('.dg-v2-header-sub');
+    const feeDual = root.getAttribute('data-dg-fee-dual') === '1';
+    const feeLab1 = (root.getAttribute('data-fee-lab1') || '').trim();
+    const feeLab2 = (root.getAttribute('data-fee-lab2') || '').trim();
     const customer_rows = [];
     root.querySelectorAll('tr.dg-v2-s-cust').forEach(function(tr) {
         const thIn = tr.querySelectorAll('th .dg-v2-cust-label');
@@ -2794,6 +3922,7 @@ function getDgGridEditorDataV2(root) {
             name: '',
             currency: '',
             amount: '',
+            amount_alt: '',
             note: '',
             bl_no: '',
             container_no: '',
@@ -2806,7 +3935,7 @@ function getDgGridEditorDataV2(root) {
         return o;
     });
     const remarkEl = root.querySelector('.dg-grid-remark');
-    return {
+    const out = {
         schema: 2,
         title: title,
         header_main: hm ? hm.value.trim() : '',
@@ -2819,6 +3948,26 @@ function getDgGridEditorDataV2(root) {
         sheet_name: (root.dataset.sheetName || '').trim(),
         remark: remarkEl ? remarkEl.value : '',
     };
+    if (feeDual) {
+        out.fee_dual_amount = true;
+        if (feeLab1) { out.fee_amount_label_1 = feeLab1; }
+        if (feeLab2) { out.fee_amount_label_2 = feeLab2; }
+    }
+    return out;
+}
+
+// DG 报价表（xlsx 网格 或 v2 分块）：单元格空白规范化（与 services.normalize_dg_grid_cell_display_spaces 一致）
+function normalizeDgGridCellSpaces(s) {
+    if (s == null || s === '') {
+        return '';
+    }
+    var str = String(s);
+    if (str.indexOf('\n') !== -1) {
+        return str.split('\n').map(function(ln) {
+            return ln.trim().replace(/[\t\u3000 ]{2,}/g, ' ');
+        }).join('\n').trim();
+    }
+    return str.trim().replace(/[\t\u3000 ]{2,}/g, ' ');
 }
 
 // DG 报价表（xlsx 网格 或 v2 分块）
@@ -2838,12 +3987,31 @@ function getDgGridEditorData(root) {
     const templateFile = (root.dataset.templateFile || '').trim();
     const remarkEl = root.querySelector('.dg-grid-remark');
     const remark = remarkEl ? remarkEl.value : '';
+    const dgVariant = (root.dataset.dgVariant || '').trim();
+    const dgTemplateId = (root.dataset.dgTemplateId || '').trim();
     const cells = [];
     for (let r = 0; r < nR; r++) {
         const line = [];
         for (let c = 0; c < nC; c++) {
-            const ta = root.querySelector('textarea.dg-grid-cell-input[data-r="' + r + '"][data-c="' + c + '"]');
-            line.push(ta ? ta.value : '');
+            const splitWrap = root.querySelector(
+                '.dg-grid-cell-split[data-r="' + r + '"][data-c="' + c + '"]'
+            );
+            let cellStr = '';
+            if (splitWrap) {
+                const labInp = splitWrap.querySelector('.dg-grid-cell-input--label');
+                const valInp = splitWrap.querySelector('.dg-grid-cell-input--value');
+                let sep = splitWrap.getAttribute('data-lv-sep');
+                if (sep === null || sep === undefined) {
+                    sep = '';
+                }
+                cellStr = (labInp ? labInp.value : '') + sep + (valInp ? valInp.value : '');
+            } else {
+                const inp = root.querySelector(
+                    '.dg-grid-cell-input[data-r="' + r + '"][data-c="' + c + '"]:not(.dg-grid-cell-input--label):not(.dg-grid-cell-input--value)'
+                );
+                cellStr = inp ? inp.value : '';
+            }
+            line.push(normalizeDgGridCellSpaces(cellStr));
         }
         cells.push(line);
     }
@@ -2881,7 +4049,7 @@ function getDgGridEditorData(root) {
             };
         }).filter(function(mg) { return mg.r >= 0; });
     }
-    return {
+    const out = {
         title: title,
         template_file: templateFile,
         sheet_name: sheetName,
@@ -2892,6 +4060,13 @@ function getDgGridEditorData(root) {
         header_orange_row: header_orange_row,
         remark: remark
     };
+    if (dgVariant) {
+        out.variant = dgVariant;
+    }
+    if (dgTemplateId) {
+        out.template_id = dgTemplateId;
+    }
+    return out;
 }
 
 // 获取渠道编辑器数据（兼容大件/纸箱简化表：无目的港、区域）

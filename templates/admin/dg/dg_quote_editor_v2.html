@@ -1,17 +1,22 @@
-{# DG 模块 schema v2 编辑器（4月25日DG周鹏版式：客户信息 + 起运/单证 + 费用表）#}
+{# DG 报价表编辑器（schema v2）：周鹏版式 — 抬头 / 客户 / 单证 + 费用表；与柜类 Excel 栅格编辑器分离 #}
+{% set dg = module.content | from_json %}
 {% set dgm = dg|dg_v2_merged %}
 <div class="dg-grid-editor dg-grid-editor--v2" data-module-id="{{ module.id }}" data-dg-schema="2"
+     data-dg-fee-dual="{{ '1' if dgm.fee_dual_amount else '0' }}"
+     data-fee-lab1="{{ (dgm.fee_amount_label_1 or '')|e }}"
+     data-fee-lab2="{{ (dgm.fee_amount_label_2 or '')|e }}"
      data-sheet-name="{{ (dgm.sheet_name or '')|e }}"
      data-template-file="{{ (dgm.template_file or '')|e }}">
     <div class="dg-editor">
         <div class="dg-grid-editor-section">
             <h4>📋 模块标题（侧栏与列表用）</h4>
             <input type="text" class="module-title-input dg-v2-title-input" data-module-id="{{ module.id }}"
-                   placeholder="如：DG 报价表"
+                   placeholder="如：DG报价表"
                    value="{{ dgm.title|e if dgm.title else '' }}"
                    oninput="updateModuleTitle({{ module.id }}, this.value)">
         </div>
-        <div class="dg-grid-editor-section dg-v2-metasheet-wrap">
+        <div class="dg-quote-v2 dg-quote-v2--editor-v2">
+            <div class="dg-grid-editor-section dg-v2-metasheet-wrap">
             <h4>报价抬头 / 客户 / 起运与单证</h4>
             {% set log = dgm.logistics %}
             <div class="dg-table-scroll">
@@ -61,7 +66,7 @@
             </div>
             <div class="dg-v2-fee-table-editor">
                 <div class="dg-table-scroll">
-                    <table class="dg-v2-fee-table">
+                    <table class="dg-v2-fee-table{% if dgm.fee_dual_amount %} dg-v2-fee-table--dual{% endif %}">
                         <thead>
                             <tr>
                                 <th class="dg-v2-fee-th-drag" aria-label="排序"></th>
@@ -69,7 +74,12 @@
                                 <th>柜号</th>
                                 <th>费用项目</th>
                                 <th>币别</th>
+                                {% if dgm.fee_dual_amount %}
+                                <th>{{ (dgm.fee_amount_label_1 or '20GP/金额')|e }}</th>
+                                <th>{{ (dgm.fee_amount_label_2 or '40HQ/金额')|e }}</th>
+                                {% else %}
                                 <th>金额</th>
+                                {% endif %}
                                 <th>说明</th>
                                 <th class="dg-v2-fee-th-act">操作</th>
                             </tr>
@@ -84,6 +94,9 @@
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="container_no" value="{{ it.container_no|default('')|e }}"></td>
                                 <td colspan="2" class="dg-v2-fee-td-merged"><input type="text" class="dg-v2-fee-inp" data-f="name" value="{{ it.name|e }}" placeholder="如 RMB合计"></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="amount" value="{{ it.amount|e }}"></td>
+                                {% if dgm.fee_dual_amount %}
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="amount_alt" value="{{ it.amount_alt|default('')|e }}"></td>
+                                {% endif %}
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="note" value="{{ it.note|e }}"></td>
                                 <td class="dg-v2-fee-td-act">
                                     <button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button>
@@ -97,6 +110,9 @@
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="name" value="{{ it.name|e }}"></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="currency" value="{{ it.currency|e }}"></td>
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="amount" value="{{ it.amount|e }}"></td>
+                                {% if dgm.fee_dual_amount %}
+                                <td><input type="text" class="dg-v2-fee-inp" data-f="amount_alt" value="{{ it.amount_alt|default('')|e }}"></td>
+                                {% endif %}
                                 <td><input type="text" class="dg-v2-fee-inp" data-f="note" value="{{ it.note|e }}"></td>
                                 <td class="dg-v2-fee-td-act">
                                     <button type="button" class="dg-v2-fee-del ch-tool-btn" data-dg-v2-act="remove-fee">删</button>
@@ -112,6 +128,7 @@
                     <button type="button" class="ch-tool-btn add-row-btn" data-dg-v2-act="add-fee" data-fee-row-kind="subtotal" data-dg-target="{{ module.id }}">+ 合计行</button>
                 </div>
             </div>
+        </div>
         </div>
         <div class="remark-section">
             <label>📌 模块备注（显示在模块下方，支持HTML）</label>

@@ -22,6 +22,18 @@ _POSTCODE_RETRY_BACKOFF_SECONDS = 0.1
 _logger = logging.getLogger(__name__)
 
 
+def _module_content_json_for_db(content):
+    """写入 modules.content 前：Excel 栅格规范化；DG v2 将 PS 说明行并入备注。"""
+    if isinstance(content, dict):
+        from services.dg_quote_grid import normalize_dg_v2_ps_rows_to_remark, normalize_excel_grid_content_storage
+
+        if int(content.get("schema") or 0) == 2:
+            content = normalize_dg_v2_ps_rows_to_remark(dict(content))
+        else:
+            content = normalize_excel_grid_content_storage(content)
+    return json.dumps(content, ensure_ascii=False)
+
+
 def _is_exact_postcode(value):
     return bool(re.fullmatch(r'\d{4}', str(value or '').strip()))
 
@@ -286,10 +298,34 @@ def module_add():
     content = data.get('content', '')
     if module_type == 'dg_grid':
         c = content if isinstance(content, dict) else {}
-        # 新模块：默认使用空白网格，不从本地 xlsx 导入；若显式带 cells 则保留（高级复制等）
+        # 新模块：默认 v2(DG报价) 或 Excel栅格（9类电池柜 / 普柜等）；显式带 cells 则保留（高级复制等）
         cells_in = c.get("cells")
+        variant = (c.get("variant") or "").strip().lower()
         if isinstance(cells_in, list) and len(cells_in) > 0:
             content = c
+        elif variant == "excel_grid":
+            hint = (c.get("title") or "") if isinstance(c.get("title"), str) else ""
+            hint_tid = ((c.get("template_id") or "") if isinstance(c.get("template_id"), str) else "").strip()
+            # 若 template_id 命中已注册模板，优先从 xlsx 导入（与「种子脚本」和实际数据一致）
+            _loaded_from_xlsx = False
+            if hint_tid:
+                from services.dg_excel_template_registry import EXCEL_QUOTE_TEMPLATE_ENTRIES
+                from services.dg_quote_grid import cabinet_quote_xlsx_grid_content
+                import config as _cfg
+                for _entry in EXCEL_QUOTE_TEMPLATE_ENTRIES:
+                    if _entry["id"] == hint_tid:
+                        _src = _entry["source_xlsx"]
+                        _abs = _src if os.path.isabs(_src) else os.path.join(_cfg._BASE_DIR, _src)
+                        if os.path.isfile(_abs):
+                            content = cabinet_quote_xlsx_grid_content(_abs)
+                            _loaded_from_xlsx = True
+                        break
+            if not _loaded_from_xlsx:
+                from services.dg_quote_grid import empty_dg_excel_grid_content
+                content = empty_dg_excel_grid_content(
+                    title=hint.strip() or None,
+                    template_id=hint_tid or None,
+                )
         else:
             from services.dg_quote_grid import empty_dg_grid_content
 
@@ -298,13 +334,45 @@ def module_add():
         cursor = conn.cursor()
         cursor.execute('SELECT MAX(sort_order) FROM modules WHERE article_id = ?', (article_id,))
         max_order = cursor.fetchone()[0] or 0
+        db_content = (
+            _module_content_json_for_db(content)
+            if isinstance(content, dict)
+            else json.dumps(content, ensure_ascii=False)
+        )
         cursor.execute(
             'INSERT INTO modules (article_id, type, content, sort_order) VALUES (?, ?, ?, ?)',
-            (article_id, module_type, json.dumps(content, ensure_ascii=False), max_order + 1)
+            (article_id, module_type, db_content, max_order + 1),
         )
         module_id = cursor.lastrowid
         conn.commit()
         return jsonify({'success': True, 'module_id': module_id})
+
+
+@api_bp.route('/dg/excel_editor_reload', methods=['POST'])
+@admin_required
+def dg_excel_editor_reload():
+    """Excel 栅格拆分编辑器：根据 cells/merges 重渲染抬头+费用 div 片段（用于非 table 费用块增删行后刷新）。"""
+    from services.dg_quote_grid import render_dg_excel_grid_editable_split_html
+
+    d = request.json or {}
+    cells = d.get('cells')
+    merges = d.get('merges')
+    hr = d.get('header_orange_row')
+    if not isinstance(cells, list):
+        cells = []
+    if not isinstance(merges, list):
+        merges = []
+    html = render_dg_excel_grid_editable_split_html(cells, merges, hr)
+    nrows = len(cells)
+    ncols = max((len(r) for r in cells), default=1) if cells else 1
+    return jsonify({
+        'success': True,
+        'html': html,
+        'merges': merges,
+        'header_orange_row': hr,
+        'rows': nrows,
+        'cols': ncols,
+    })
 
 
 @api_bp.route('/module/<int:module_id>/update', methods=['POST'])
@@ -315,7 +383,7 @@ def module_update(module_id):
     content = data.get('content')
     with db.get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('UPDATE modules SET content = ? WHERE id = ?', (json.dumps(content, ensure_ascii=False), module_id))
+        cursor.execute('UPDATE modules SET content = ? WHERE id = ?', (_module_content_json_for_db(content), module_id))
         conn.commit()
         return jsonify({'success': True})
 
@@ -377,7 +445,7 @@ def article_save_all(article_id):
                     continue
                 cursor.execute(
                     'UPDATE modules SET content = ? WHERE id = ?',
-                    (json.dumps(content, ensure_ascii=False), module_id)
+                    (_module_content_json_for_db(content), module_id),
                 )
             conn.commit()
             return jsonify({'success': True})

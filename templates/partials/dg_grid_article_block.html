@@ -1,15 +1,17 @@
-{# 文章详情中的单个 DG 报价表模块（article / article_dg 共用） #}
+{# dg_grid：DG报价(schema v2) 与 Excel栅格（9类电池柜报价表、普柜报价表）分流到独立 partial #}
 {% set content = module.content | from_json %}
-<div class="module module-dg-grid{% if (content.schema|default(0))|int == 2 %} module-dg-grid--v2{% endif %}">
+{% if (content.schema|default(0))|int != 2 %}
+{% set content = content | dg_excel_grid_canonical %}
+{% endif %}
+{% set dg_variant = (content.variant or '')|lower %}
+<div class="module module-dg-grid{% if (content.schema|default(0))|int == 2 %} module-dg-grid--v2{% elif dg_variant == 'excel_grid' %} module-dg-grid--excel-grid{% endif %}"{% if dg_variant == 'excel_grid' %} data-template-id="{{ (content.template_id or '')|e }}"{% endif %}>
     {% if content.title %}
     <div class="dg-grid-title">{{ content.title }}</div>
     {% endif %}
     {% if (content.schema|default(0))|int == 2 %}
-    {{ content | dg_grid_render_table }}
+        {% include 'partials/dg_quote_article_body.html' %}
     {% else %}
-    <div class="dg-grid-scroll">
-        {{ content | dg_grid_render_table }}
-    </div>
+        {% include 'partials/dg_excel_grid_article_body.html' %}
     {% endif %}
     {% if content.remark %}
     <div class="module-remark">{{ content.remark | safe_html }}</div>
