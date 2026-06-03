@@ -3,6 +3,7 @@
 {% block title %}编辑文章: {{ article['title'] }} - 报价网站{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ static_with_version('vendor/wangeditor/style.css') }}">
 <link rel="stylesheet" href="{{ static_with_version('css/admin-editor.css') }}">
 <link rel="stylesheet" href="{{ static_with_version('css/article.css') }}">
 <style>
@@ -393,6 +394,54 @@
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* 模块备注 .remark-section：wangeditor（文本 / 图片 / 渠道 / 报价表共用） */
+.remark-section[data-remark-richtext="1"] {
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+}
+.remark-section[data-remark-richtext="1"]:focus-within {
+    z-index: 40;
+}
+.remark-section[data-remark-richtext="1"] .module-remark-editor-wrapper {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: visible;
+    background: var(--bg-white);
+}
+.remark-section[data-remark-richtext="1"] .module-remark-toolbar-container {
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+    position: relative;
+    z-index: 2;
+    border-radius: 6px 6px 0 0;
+}
+.remark-section[data-remark-richtext="1"] .module-remark-editor-container {
+    min-height: 120px;
+    height: 120px;
+    overflow: hidden;
+    border-radius: 0 0 6px 6px;
+}
+.remark-section[data-remark-richtext="1"] .module-remark-editor-container .w-e-text-container {
+    height: 100%;
+}
+.remark-section[data-remark-richtext="1"] .w-e-bar-item-menus-container,
+.remark-section[data-remark-richtext="1"] .w-e-drop-panel,
+.remark-section[data-remark-richtext="1"] .w-e-select-list {
+    z-index: 1000 !important;
+}
+.remark-section[data-remark-richtext="1"] textarea.remark-editor {
+    display: none !important;
+}
+.remark-section[data-remark-richtext="1"][data-remark-fallback="1"] textarea.remark-editor {
+    display: block !important;
+    width: 100%;
+    min-height: 120px;
+}
+.remark-section[data-remark-richtext="1"][data-remark-fallback="1"] .module-remark-editor-wrapper {
+    display: none;
 }
 
 /* 文本模块 */
@@ -2145,10 +2194,9 @@
                                    oninput="updateModuleTitle({{ module.id }}, this.value)">
                         </div>
                         <textarea class="text-editor" data-module-id="{{ module.id }}">{{ content.text if content else '' }}</textarea>
-                        <div class="remark-section">
-                            <label>📌 模块备注（显示在模块下方）</label>
-                            <textarea class="remark-editor">{{ content.remark if content else '' }}</textarea>
-                        </div>
+                        {% set remark_content = content.remark if content else '' %}
+                        {% set remark_editor_extra_class = '' %}
+                        {% include 'admin/partials/module_remark_richtext.html' %}
                     {% elif module.type == 'image' %}
                         {% set content = module.content | from_json %}
                         <div class="image-editor" data-module-id="{{ module.id }}">
@@ -2174,10 +2222,9 @@
                             {% if content and content.url %}
                             <img src="{{ content.url }}" class="image-preview">
                             {% endif %}
-                            <div class="remark-section">
-                                <label>📌 模块备注（显示在模块下方）</label>
-                                <textarea class="remark-editor">{{ content.remark if content else '' }}</textarea>
-                            </div>
+                            {% set remark_content = content.remark if content else '' %}
+                            {% set remark_editor_extra_class = '' %}
+                            {% include 'admin/partials/module_remark_richtext.html' %}
                         </div>
                     {% elif module.type == 'channel' %}
                         {% set content = module.content | from_json %}
@@ -2277,10 +2324,9 @@
                                 </div>
                             </div>
                             
-                            <div class="remark-section">
-                                <label>📌 模块备注（显示在模块下方，支持HTML）</label>
-                                <textarea class="remark-editor" style="min-height: 120px;">{{ content.remark if content else '' }}</textarea>
-                            </div>
+                            {% set remark_content = content.remark if content else '' %}
+                            {% set remark_editor_extra_class = '' %}
+                            {% include 'admin/partials/module_remark_richtext.html' %}
                         </div>
                     {% elif module.type == 'dg_grid' %}
                         {% set dg = module.content | from_json %}
@@ -2319,6 +2365,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ static_with_version('vendor/wangeditor/index.js') }}"></script>
 <script>
 const articleId = {{ article['id'] }};
 // 报价文章编辑页：渠道表含目的港/区域，新建渠道模块用海派模板
@@ -2326,9 +2373,107 @@ const isChannelSimple = false;
 let isSaving = false;           // 手动保存进行中时不再触发自动保存
 const INLINE_PRICE_ADJUST_STATE = new WeakMap();
 
-function syncAllRichTextEditors() {}
+const DG_REMARK_EDITORS = new WeakMap();
 
-function initRichTextEditors() {}
+function dgRemarkInitialHtml(raw) {
+    const s = String(raw || '').trim();
+    return s ? s : '<p><br></p>';
+}
+
+function getDgRemarkToolbarConfig() {
+    return {
+        toolbarKeys: ['fontSize', 'color', 'bold']
+    };
+}
+
+function dgRemarkShowTextareaFallback(section, textarea) {
+    if (!section || !textarea) {
+        return;
+    }
+    section.dataset.remarkFallback = '1';
+    textarea.hidden = false;
+    textarea.removeAttribute('aria-hidden');
+}
+
+function initDgRemarkRichTextSection(section) {
+    if (!section || section.dataset.dgRemarkRichTextReady === '1') {
+        return;
+    }
+    const textarea = section.querySelector('textarea.remark-editor');
+    const toolbarEl = section.querySelector('.module-remark-toolbar-container');
+    const editorEl = section.querySelector('.module-remark-editor-container');
+    if (!textarea || !toolbarEl || !editorEl) {
+        return;
+    }
+
+    const wang = window.wangEditor;
+    if (!wang || typeof wang.createEditor !== 'function') {
+        dgRemarkShowTextareaFallback(section, textarea);
+        return;
+    }
+
+    const toolbarSelector = toolbarEl.id ? ('#' + toolbarEl.id) : toolbarEl;
+    const editorSelector = editorEl.id ? ('#' + editorEl.id) : editorEl;
+
+    let editor;
+    try {
+        editor = wang.createEditor({
+            selector: editorSelector,
+            html: dgRemarkInitialHtml(textarea.value),
+            config: {
+                placeholder: '请输入模块备注…',
+                onChange(ed) {
+                    textarea.value = ed.getHtml();
+                }
+            },
+            mode: 'default'
+        });
+
+        wang.createToolbar({
+            editor: editor,
+            selector: toolbarSelector,
+            config: getDgRemarkToolbarConfig(),
+            mode: 'default'
+        });
+    } catch (err) {
+        console.error('初始化模块备注富文本失败', err);
+        dgRemarkShowTextareaFallback(section, textarea);
+        return;
+    }
+
+    textarea.value = editor.getHtml();
+    section.dataset.dgRemarkRichTextReady = '1';
+    DG_REMARK_EDITORS.set(section, editor);
+}
+
+function destroyDgRemarkRichTextSection(section) {
+    const editor = DG_REMARK_EDITORS.get(section);
+    if (editor && typeof editor.destroy === 'function') {
+        editor.destroy();
+    }
+    if (section) {
+        delete section.dataset.dgRemarkRichTextReady;
+    }
+    DG_REMARK_EDITORS.delete(section);
+}
+
+function syncDgRemarkRichTextEditors() {
+    document.querySelectorAll('.remark-section[data-remark-richtext="1"]').forEach(function(section) {
+        const editor = DG_REMARK_EDITORS.get(section);
+        const textarea = section.querySelector('textarea.remark-editor');
+        if (editor && textarea) {
+            textarea.value = editor.getHtml();
+        }
+    });
+}
+
+function syncAllRichTextEditors() {
+    syncDgRemarkRichTextEditors();
+}
+
+function initRichTextEditors() {
+    document.querySelectorAll('.remark-section[data-remark-richtext="1"]').forEach(initDgRemarkRichTextSection);
+}
 
 // 获取当前页面状态（用于判断是否有修改，避免无效自动保存）
 function getCurrentState() {
@@ -2357,6 +2502,7 @@ function getCurrentState() {
 // 左侧列表拖拽排序（保留）
 
 document.addEventListener('DOMContentLoaded', function() {
+    initRichTextEditors();
     initUploadAreas();
     initModuleListDrag();
     updateActiveModule();
@@ -3934,7 +4080,7 @@ function getDgGridEditorDataV2(root) {
         if (o.row_kind === 'subtotal') { o.currency = ''; }
         return o;
     });
-    const remarkEl = root.querySelector('.dg-grid-remark');
+    const remarkEl = root.querySelector('.remark-section textarea.remark-editor') || root.querySelector('.dg-grid-remark');
     const out = {
         schema: 2,
         title: title,
@@ -3985,7 +4131,7 @@ function getDgGridEditorData(root) {
     const title = titleEl ? titleEl.value.trim() : '';
     const sheetName = (root.dataset.sheetName || '').trim();
     const templateFile = (root.dataset.templateFile || '').trim();
-    const remarkEl = root.querySelector('.dg-grid-remark');
+    const remarkEl = root.querySelector('.remark-section textarea.remark-editor') || root.querySelector('.dg-grid-remark');
     const remark = remarkEl ? remarkEl.value : '';
     const dgVariant = (root.dataset.dgVariant || '').trim();
     const dgTemplateId = (root.dataset.dgTemplateId || '').trim();
@@ -4329,6 +4475,7 @@ async function deleteModule(moduleId) {
         // 移除主内容区域的模块
         const moduleItem = document.querySelector(`.module-item[data-module-id="${moduleId}"]`);
         if (moduleItem) {
+            moduleItem.querySelectorAll('.remark-section[data-remark-richtext="1"]').forEach(destroyDgRemarkRichTextSection);
             moduleItem.remove();
         }
         

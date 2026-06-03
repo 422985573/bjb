@@ -191,6 +191,18 @@
     word-wrap: break-word;
     line-height: 1.6;
 }
+.module-remark p {
+    margin: 0.35em 0;
+}
+.module-remark p:first-child {
+    margin-top: 0;
+}
+.module-remark p:last-child {
+    margin-bottom: 0;
+}
+.module-dg-grid .module-remark {
+    white-space: normal;
+}
 /* 图片模块备注左对齐 */
 .module-image .module-remark {
     text-align: left;

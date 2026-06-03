@@ -1,0 +1,9 @@
+{# 模块备注 .remark-section：wangeditor 富文本；remark_content 由 include 方传入，需有 module.id #}
+<div class="remark-section" data-remark-richtext="1">
+    <label>📌 模块备注（显示在模块下方，支持富文本）</label>
+    <div class="module-remark-editor-wrapper">
+        <div id="module-remark-toolbar-{{ module.id }}" class="module-remark-toolbar-container"></div>
+        <div id="module-remark-editor-{{ module.id }}" class="module-remark-editor-container"></div>
+    </div>
+    <textarea class="remark-editor{% if remark_editor_extra_class %} {{ remark_editor_extra_class }}{% endif %}" hidden aria-hidden="true">{{ remark_content|default('', true) }}</textarea>
+</div>

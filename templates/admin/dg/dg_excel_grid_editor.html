@@ -38,9 +38,8 @@
                 <p class="dg-excel-fee-hint">普柜与 9类电池柜共用上述规则：「新增费用」插在「总合计」行之前；「添加行」在表格末尾追加（汇率说明等行之下），版式与「总合计」行一致，若无总合计则参照其它含「合计」的行；删除整个大类在左侧大类合并格内点「删类别」。</p>
             </div>
         </div>
-        <div class="remark-section">
-            <label>📌 模块备注（显示在模块下方，支持HTML）</label>
-            <textarea class="remark-editor dg-grid-remark" style="min-height: 80px;">{{ dg.remark if dg else '' }}</textarea>
-        </div>
+        {% set remark_content = dg.remark if dg else '' %}
+        {% set remark_editor_extra_class = 'dg-grid-remark' %}
+        {% include 'admin/partials/module_remark_richtext.html' %}
     </div>
 </div>

@@ -130,9 +130,8 @@
             </div>
         </div>
         </div>
-        <div class="remark-section">
-            <label>📌 模块备注（显示在模块下方，支持HTML）</label>
-            <textarea class="remark-editor dg-grid-remark" style="min-height: 80px;">{{ dgm.remark if dgm.remark else '' }}</textarea>
-        </div>
+        {% set remark_content = dgm.remark if dgm.remark else '' %}
+        {% set remark_editor_extra_class = 'dg-grid-remark' %}
+        {% include 'admin/partials/module_remark_richtext.html' %}
     </div>
 </div>
