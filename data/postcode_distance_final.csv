@@ -682,6 +682,7 @@ Warehouse_Region,Postcode,Distance_km,Distance_Category
 4xxx (QLD (Archerfield)),4503,55.5,30-60km
 4xxx (QLD (Archerfield)),4509,56.1,30-60km
 2xxx (NSW (Rydalmere)),2042,34,90-300km
+2xxx (NSW (Rydalmere)),2078,19,<30km
 2xxx (NSW (Rydalmere)),2084,35.0,30-60km
 2xxx (NSW (Rydalmere)),2105,38.2,30-60km
 2xxx (NSW (Rydalmere)),2108,47.1,30-60km
