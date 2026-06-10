@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article['title'] }} - 中海豹国际{% endblock %}
+{% block share_description %}澳洲海外仓一件代发报价{% endblock %}
+{% block og_type %}article{% endblock %}
+
+{% block viewport_meta %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ static_with_version('css/article_warehouse.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="wh-page" id="whPage">
+    <div class="breadcrumb">
+        <a href="{{ url_for('front.index') }}">首页</a>
+        <span class="separator">/</span>
+        <span>{{ article.get('category_name') or '未分类' }}</span>
+        <span class="separator">/</span>
+        <span>{{ article['title'] }}</span>
+    </div>
+
+    <div class="wh-layout">
+        <nav class="wh-sidebar" id="whSidebar">
+            <div class="wh-sidebar-title">报价目录</div>
+            <div class="wh-postcode-global">
+                <div class="wh-pc-input-wrap">
+                    <input type="text" id="whGlobalPcInput" placeholder="输入邮编查询" maxlength="4" inputmode="numeric">
+                    <button class="wh-pc-clear" style="display:none">&times;</button>
+                </div>
+                <div id="whGlobalPcResults"></div>
+            </div>
+            <ul class="wh-nav-list" id="whNavList">
+                <li class="wh-nav-item wh-nav-loading">加载中...</li>
+            </ul>
+        </nav>
+        <main class="wh-content" id="whContent">
+            <div class="wh-loading" id="whLoading">
+                <div class="wh-spinner"></div>
+                <span>加载中...</span>
+            </div>
+        </main>
+    </div>
+
+    <button class="wh-toc-fab" id="whTocFab" aria-label="目录">&#9776;</button>
+    <div class="wh-toc-overlay" id="whTocOverlay"></div>
+    <div class="wh-toc-panel" id="whTocPanel">
+        <div class="wh-toc-panel-header">
+            <span>报价目录</span>
+            <button class="wh-toc-close" id="whTocClose">&times;</button>
+        </div>
+        <div class="wh-postcode-global wh-postcode-global-mobile">
+            <div class="wh-pc-input-wrap">
+                <input type="text" id="whGlobalPcInputMobile" placeholder="输入邮编查询" maxlength="4" inputmode="numeric">
+                <button class="wh-pc-clear" style="display:none">&times;</button>
+            </div>
+            <div id="whGlobalPcResultsMobile"></div>
+        </div>
+        <ul class="wh-toc-list" id="whTocList"></ul>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ static_with_version('js/article_warehouse.js') }}"></script>
+{% endblock %}

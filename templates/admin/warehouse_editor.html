@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑: {{ article['title'] }} - 报价网站{% endblock %}
+
+{% block extra_css %}
+<style>
+.wh-editor {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.wh-editor-header {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+.wh-editor-header h2 {
+    font-size: 18px;
+    color: #0f172a;
+    margin: 0 0 16px;
+}
+.wh-editor-form {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+.wh-editor-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.wh-editor-form label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+}
+.wh-editor-form input,
+.wh-editor-form select {
+    padding: 8px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+}
+.wh-editor-form input[name="title"] { width: 360px; }
+.wh-editor-form input:focus,
+.wh-editor-form select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.wh-editor-save-btn {
+    padding: 8px 24px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.wh-editor-save-btn:hover { background: #1d4ed8; }
+
+.wh-editor-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.wh-editor-action-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+}
+.wh-editor-action-btn--primary {
+    background: #2563eb;
+    color: #fff;
+}
+.wh-editor-action-btn--primary:hover { background: #1d4ed8; }
+.wh-editor-action-btn--outline {
+    background: #fff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+.wh-editor-action-btn--outline:hover { background: #f1f5f9; }
+
+/* Sheet cards */
+.wh-sheet-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.wh-sheet-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 0.15s;
+}
+.wh-sheet-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+}
+.wh-sheet-card-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+.wh-sheet-card-meta {
+    font-size: 12px;
+    color: #64748b;
+    min-width: 80px;
+    text-align: right;
+}
+.wh-sheet-card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.wh-adjust-input-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.wh-adjust-group {
+    display: flex;
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.wh-adjust-step {
+    width: 30px;
+    height: 32px;
+    border: none;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+.wh-adjust-step:hover { background: #e2e8f0; }
+.wh-adjust-step:active { background: #cbd5e1; }
+.wh-adjust-input {
+    width: 60px;
+    padding: 6px 4px;
+    border: none;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    font-size: 13px;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+.wh-adjust-input::-webkit-inner-spin-button,
+.wh-adjust-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.wh-adjust-input:focus {
+    outline: none;
+    background: #eff6ff;
+}
+.wh-adjust-pct {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+.wh-adjust-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #2563eb;
+    color: #fff;
+}
+.wh-adjust-btn:hover { background: #1d4ed8; }
+.wh-adjust-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.wh-edit-link {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #2563eb;
+    text-decoration: none;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+}
+.wh-edit-link:hover {
+    background: #eff6ff;
+}
+.wh-adjust-hint {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.wh-adjust-result {
+    font-size: 12px;
+    color: #16a34a;
+    font-weight: 600;
+    min-width: 100px;
+}
+.wh-adjust-result.error {
+    color: #dc2626;
+}
+
+.wh-editor-hint {
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #92400e;
+    line-height: 1.6;
+}
+
+.wh-editor-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+@media (max-width: 768px) {
+    .wh-editor { padding: 12px; }
+    .wh-editor-form { flex-direction: column; }
+    .wh-editor-form input[name="title"] { width: 100%; }
+    .wh-sheet-card {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px;
+    }
+    .wh-sheet-card-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wh-editor">
+    <div class="wh-editor-header">
+        <h2>澳洲海外仓报价编辑器</h2>
+        <form method="POST" class="wh-editor-form" id="whEditorForm">
+            <div class="form-group">
+                <label>标题</label>
+                <input type="text" name="title" value="{{ article['title'] }}">
+            </div>
+            <div class="form-group">
+                <label>分类</label>
+                <select name="category_id">
+                    {% for category in categories %}
+                    <option value="{{ category['id'] }}" {% if article['category_id'] == category['id'] %}selected{% endif %}>
+                        {{ category['name'] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>状态</label>
+                <select name="is_published">
+                    <option value="1" {% if article.get('is_published') %}selected{% endif %}>已发布</option>
+                    <option value="0" {% if not article.get('is_published') %}selected{% endif %}>未发布</option>
+                </select>
+            </div>
+            <button type="submit" class="wh-editor-save-btn">保存信息</button>
+        </form>
+    </div>
+
+    <div class="wh-editor-actions">
+        <a href="{{ url_for('front.article_detail', article_code=article['article_code']) }}" target="_blank" class="wh-editor-action-btn wh-editor-action-btn--outline">预览文章</a>
+        <a href="{{ back_url }}" class="wh-editor-action-btn wh-editor-action-btn--outline">返回列表</a>
+    </div>
+
+    <!-- 渠道列表 -->
+    <div class="wh-editor-section" style="margin-top:24px;">
+        <h3 style="font-size:15px;color:#0f172a;margin:0 0 12px;">渠道报价表</h3>
+        <div class="wh-sheet-cards" id="whSheetCards">
+            {% for sheet in sheets_index %}
+            {% if sheet.key != 'mulu' %}
+            <div class="wh-sheet-card" data-key="{{ sheet.key }}">
+                <div class="wh-sheet-card-name">{{ sheet.name }}</div>
+                <div class="wh-sheet-card-meta">{{ sheet.row_count }} 行</div>
+                <div class="wh-sheet-card-actions">
+                    <a href="{{ url_for('admin.warehouse_sheet_edit', key=sheet.key) }}" class="wh-edit-link">编辑</a>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% if not sheets_index %}
+            <p style="color:#94a3b8;text-align:center;padding:40px;">数据未初始化，请先运行 <code>python3 scripts/init_warehouse_au.py</code></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

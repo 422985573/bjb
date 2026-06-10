@@ -1,0 +1,906 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑: {{ sheet_name }} - 报价网站{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ static_with_version('vendor/wangeditor/style.css') }}">
+<style>
+.wse-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.wse-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.wse-header h2 {
+    font-size: 18px;
+    color: #0f172a;
+    margin: 0;
+}
+.wse-back {
+    font-size: 13px;
+    color: #2563eb;
+    text-decoration: none;
+}
+.wse-back:hover { text-decoration: underline; }
+
+.wse-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.wse-save-btn {
+    padding: 8px 24px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.wse-save-btn:hover { background: #1d4ed8; }
+.wse-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.wse-result {
+    font-size: 13px;
+    font-weight: 600;
+}
+.wse-result.ok { color: #16a34a; }
+.wse-result.error { color: #dc2626; }
+
+.wse-search {
+    padding: 7px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 200px;
+}
+.wse-search:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+
+/* Adjust row */
+.wse-adjust-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.wse-adjust-group {
+    display: flex;
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.wse-adjust-step {
+    width: 32px;
+    height: 34px;
+    border: none;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+.wse-adjust-step:hover { background: #e2e8f0; }
+.wse-adjust-step:active { background: #cbd5e1; }
+.wse-adjust-input {
+    width: 70px;
+    padding: 7px 4px;
+    border: none;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    font-size: 13px;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+.wse-adjust-input::-webkit-inner-spin-button,
+.wse-adjust-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.wse-adjust-input:focus {
+    outline: none;
+    background: #eff6ff;
+}
+.wse-adjust-pct {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 600;
+}
+.wse-adjust-btn {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #f59e0b;
+    color: #fff;
+}
+.wse-adjust-btn:hover { background: #d97706; }
+.wse-adjust-result {
+    font-size: 11px;
+    color: #16a34a;
+    font-weight: 600;
+}
+.wse-adjust-result.error { color: #dc2626; }
+
+/* Grouped table */
+.wse-group-header td {
+    background: #eff6ff;
+    font-weight: 700;
+    font-size: 13px;
+    color: #1e40af;
+    padding: 10px 14px;
+    border-left: 3px solid #2563eb;
+    border-bottom: 1px solid #dbeafe;
+}
+.wse-group-cell {
+    vertical-align: middle;
+    font-weight: 700;
+    font-size: 13px;
+    color: #1e40af;
+    background: #f8fafc;
+    text-align: center;
+    border-right: 2px solid #dbeafe;
+}
+.wse-group-add td {
+    padding: 6px;
+    text-align: center;
+    border-bottom: 2px solid #e2e8f0;
+}
+.wse-group-add button {
+    font-size: 11px;
+    color: #64748b;
+    background: none;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 4px 12px;
+    cursor: pointer;
+}
+.wse-group-add button:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+/* Section */
+.wse-section {
+    margin-bottom: 24px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 16px;
+}
+.wse-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e40af;
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dbeafe;
+}
+.wse-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.wse-table {
+    border-collapse: collapse;
+    font-size: 13px;
+    width: 100%;
+}
+.wse-table th, .wse-table td {
+    border: 1px solid #e2e8f0;
+    padding: 0;
+}
+.wse-table th {
+    background: #f1f5f9;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: #334155;
+}
+.wse-table input {
+    width: 100%;
+    min-width: 60px;
+    padding: 5px 7px;
+    border: none;
+    font-size: 12px;
+    background: transparent;
+    box-sizing: border-box;
+}
+.wse-table input:focus {
+    outline: none;
+    background: #eff6ff;
+}
+.wse-table .wse-row-actions {
+    width: 36px;
+    text-align: center;
+    padding: 4px;
+}
+.wse-del-btn {
+    background: none;
+    border: none;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.wse-del-btn:hover { background: #fee2e2; }
+.wse-add-row-btn {
+    margin-top: 8px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+}
+.wse-add-row-btn:hover { border-color: #2563eb; color: #2563eb; }
+
+/* Pagination */
+.wse-pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #64748b;
+}
+.wse-pager-btn {
+    padding: 5px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    cursor: pointer;
+    font-size: 13px;
+}
+.wse-pager-btn:hover { background: #f1f5f9; }
+.wse-pager-btn:disabled { opacity: 0.4; cursor: default; }
+.wse-pager-info { font-size: 12px; color: #94a3b8; }
+
+/* Loading */
+.wse-loading {
+    text-align: center;
+    padding: 60px;
+    color: #64748b;
+    font-size: 14px;
+}
+.wse-adjust-col {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #334155;
+    background: #fff;
+    max-width: 160px;
+}
+.wse-adjust-col:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+.wse-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .wse-page { padding: 12px; }
+    .wse-toolbar { flex-direction: column; align-items: stretch; }
+    .wse-adjust-row { margin-left: 0; }
+    .wse-table input { min-width: 50px; padding: 4px 5px; font-size: 11px; }
+}
+.wse-richtext-toolbar {
+    border: 1px solid #e2e8f0;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: #f8fafc;
+}
+.wse-richtext-editor {
+    border: 1px solid #e2e8f0;
+    border-radius: 0 0 6px 6px;
+    min-height: 200px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wse-page">
+    <div class="wse-header">
+        <a href="javascript:history.back()" class="wse-back">&larr; 返回</a>
+        <h2>{{ sheet_name }}</h2>
+    </div>
+    <div class="wse-toolbar">
+        <button type="button" class="wse-save-btn" id="wseSaveBtn" onclick="wseDoSave()">保存</button>
+        <span class="wse-result" id="wseResult"></span>
+    </div>
+    <div id="wseContent">
+        <div class="wse-loading">加载中...</div>
+    </div>
+</div>
+
+<script src="{{ static_with_version('vendor/wangeditor/index.js') }}"></script>
+<script>
+(function() {
+  'use strict';
+
+  var SHEET_KEY = '{{ sheet_key }}';
+  var PAGE_SIZE = {{ 50 if is_large else 0 }};
+  var sheetData = null;
+  var pageNums = {};
+  var searchTerm = '';
+
+  function init() {
+    fetch('/api/warehouse-sheet/' + encodeURIComponent(SHEET_KEY))
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) {
+          document.getElementById('wseContent').innerHTML = '<p style="color:#dc2626;">加载失败</p>';
+          return;
+        }
+        sheetData = res.data;
+        render();
+      })
+      .catch(function() {
+        document.getElementById('wseContent').innerHTML = '<p style="color:#dc2626;">网络错误</p>';
+      });
+  }
+
+  var rtEditors = {};
+
+  function render() {
+    var sections = sheetData.sections || [];
+    var html = '';
+    sections.forEach(function(sec, si) {
+      html += renderSection(sec, si);
+    });
+    document.getElementById('wseContent').innerHTML = html;
+    bindEvents();
+    initRichTextEditors();
+  }
+
+  function initRichTextEditors() {
+    var wang = window.wangEditor;
+    if (!wang) return;
+    (sheetData.sections || []).forEach(function(sec, si) {
+      if (sec.type !== 'richtext') return;
+      var toolbarEl = document.getElementById('wseRtToolbar' + si);
+      var editorEl = document.getElementById('wseRtEditor' + si);
+      if (!toolbarEl || !editorEl) return;
+
+      var editor = wang.createEditor({
+        selector: '#wseRtEditor' + si,
+        html: sec.html || '',
+        config: {
+          placeholder: '请输入内容…',
+          onChange: function(ed) {
+            sheetData.sections[si].html = ed.getHtml();
+          }
+        },
+        mode: 'default'
+      });
+      wang.createToolbar({
+        editor: editor,
+        selector: '#wseRtToolbar' + si,
+        config: {
+          toolbarKeys: ['headerSelect', 'bold', 'color', 'bgColor', 'fontSize', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo']
+        },
+        mode: 'default'
+      });
+      rtEditors[si] = editor;
+    });
+  }
+
+  function renderSection(sec, si) {
+    var rows = sec.rows || [];
+    var h = '<div class="wse-section" data-si="' + si + '"';
+
+    if (sec.type === 'richtext') {
+      h += ' data-type="richtext">';
+      if (sec.title) {
+        h += '<div class="wse-section-title">' + esc(sec.title) + '</div>';
+      }
+      h += '<div class="wse-richtext-toolbar" id="wseRtToolbar' + si + '"></div>';
+      h += '<div class="wse-richtext-editor" id="wseRtEditor' + si + '"></div>';
+      h += '</div>';
+      return h;
+    }
+
+    var cols = 0;
+    var headers = sec.headers || [];
+    if (sec.type === 'zone_table') return '';
+    rows.forEach(function(r) { if (r.length > cols) cols = r.length; });
+    if (headers.length > cols) cols = headers.length;
+    if (!rows.length && !headers.length) return '';
+
+    h += ' data-cols="' + cols + '">';
+    if (sec.title) {
+      h += '<div class="wse-section-title">' + esc(sec.title) + '</div>';
+    }
+
+    if (sec.type === 'price_table') {
+      h += '<div class="wse-adjust-row" data-si="' + si + '">';
+      h += '<select class="wse-adjust-col" id="wseAdjustCol' + si + '">';
+      h += '<option value="all">所有价格列</option>';
+      var seen = {};
+      for (var ci = 0; ci < headers.length; ci++) {
+        var hName = headers[ci];
+        if (!hName || seen[hName]) continue;
+        var hasNum = false;
+        rows.forEach(function(row) { if (hasNum) return; var v = ci < row.length ? row[ci] : ''; if (v !== '' && v !== null) { var n = parseFloat(v); if (!isNaN(n) && String(n) === String(v).toString().trim()) hasNum = true; } });
+        if (hasNum) { seen[hName] = true; h += '<option value="' + escAttr(hName) + '">' + esc(hName) + '</option>'; }
+      }
+      h += '</select>';
+      h += '<div class="wse-adjust-group">';
+      h += '<button type="button" class="wse-adjust-step" onclick="wseStepAdjust(-1,' + si + ')">−</button>';
+      h += '<input type="number" class="wse-adjust-input" id="wseAdjustInput' + si + '" placeholder="0" step="1">';
+      h += '<button type="button" class="wse-adjust-step" onclick="wseStepAdjust(1,' + si + ')">+</button>';
+      h += '</div>';
+      h += '<span class="wse-adjust-pct">%</span>';
+      h += '<button type="button" class="wse-adjust-btn" onclick="wseDoLocalAdjust(' + si + ')">调价</button>';
+      h += '<span class="wse-adjust-result" id="wseAdjustResult' + si + '"></span>';
+      h += '</div>';
+    }
+
+    var usePaging = PAGE_SIZE > 0 && rows.length > PAGE_SIZE && sec.type === 'zone_table';
+    if (usePaging) {
+      h += '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">';
+      h += '<input type="text" class="wse-search" placeholder="搜索..." data-si="' + si + '" oninput="wseSearch(this)">';
+      h += '<span class="wse-pager-info" id="wseCount' + si + '">' + rows.length + ' 行</span>';
+      h += '</div>';
+    }
+
+    h += renderTable(sec, si, cols, usePaging);
+
+    if (!(sec.type === 'price_table' && (canGroupByCol0(sec.rows || []) || canGroupByMarkerRows(sec.rows || [])))) {
+      h += '<button type="button" class="wse-add-row-btn" onclick="wseAddRow(' + si + ')">+ 添加行</button>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  function canGroupByCol0(rows) {
+    if (!rows.length) return false;
+    var first = rows[0][0];
+    if (first === '' || first === null || first === undefined) return false;
+    var count = 0;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i][0] !== '' && rows[i][0] !== null && rows[i][0] !== undefined) count++;
+    }
+    return count >= 1 && count <= rows.length / 2;
+  }
+
+  function isMarkerRow(row) {
+    if (!row[0] || row[0] === '') return false;
+    for (var i = 1; i < row.length; i++) {
+      if (row[i] !== '' && row[i] !== null && row[i] !== undefined) return false;
+    }
+    return true;
+  }
+
+  function canGroupByMarkerRows(rows) {
+    if (rows.length < 3) return false;
+    var markers = 0;
+    for (var i = 0; i < rows.length; i++) {
+      if (isMarkerRow(rows[i])) markers++;
+    }
+    return markers >= 2 && markers <= rows.length / 3;
+  }
+
+  function renderGroupedTable(sec, si, cols) {
+    var rows = sec.rows || [];
+    var headers = sec.headers || [];
+    var groups = [];
+    var cur = null;
+    for (var i = 0; i < rows.length; i++) {
+      var v = rows[i][0];
+      if (v !== '' && v !== null && v !== undefined) {
+        cur = {state: v, start: i, end: i};
+        groups.push(cur);
+      } else if (cur) {
+        cur.end = i;
+      }
+    }
+
+    var h = '<div class="wse-table-wrap"><table class="wse-table"><thead><tr>';
+    for (var hi = 0; hi < headers.length; hi++) {
+      h += '<th>' + esc(headers[hi] || '') + '</th>';
+    }
+    h += '<th></th></tr></thead><tbody>';
+
+    groups.forEach(function(g) {
+      var cnt = g.end - g.start + 1;
+      for (var ri = g.start; ri <= g.end; ri++) {
+        var row = rows[ri];
+        h += '<tr data-ri="' + ri + '">';
+        if (ri === g.start) {
+          h += '<td rowspan="' + cnt + '" class="wse-group-cell">' + esc(g.state) + '</td>';
+        }
+        for (var ci = 1; ci < cols; ci++) {
+          var val = ci < row.length ? row[ci] : '';
+          if (val === null || val === undefined) val = '';
+          h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+        }
+        h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除行">&times;</button></td>';
+        h += '</tr>';
+      }
+      h += '<tr class="wse-group-add"><td colspan="' + (cols + 1) + '"><button type="button" onclick="wseAddRowInGroup(' + si + ',' + g.end + ')">+ 添加行</button></td></tr>';
+    });
+
+    h += '</tbody></table></div>';
+    return h;
+  }
+
+  function renderMarkerGroupedTable(sec, si, cols) {
+    var rows = sec.rows || [];
+    var headers = sec.headers || [];
+    var groups = [];
+    var cur = null;
+    for (var i = 0; i < rows.length; i++) {
+      if (isMarkerRow(rows[i])) {
+        cur = {state: rows[i][0], markerIdx: i, start: i + 1, end: i};
+        groups.push(cur);
+      } else if (cur) {
+        cur.end = i;
+      }
+    }
+
+    var h = '<div class="wse-table-wrap"><table class="wse-table"><thead><tr>';
+    h += '<th>State</th>';
+    for (var hi = 0; hi < headers.length; hi++) {
+      h += '<th>' + esc(headers[hi] || '') + '</th>';
+    }
+    h += '<th></th></tr></thead><tbody>';
+
+    groups.forEach(function(g) {
+      var cnt = g.end - g.start + 1;
+      if (cnt < 1) return;
+      for (var ri = g.start; ri <= g.end; ri++) {
+        var row = rows[ri];
+        h += '<tr data-ri="' + ri + '">';
+        if (ri === g.start) {
+          h += '<td rowspan="' + cnt + '" class="wse-group-cell">' + esc(g.state) + '</td>';
+        }
+        for (var ci = 0; ci < cols; ci++) {
+          var val = ci < row.length ? row[ci] : '';
+          if (val === null || val === undefined) val = '';
+          h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+        }
+        h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除行">&times;</button></td>';
+        h += '</tr>';
+      }
+      h += '<tr class="wse-group-add"><td colspan="' + (cols + 2) + '"><button type="button" onclick="wseAddRowInGroup(' + si + ',' + g.end + ')">+ 添加行</button></td></tr>';
+    });
+
+    h += '</tbody></table></div>';
+    return h;
+  }
+
+  function renderTable(sec, si, cols, usePaging) {
+    var rows = sec.rows || [];
+
+    if (sec.type === 'price_table' && canGroupByMarkerRows(rows)) {
+      return renderMarkerGroupedTable(sec, si, cols);
+    }
+    if (sec.type === 'price_table' && canGroupByCol0(rows)) {
+      return renderGroupedTable(sec, si, cols);
+    }
+
+    var display = rows;
+
+    if (usePaging && searchTerm) {
+      display = [];
+      var term = searchTerm;
+      for (var i = 0; i < rows.length; i++) {
+        for (var j = 0; j < rows[i].length; j++) {
+          if (String(rows[i][j]).toLowerCase().indexOf(term) >= 0) {
+            display.push({row: rows[i], idx: i});
+            break;
+          }
+        }
+      }
+    } else if (usePaging) {
+      display = rows.map(function(r, i) { return {row: r, idx: i}; });
+    }
+
+    var pageRows, totalPages = 1, page = pageNums[si] || 1;
+    if (usePaging) {
+      totalPages = Math.max(1, Math.ceil(display.length / PAGE_SIZE));
+      if (page > totalPages) page = totalPages;
+      pageNums[si] = page;
+      var start = (page - 1) * PAGE_SIZE;
+      pageRows = display.slice(start, start + PAGE_SIZE);
+    } else {
+      pageRows = rows.map(function(r, i) { return {row: r, idx: i}; });
+    }
+
+    var h = '<div class="wse-table-wrap"><table class="wse-table">';
+    var headers = sec.headers || [];
+    if (headers.length) {
+      h += '<thead><tr>';
+      for (var hi = 0; hi < headers.length; hi++) {
+        h += '<th>' + esc(headers[hi] || '') + '</th>';
+      }
+      h += '<th></th>';
+      h += '</tr></thead>';
+    }
+    h += '<tbody>';
+    pageRows.forEach(function(item) {
+      var row = item.row;
+      var ri = item.idx;
+      h += '<tr data-ri="' + ri + '">';
+      var filled = [];
+      for (var k = 0; k < cols; k++) {
+        var v = k < row.length ? row[k] : '';
+        if (v !== '' && v !== null && v !== undefined) filled.push(k);
+      }
+      if (cols >= 4 && filled.length > 0 && filled.length * 2 <= cols) {
+        var text = filled.map(function(fi) { return String(row[fi]); }).join('  ');
+        h += '<td colspan="' + cols + '"><input type="text" value="' + escAttr(text) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + filled[0] + '" data-merged="1" style="min-width:100%"></td>';
+      } else {
+        for (var ci = 0; ci < cols; ci++) {
+          var val = ci < row.length ? row[ci] : '';
+          if (val === null || val === undefined) val = '';
+          h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+        }
+      }
+      h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除行">&times;</button></td>';
+      h += '</tr>';
+    });
+    h += '</tbody></table></div>';
+
+    if (usePaging && totalPages > 1) {
+      h += '<div class="wse-pager">';
+      h += '<button class="wse-pager-btn" onclick="wsePage(' + si + ',-1)"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>';
+      h += '<span>' + page + ' / ' + totalPages + '</span>';
+      h += '<button class="wse-pager-btn" onclick="wsePage(' + si + ',1)"' + (page >= totalPages ? ' disabled' : '') + '>下一页</button>';
+      h += '<span class="wse-pager-info">共 ' + display.length + ' 行</span>';
+      h += '</div>';
+    }
+
+    return h;
+  }
+
+  function syncInputsToData() {
+    var inputs = document.querySelectorAll('.wse-table input[data-si]');
+    inputs.forEach(function(inp) {
+      var si = parseInt(inp.dataset.si);
+      var ri = parseInt(inp.dataset.ri);
+      var ci = parseInt(inp.dataset.ci);
+      var v = inp.value;
+      var sec = sheetData.sections[si];
+      if (!sec) return;
+      while (sec.rows.length <= ri) sec.rows.push([]);
+      var row = sec.rows[ri];
+      if (inp.dataset.merged) {
+        for (var i = 0; i < row.length; i++) row[i] = '';
+        row[ci] = v;
+        return;
+      }
+      while (row.length <= ci) row.push('');
+      var num = parseFloat(v);
+      if (v !== '' && !isNaN(num) && String(num) === v.trim()) {
+        row[ci] = num;
+      } else {
+        row[ci] = v;
+      }
+    });
+  }
+
+  function rerenderSection(si) {
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var cols = 0;
+    (sec.rows || []).forEach(function(r) { if (r.length > cols) cols = r.length; });
+    var usePaging = PAGE_SIZE > 0 && (sec.rows || []).length > PAGE_SIZE;
+    var el = document.querySelector('.wse-section[data-si="' + si + '"]');
+    if (!el) return;
+    var newEl = document.createElement('div');
+    newEl.innerHTML = renderSection(sec, si);
+    el.parentNode.replaceChild(newEl.firstChild, el);
+    bindEvents();
+  }
+
+  function bindEvents() {
+    document.querySelectorAll('.wse-table input[data-si]').forEach(function(inp) {
+      inp.removeEventListener('change', onInputChange);
+      inp.addEventListener('change', onInputChange);
+    });
+  }
+
+  function onInputChange(e) {
+    var inp = e.target;
+    var si = parseInt(inp.dataset.si);
+    var ri = parseInt(inp.dataset.ri);
+    var ci = parseInt(inp.dataset.ci);
+    var v = inp.value;
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    while (sec.rows.length <= ri) sec.rows.push([]);
+    var row = sec.rows[ri];
+    if (inp.dataset.merged) {
+      for (var i = 0; i < row.length; i++) row[i] = '';
+      row[ci] = v;
+      return;
+    }
+    while (row.length <= ci) row.push('');
+    var num = parseFloat(v);
+    if (v !== '' && !isNaN(num) && String(num) === v.trim()) {
+      row[ci] = num;
+    } else {
+      row[ci] = v;
+    }
+  }
+
+  window.wseAddRow = function(si) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var cols = parseInt(document.querySelector('.wse-section[data-si="' + si + '"]').dataset.cols) || 1;
+    var newRow = [];
+    for (var i = 0; i < cols; i++) newRow.push('');
+    sec.rows.push(newRow);
+    if (PAGE_SIZE > 0 && sec.rows.length > PAGE_SIZE) {
+      pageNums[si] = Math.ceil(sec.rows.length / PAGE_SIZE);
+    }
+    rerenderSection(si);
+  };
+
+  window.wseAddRowInGroup = function(si, afterIdx) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var cols = parseInt(document.querySelector('.wse-section[data-si="' + si + '"]').dataset.cols) || 1;
+    var newRow = [];
+    for (var i = 0; i < cols; i++) newRow.push('');
+    sec.rows.splice(afterIdx + 1, 0, newRow);
+    rerenderSection(si);
+  };
+
+  window.wseDelRow = function(btn, si, ri) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec || !sec.rows[ri]) return;
+    sec.rows.splice(ri, 1);
+    rerenderSection(si);
+  };
+
+  window.wsePage = function(si, dir) {
+    syncInputsToData();
+    pageNums[si] = (pageNums[si] || 1) + dir;
+    if (pageNums[si] < 1) pageNums[si] = 1;
+    rerenderSection(si);
+  };
+
+  window.wseSearch = function(inp) {
+    syncInputsToData();
+    var si = parseInt(inp.dataset.si);
+    searchTerm = inp.value.trim().toLowerCase();
+    pageNums[si] = 1;
+    rerenderSection(si);
+    var newInp = document.querySelector('.wse-search[data-si="' + si + '"]');
+    if (newInp) {
+      newInp.focus();
+      newInp.setSelectionRange(newInp.value.length, newInp.value.length);
+    }
+  };
+
+  window.wseStepAdjust = function(dir, si) {
+    var inp = document.getElementById('wseAdjustInput' + si);
+    var val = parseFloat(inp.value) || 0;
+    inp.value = val + dir;
+  };
+
+  window.wseDoLocalAdjust = function(si) {
+    var inp = document.getElementById('wseAdjustInput' + si);
+    var result = document.getElementById('wseAdjustResult' + si);
+    var colSel = document.getElementById('wseAdjustCol' + si);
+    var pct = parseFloat(inp.value);
+    if (isNaN(pct) || pct === 0) { result.className = 'wse-adjust-result error'; result.textContent = '请输入非零数值'; return; }
+
+    var colName = colSel ? colSel.value : 'all';
+    var label = colName === 'all' ? '所有价格' : ('"' + colName + '"列');
+    if (!confirm('确认' + label + (pct > 0 ? '上浮' : '下调') + ' ' + Math.abs(pct) + '%？')) return;
+
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var factor = 1 + pct / 100;
+    var count = 0;
+    var headers = sec.headers || [];
+    var targetCols = {};
+    if (colName === 'all') {
+      for (var ci = 0; ci < (headers.length || 999); ci++) targetCols[ci] = true;
+    } else {
+      for (var ci = 0; ci < headers.length; ci++) {
+        if (headers[ci] === colName) targetCols[ci] = true;
+      }
+    }
+    (sec.rows || []).forEach(function(row) {
+      for (var ci = 0; ci < row.length; ci++) {
+        if (!targetCols[ci]) continue;
+        if (row[ci] === '' || row[ci] === null) continue;
+        var n = parseFloat(row[ci]);
+        if (!isNaN(n) && String(n) === String(row[ci]).trim()) {
+          var nv = Math.round(n * factor * 100) / 100;
+          row[ci] = nv % 1 === 0 ? parseInt(nv) : nv;
+          count++;
+        }
+      }
+    });
+
+    rerenderSection(si);
+    result = document.getElementById('wseAdjustResult' + si);
+    if (result) { result.className = 'wse-adjust-result'; result.textContent = '已调整 ' + label + ' ' + count + ' 个数值（未保存）'; }
+  };
+
+  window.wseDoSave = function() {
+    syncInputsToData();
+    var result = document.getElementById('wseResult');
+    var saveBtn = document.getElementById('wseSaveBtn');
+    var sections = sheetData.sections.map(function(sec) {
+      if (sec.type === 'richtext') {
+        return {type: 'richtext', html: sec.html || ''};
+      }
+      return {rows: sec.rows || []};
+    });
+
+    saveBtn.disabled = true;
+    result.className = 'wse-result';
+    result.textContent = '保存中...';
+
+    fetch('/api/warehouse-sheet/' + encodeURIComponent(SHEET_KEY) + '/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sections: sections})
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        saveBtn.disabled = false;
+        if (res.success) {
+          result.className = 'wse-result ok';
+          result.textContent = '已保存';
+        } else {
+          result.className = 'wse-result error';
+          result.textContent = res.message || '保存失败';
+        }
+      })
+      .catch(function() {
+        saveBtn.disabled = false;
+        result.className = 'wse-result error';
+        result.textContent = '网络错误';
+      });
+  };
+
+  function esc(v) {
+    var d = document.createElement('div');
+    d.textContent = v;
+    return d.innerHTML;
+  }
+  function escAttr(v) {
+    return v.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  init();
+})();
+</script>
+{% endblock %}

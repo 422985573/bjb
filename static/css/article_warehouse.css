@@ -1,0 +1,560 @@
+/* 澳洲海外仓报价文章页 */
+.wh-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 16px;
+    overflow-x: hidden;
+}
+.wh-page .breadcrumb {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+.wh-page .breadcrumb a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+/* Layout */
+.wh-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* Sidebar */
+.wh-sidebar {
+    width: 210px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 72px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 20px 0 12px;
+}
+.wh-sidebar::-webkit-scrollbar { width: 4px; }
+.wh-sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+.wh-sidebar-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    padding: 4px 16px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 0;
+}
+
+/* Global postcode query */
+.wh-postcode-global {
+    padding: 10px 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.wh-pc-input-wrap {
+    position: relative;
+}
+.wh-postcode-global input {
+    width: 100%;
+    padding: 7px 28px 7px 10px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+.wh-postcode-global input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+.wh-pc-clear {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+}
+.wh-pc-clear:hover {
+    color: #475569;
+}
+.wh-pc-results {
+    margin-top: 6px;
+}
+.wh-pc-result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    margin-top: 3px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #334155;
+    transition: background 0.15s;
+}
+.wh-pc-result-item:hover {
+    background: #eff6ff;
+}
+.wh-pc-result-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wh-pc-zone-badge {
+    flex-shrink: 0;
+    margin-left: 6px;
+    padding: 1px 6px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.wh-pc-no-result {
+    padding: 6px 8px;
+    margin-top: 3px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+.wh-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.wh-nav-item {
+    padding: 9px 16px;
+    font-size: 13px;
+    color: #334155;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+    line-height: 1.4;
+}
+.wh-nav-item:hover {
+    background: #f1f5f9;
+    color: #1e40af;
+}
+.wh-nav-item.active {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+    border-left-color: #2563eb;
+}
+.wh-nav-item .wh-nav-rows {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 400;
+    margin-left: 4px;
+}
+.wh-nav-loading {
+    color: #94a3b8;
+    font-style: italic;
+    cursor: default;
+}
+
+/* Content */
+.wh-content {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 20px;
+    min-height: 400px;
+}
+
+/* Loading */
+.wh-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #64748b;
+    font-size: 14px;
+}
+.wh-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e2e8f0;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: wh-spin 0.6s linear infinite;
+}
+@keyframes wh-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Sheet title */
+.wh-sheet-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+/* Search */
+.wh-search-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+.wh-search-input {
+    flex: 1;
+    max-width: 320px;
+    padding: 8px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.wh-search-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.wh-search-count {
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* Section */
+.wh-section {
+    margin-bottom: 28px;
+}
+.wh-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e40af;
+    margin: 0 0 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #dbeafe;
+}
+.wh-section-notes {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #92400e;
+    line-height: 1.6;
+}
+.wh-section-notes p {
+    margin: 2px 0;
+}
+
+/* Richtext (报价说明 etc) */
+.wh-richtext {
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.8;
+    padding: 10px 14px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+}
+.wh-richtext p {
+    margin: 4px 0;
+}
+
+/* Info cards (for 目录 etc) */
+.wh-info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.wh-info-list li {
+    padding: 6px 0;
+    font-size: 13px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.wh-nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0;
+    list-style: none;
+    margin: 0;
+}
+.wh-nav-link-item {
+    padding: 8px 16px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #dbeafe;
+    transition: all 0.15s;
+}
+.wh-nav-link-item:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+/* Tables */
+.wh-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+.wh-table {
+    min-width: 100%;
+    width: max-content;
+    border-collapse: collapse;
+    font-size: 12px;
+    white-space: nowrap;
+}
+.wh-table th {
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 600;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.wh-table td {
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    text-align: center;
+}
+.wh-table tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+.wh-table tbody tr:hover {
+    background: #eff6ff;
+}
+.wh-table tbody tr.wh-row-highlight {
+    background: #fef9c3 !important;
+}
+.wh-table td:first-child,
+.wh-table th:first-child {
+    text-align: left;
+}
+.wh-table td[rowspan] {
+    vertical-align: middle;
+    font-weight: 600;
+    background: #f8fafc;
+}
+.wh-table td.wh-cell-note {
+    white-space: normal;
+    text-align: left;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+/* Zone table specific */
+.wh-zone-table .wh-table td {
+    font-size: 11px;
+}
+
+/* Pagination for large tables */
+.wh-pagination {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #64748b;
+}
+.wh-page-btn {
+    padding: 6px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    cursor: pointer;
+    font-size: 13px;
+}
+.wh-page-btn:hover { background: #f1f5f9; }
+.wh-page-btn:disabled { opacity: 0.4; cursor: default; }
+.wh-page-btn:disabled:hover { background: #fff; }
+
+/* Postcode query box */
+.wh-postcode-query {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+.wh-postcode-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+}
+.wh-postcode-input {
+    padding: 8px 14px;
+    border: 2px solid #2563eb;
+    border-radius: 8px;
+    font-size: 16px;
+    width: 140px;
+    outline: none;
+    transition: box-shadow 0.2s;
+}
+.wh-postcode-input:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.wh-postcode-result {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+}
+.wh-postcode-result.wh-postcode-ok {
+    color: #2563eb;
+}
+.wh-postcode-result.wh-postcode-error {
+    color: #dc2626;
+}
+
+/* Mobile floating TOC */
+.wh-toc-fab {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+.wh-toc-fab:active { transform: scale(0.92); }
+.wh-toc-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1001;
+}
+.wh-toc-overlay.open { display: block; }
+.wh-toc-panel {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 60vh;
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+    z-index: 1002;
+    transform: translateY(100%);
+    transition: transform 0.28s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.wh-toc-panel.open { transform: translateY(0); }
+.wh-toc-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+.wh-toc-panel-header span {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.wh-toc-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+}
+.wh-toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.wh-toc-list li {
+    padding: 11px 20px;
+    font-size: 14px;
+    color: #334155;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+}
+.wh-toc-list li:active { background: #f1f5f9; }
+.wh-toc-list li.active {
+    color: #2563eb;
+    font-weight: 600;
+    background: #eff6ff;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .wh-page { padding: 10px; }
+
+    .wh-layout {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .wh-sidebar {
+        display: none;
+    }
+    .wh-toc-fab {
+        display: flex;
+    }
+
+    .wh-content {
+        padding: 14px;
+        border-radius: 8px;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    .wh-sheet-title { font-size: 16px; }
+    .wh-search-input { max-width: 100%; }
+
+    .wh-table { font-size: 11px; }
+    .wh-table th, .wh-table td { padding: 5px 7px; }
+
+    .wh-postcode-query {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+    .wh-postcode-input {
+        width: 120px;
+        font-size: 16px !important;
+    }
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "key": "mulu",
+    "name": "目录",
+    "row_count": 19,
+    "is_large": false
+  },
+  {
+    "key": "churuku",
+    "name": "出入库操作费与仓租",
+    "row_count": 23,
+    "is_large": false
+  },
+  {
+    "key": "zengzhi",
+    "name": "增值服务",
+    "row_count": 19,
+    "is_large": false
+  },
+  {
+    "key": "fba",
+    "name": "FBA退货换标",
+    "row_count": 32,
+    "is_large": false
+  },
+  {
+    "key": "pfl",
+    "name": "PFL派送",
+    "row_count": 2789,
+    "is_large": true
+  },
+  {
+    "key": "imile",
+    "name": "iMile价格表",
+    "row_count": 2183,
+    "is_large": true
+  },
+  {
+    "key": "aupost_eparcel",
+    "name": "AU POST-Eparcel价格表",
+    "row_count": 16673,
+    "is_large": true
+  },
+  {
+    "key": "yto",
+    "name": "YTO价格表",
+    "row_count": 1895,
+    "is_large": true
+  },
+  {
+    "key": "fastway",
+    "name": "Fastway价格表",
+    "row_count": 5200,
+    "is_large": true
+  },
+  {
+    "key": "allied",
+    "name": "Allied价格表",
+    "row_count": 358,
+    "is_large": false
+  },
+  {
+    "key": "border",
+    "name": "Border价格表",
+    "row_count": 13456,
+    "is_large": true
+  },
+  {
+    "key": "tfm",
+    "name": "TFM价格表",
+    "row_count": 17059,
+    "is_large": true
+  },
+  {
+    "key": "toll",
+    "name": "TOLL价格表",
+    "row_count": 12967,
+    "is_large": true
+  },
+  {
+    "key": "aupost_express",
+    "name": "AU POST-Express价格表",
+    "row_count": 16673,
+    "is_large": true
+  },
+  {
+    "key": "aupost_letter",
+    "name": "AU POST- Letter价格表",
+    "row_count": 3,
+    "is_large": false
+  },
+  {
+    "key": "peichang",
+    "name": "渠道赔偿标准",
+    "row_count": 12,
+    "is_large": false
+  }
+]

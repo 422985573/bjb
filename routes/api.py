@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import functools
 import importlib
 import logging
 import os
@@ -609,3 +610,183 @@ def export_article_xlsx(article_code):
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+
+# ---------------------------------------------------------------------------
+# 澳洲海外仓报价 — sheet 数据查询 + 批量调价
+# ---------------------------------------------------------------------------
+
+_WAREHOUSE_DATA_DIR = os.path.join(config._BASE_DIR, 'data', 'warehouse_au')
+
+
+def _wh_index_path():
+    return os.path.join(_WAREHOUSE_DATA_DIR, '_index.json')
+
+
+def _wh_sheet_path(key):
+    safe = re.sub(r'[^a-zA-Z0-9_]', '', key)
+    return os.path.join(_WAREHOUSE_DATA_DIR, f'{safe}.json')
+
+
+@api_bp.route('/warehouse-sheets')
+def warehouse_sheets_index():
+    path = _wh_index_path()
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': '数据未初始化'}), 404
+    with open(path, 'r', encoding='utf-8') as f:
+        index = json.load(f)
+    index = [s for s in index if s.get('key') != 'mulu']
+    return jsonify({'success': True, 'data': index})
+
+
+@functools.lru_cache(maxsize=1)
+def _load_all_postcode_maps():
+    """Load all postcode_zone_map / postcode_zone_maps from sheet JSON files."""
+    index_path = _wh_index_path()
+    if not os.path.isfile(index_path):
+        return []
+    with open(index_path, 'r', encoding='utf-8') as f:
+        index = json.load(f)
+    result = []
+    for entry in index:
+        key = entry.get('key', '')
+        if key == 'mulu':
+            continue
+        path = _wh_sheet_path(key)
+        if not os.path.isfile(path):
+            continue
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        name = data.get('name', entry.get('name', key))
+        pzm = data.get('postcode_zone_map')
+        pzms = data.get('postcode_zone_maps')
+        if pzm or pzms:
+            result.append({'key': key, 'name': name, 'pzm': pzm, 'pzms': pzms})
+    return result
+
+
+@api_bp.route('/warehouse-postcode-lookup')
+def warehouse_postcode_lookup():
+    code = (request.args.get('code') or '').strip()
+    if not code or not re.fullmatch(r'\d{3,4}', code):
+        return jsonify({'success': False, 'message': '请输入3-4位邮编'}), 400
+
+    maps = _load_all_postcode_maps()
+    hits = []
+    for m in maps:
+        if m['pzm'] and code in m['pzm']:
+            hits.append({'key': m['key'], 'name': m['name'], 'zone': m['pzm'][code]})
+        if m['pzms']:
+            for wh_key, wh_map in m['pzms'].items():
+                if code in wh_map:
+                    hits.append({'key': m['key'], 'name': m['name'], 'warehouse': wh_key, 'zone': wh_map[code]})
+    return jsonify({'success': True, 'data': hits})
+
+
+@api_bp.route('/warehouse-sheet/<key>')
+def warehouse_sheet_detail(key):
+    path = _wh_sheet_path(key)
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    search = (request.args.get('search') or '').strip().lower()
+    if search:
+        for sec in data.get('sections', []):
+            if sec.get('type') != 'zone_table':
+                continue
+            filtered = []
+            for row in sec.get('rows', []):
+                if any(search in str(c).lower() for c in row):
+                    filtered.append(row)
+            sec['rows'] = filtered
+
+    return jsonify({'success': True, 'data': data})
+
+
+@api_bp.route('/warehouse-adjust-price', methods=['POST'])
+@admin_required
+def warehouse_adjust_price():
+    body = request.json or {}
+    sheet_key = body.get('sheet_key', '')
+    pct_raw = body.get('percentage')
+
+    if not sheet_key or pct_raw is None:
+        return jsonify({'success': False, 'message': '缺少 sheet_key 或 percentage'}), 400
+
+    try:
+        pct = float(pct_raw)
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'percentage 必须是数字'}), 400
+
+    if abs(pct) > 100:
+        return jsonify({'success': False, 'message': '调幅不能超过 ±100%'}), 400
+
+    path = _wh_sheet_path(sheet_key)
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': f'sheet "{sheet_key}" 不存在'}), 404
+
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    factor = 1 + pct / 100.0
+    adjusted = 0
+
+    for sec in data.get('sections', []):
+        if sec.get('type') == 'zone_table':
+            continue
+        for row in sec.get('rows', []):
+            for ci, cell in enumerate(row):
+                if cell == '' or cell is None:
+                    continue
+                try:
+                    num = float(cell)
+                except (ValueError, TypeError):
+                    continue
+                new_val = round(num * factor, 2)
+                if new_val == int(new_val):
+                    new_val = int(new_val)
+                row[ci] = new_val
+                adjusted += 1
+
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
+
+    _load_all_postcode_maps.cache_clear()
+    _logger.info('warehouse adjust price sheet=%s pct=%s adjusted=%s', sheet_key, pct, adjusted)
+    return jsonify({'success': True, 'adjusted_count': adjusted})
+
+
+@api_bp.route('/warehouse-sheet/<key>/save', methods=['POST'])
+@admin_required
+def warehouse_sheet_save(key):
+    """保存小表编辑数据"""
+    path = _wh_sheet_path(key)
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    body = request.json or {}
+    sections = body.get('sections')
+    if not isinstance(sections, list):
+        return jsonify({'success': False, 'message': '参数错误'}), 400
+
+    for i, sec_data in enumerate(sections):
+        if i >= len(data.get('sections', [])):
+            break
+        if sec_data.get('type') == 'richtext':
+            data['sections'][i]['html'] = sec_data.get('html', '')
+        if 'rows' in sec_data:
+            data['sections'][i]['rows'] = sec_data['rows']
+        if 'title' in sec_data:
+            data['sections'][i]['title'] = sec_data['title']
+
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    _load_all_postcode_maps.cache_clear()
+    _logger.info('warehouse sheet save key=%s', key)
+    return jsonify({'success': True})
