@@ -8,19 +8,19 @@
   {
     "key": "churuku",
     "name": "出入库操作费与仓租",
-    "row_count": 23,
+    "row_count": 14,
     "is_large": false
   },
   {
     "key": "zengzhi",
     "name": "增值服务",
-    "row_count": 19,
+    "row_count": 18,
     "is_large": false
   },
   {
     "key": "fba",
     "name": "FBA退货换标",
-    "row_count": 32,
+    "row_count": 24,
     "is_large": false
   },
   {
@@ -92,7 +92,7 @@
   {
     "key": "peichang",
     "name": "渠道赔偿标准",
-    "row_count": 12,
+    "row_count": 17,
     "is_large": false
   }
 ]

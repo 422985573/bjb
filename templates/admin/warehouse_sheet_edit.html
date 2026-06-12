@@ -471,7 +471,12 @@
 
     h += renderTable(sec, si, cols, usePaging);
 
-    if (!(sec.type === 'price_table' && (canGroupByCol0(sec.rows || []) || canGroupByMarkerRows(sec.rows || [])))) {
+    var hasRspGroups = false;
+    if (sec.type !== 'price_table' && sec.type !== 'zone_table') {
+      var rspCheck = wseBuildRowspanMap(sec.rows || [], cols);
+      hasRspGroups = wseHasRowspanGroups(rspCheck);
+    }
+    if (!(sec.type === 'price_table' && (canGroupByCol0(sec.rows || []) || canGroupByMarkerRows(sec.rows || []))) && !hasRspGroups) {
       h += '<button type="button" class="wse-add-row-btn" onclick="wseAddRow(' + si + ')">+ 添加行</button>';
     }
     h += '</div>';
@@ -537,6 +542,7 @@
         }
         for (var ci = 1; ci < cols; ci++) {
           var val = ci < row.length ? row[ci] : '';
+          val = wseCellValue(val);
           if (val === null || val === undefined) val = '';
           h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
         }
@@ -582,6 +588,7 @@
         }
         for (var ci = 0; ci < cols; ci++) {
           var val = ci < row.length ? row[ci] : '';
+          val = wseCellValue(val);
           if (val === null || val === undefined) val = '';
           h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
         }
@@ -593,6 +600,102 @@
 
     h += '</tbody></table></div>';
     return h;
+  }
+
+  function wseCellValue(c) {
+    if (c && typeof c === 'object' && !Array.isArray(c)) {
+      return c.v != null ? c.v : (c.text != null ? c.text : '');
+    }
+    return c;
+  }
+  function wseCellColspan(c) {
+    if (c && typeof c === 'object' && !Array.isArray(c)) {
+      return c.cs || c.colspan || 1;
+    }
+    return 1;
+  }
+  function wseBuildColspanCover(rows) {
+    var covered = {};
+    for (var ri = 0; ri < rows.length; ri++) {
+      for (var ci = 0; ci < rows[ri].length; ci++) {
+        var cs = wseCellColspan(rows[ri][ci]);
+        if (cs > 1) {
+          for (var k = 1; k < cs; k++) covered[ri + '_' + (ci + k)] = true;
+        }
+      }
+    }
+    return covered;
+  }
+
+  function wseIsFullSpanRow(row, colCount) {
+    if (colCount < 5) return false;
+    var filled = 0;
+    var leadingEmpty = 0;
+    var seenFilled = false;
+    for (var i = 0; i < row.length; i++) {
+      var v = wseCellValue(row[i]);
+      if (v !== '' && v !== null && v !== undefined) {
+        seenFilled = true;
+        filled += wseCellColspan(row[i]);
+      } else if (!seenFilled) {
+        leadingEmpty++;
+      }
+    }
+    if (leadingEmpty > 1) return false;
+    return filled > 0 && filled * 3 <= colCount;
+  }
+
+  function wseBuildRowspanMap(rows, cols) {
+    var map = {};
+    if (!rows.length) return map;
+    var covered = wseBuildColspanCover(rows);
+    for (var ci = 0; ci < cols; ci++) {
+      var hasGrouping = false;
+      for (var ri = 1; ri < rows.length; ri++) {
+        if (covered[ri + '_' + ci]) continue;
+        var v = wseCellValue(rows[ri][ci]);
+        if (v === '' || v === null || v === undefined) {
+          var prevV = wseCellValue(rows[ri - 1][ci]);
+          if (prevV !== '' && prevV !== null && prevV !== undefined) {
+            hasGrouping = true;
+            break;
+          }
+        }
+      }
+      if (!hasGrouping) continue;
+
+      var anchor = -1;
+      for (var ri2 = 0; ri2 < rows.length; ri2++) {
+        if (covered[ri2 + '_' + ci]) {
+          if (anchor >= 0) map[anchor + '_' + ci] = ri2 - anchor;
+          anchor = -1;
+          continue;
+        }
+        var v2 = wseCellValue(rows[ri2][ci]);
+        var isEmpty = (v2 === '' || v2 === null || v2 === undefined);
+        if (wseIsFullSpanRow(rows[ri2], cols)) {
+          if (anchor >= 0) map[anchor + '_' + ci] = ri2 - anchor;
+          anchor = -1;
+          continue;
+        }
+        if (!isEmpty) {
+          if (anchor >= 0) map[anchor + '_' + ci] = ri2 - anchor;
+          anchor = ri2;
+          map[ri2 + '_' + ci] = 1;
+        } else {
+          if (anchor >= 0) map[ri2 + '_' + ci] = 0;
+        }
+      }
+      if (anchor >= 0) map[anchor + '_' + ci] = rows.length - anchor;
+    }
+    return map;
+  }
+
+  function wseHasRowspanGroups(rspMap) {
+    for (var k in rspMap) {
+      if (rspMap[k] > 1) return true;
+    }
+    return false;
   }
 
   function renderTable(sec, si, cols, usePaging) {
@@ -644,23 +747,46 @@
       h += '</tr></thead>';
     }
     h += '<tbody>';
+    var coverMap = wseBuildColspanCover(rows);
+    var rspMap = (sec.type !== 'price_table' && sec.type !== 'zone_table') ? wseBuildRowspanMap(rows, cols) : {};
     pageRows.forEach(function(item) {
       var row = item.row;
       var ri = item.idx;
       h += '<tr data-ri="' + ri + '">';
       var filled = [];
+      var leadingEmpty = 0;
+      var seenFilled = false;
       for (var k = 0; k < cols; k++) {
-        var v = k < row.length ? row[k] : '';
-        if (v !== '' && v !== null && v !== undefined) filled.push(k);
+        var cellRaw = k < row.length ? row[k] : '';
+        var v = wseCellValue(cellRaw);
+        if (v !== '' && v !== null && v !== undefined) {
+          filled.push(k);
+          seenFilled = true;
+        } else if (!seenFilled) {
+          leadingEmpty++;
+        }
       }
-      if (cols >= 4 && filled.length > 0 && filled.length * 2 <= cols) {
-        var text = filled.map(function(fi) { return String(row[fi]); }).join('  ');
+      var isNoteRow = cols >= 4 && filled.length > 0 && filled.length * 2 <= cols && leadingEmpty <= 1;
+      if (isNoteRow) {
+        var text = filled.map(function(fi) { return String(wseCellValue(row[fi])); }).join('  ');
         h += '<td colspan="' + cols + '"><input type="text" value="' + escAttr(text) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + filled[0] + '" data-merged="1" style="min-width:100%"></td>';
       } else {
-        for (var ci = 0; ci < cols; ci++) {
-          var val = ci < row.length ? row[ci] : '';
+        var ci = 0;
+        while (ci < cols) {
+          if (coverMap[ri + '_' + ci]) { ci++; continue; }
+          var rsp = rspMap[ri + '_' + ci];
+          if (rsp === 0) { ci++; continue; }
+          var cellRaw2 = ci < row.length ? row[ci] : '';
+          var val = wseCellValue(cellRaw2);
           if (val === null || val === undefined) val = '';
-          h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+          var cs = wseCellColspan(cellRaw2);
+          var attrs = '';
+          if (cs > 1) attrs += ' colspan="' + cs + '"';
+          if (rsp > 1) attrs += ' rowspan="' + rsp + '"';
+          var dataAttrs = '';
+          if (cs > 1) dataAttrs += ' data-cs="' + cs + '"';
+          h += '<td' + attrs + '><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"' + dataAttrs + '></td>';
+          ci += cs;
         }
       }
       h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除行">&times;</button></td>';
@@ -697,6 +823,11 @@
         return;
       }
       while (row.length <= ci) row.push('');
+      var cs = parseInt(inp.dataset.cs) || 1;
+      if (cs > 1) {
+        row[ci] = {v: v, cs: cs};
+        return;
+      }
       var num = parseFloat(v);
       if (v !== '' && !isNaN(num) && String(num) === v.trim()) {
         row[ci] = num;
@@ -743,6 +874,11 @@
       return;
     }
     while (row.length <= ci) row.push('');
+    var cs = parseInt(inp.dataset.cs) || 1;
+    if (cs > 1) {
+      row[ci] = {v: v, cs: cs};
+      return;
+    }
     var num = parseFloat(v);
     if (v !== '' && !isNaN(num) && String(num) === v.trim()) {
       row[ci] = num;

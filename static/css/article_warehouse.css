@@ -3,7 +3,6 @@
     max-width: 1400px;
     margin: 0 auto;
     padding: 16px;
-    overflow-x: hidden;
 }
 .wh-page .breadcrumb {
     font-size: 13px;
@@ -15,25 +14,25 @@
     text-decoration: none;
 }
 
-/* Layout */
+/* Layout — app-shell: layout fills remaining viewport, only content scrolls */
 .wh-layout {
     display: flex;
     gap: 20px;
-    align-items: flex-start;
+    align-items: stretch;
+    height: calc(100vh - 140px);
 }
 
 /* Sidebar */
 .wh-sidebar {
     width: 210px;
     flex-shrink: 0;
-    position: sticky;
-    top: 72px;
-    max-height: calc(100vh - 90px);
+    height: 100%;
     overflow-y: auto;
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     padding: 20px 0 12px;
+    box-sizing: border-box;
 }
 .wh-sidebar::-webkit-scrollbar { width: 4px; }
 .wh-sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
@@ -166,11 +165,14 @@
 .wh-content {
     flex: 1;
     min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     padding: 20px;
-    min-height: 400px;
+    box-sizing: border-box;
 }
 
 /* Loading */
@@ -240,8 +242,10 @@
     font-weight: 700;
     color: #1e40af;
     margin: 0 0 10px;
-    padding: 6px 0;
-    border-bottom: 1px solid #dbeafe;
+    padding: 8px 14px;
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
 }
 .wh-section-notes {
     margin-top: 10px;
@@ -323,11 +327,11 @@
     white-space: nowrap;
 }
 .wh-table th {
-    background: #f1f5f9;
-    color: #334155;
+    background: #dbeafe;
+    color: #1e40af;
     font-weight: 600;
     padding: 8px 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #bfdbfe;
     text-align: center;
     position: sticky;
     top: 0;
@@ -348,7 +352,7 @@
 .wh-table tbody tr.wh-row-highlight {
     background: #fef9c3 !important;
 }
-.wh-table td:first-child,
+.wh-table td.wh-col-0,
 .wh-table th:first-child {
     text-align: left;
 }
@@ -528,6 +532,7 @@
     .wh-layout {
         flex-direction: column;
         gap: 12px;
+        height: auto;
     }
 
     .wh-sidebar {
@@ -538,6 +543,8 @@
     }
 
     .wh-content {
+        height: auto;
+        overflow-y: visible;
         padding: 14px;
         border-radius: 8px;
         max-width: 100%;
@@ -557,4 +564,16 @@
         width: 120px;
         font-size: 16px !important;
     }
+}
+
+.wh-next-hint {
+    margin: 24px 0 4px;
+    padding: 10px 14px;
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    user-select: none;
 }

@@ -15,6 +15,9 @@
   var sheetCache = {};
   var postcodeZoneMap = null;
   var postcodeZoneMaps = null;
+  var autoNextLock = false;
+  var bottomOverscroll = 0;
+  var BOTTOM_OVERSCROLL_THRESHOLD = 120;
 
   function $(sel, ctx) { return (ctx || document).querySelector(sel); }
   function $$(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
@@ -27,6 +30,7 @@
         sheetsIndex = res.data || [];
         renderNav();
         if (sheetsIndex.length) loadSheet(sheetsIndex[0].key);
+        bindAutoNextSheet();
       })
       .catch(function () {
         $('#whNavList').innerHTML = '<li class="wh-nav-item wh-nav-loading">加载失败</li>';
@@ -96,6 +100,7 @@
     currentKey = key;
     zonePageNum = 1;
     zoneSearchTerm = '';
+    bottomOverscroll = 0;
     setActiveNav(key);
 
     if (sheetCache[key]) {
@@ -128,15 +133,18 @@
     postcodeZoneMap = currentData.postcode_zone_map || null;
     postcodeZoneMaps = currentData.postcode_zone_maps || null;
     var html = '<h2 class="wh-sheet-title">' + esc(currentData.name) + '</h2>';
+
+    if (postcodeZoneMap) {
+      html += renderPostcodeQueryBox('whPostcodeInput', 'whPostcodeResult');
+    }
+
     var sections = currentData.sections || [];
 
     sections.forEach(function (sec, si) {
       html += renderSection(sec, si);
     });
 
-    if (postcodeZoneMap) {
-      html += renderPostcodeQueryBox('whPostcodeInput', 'whPostcodeResult');
-    }
+    html += renderNextSheetHint();
 
     $('#whContent').innerHTML = html;
 
@@ -226,10 +234,46 @@
   function isFullSpanRow(row, colCount) {
     if (colCount < 5) return false;
     var filled = 0;
+    var leadingEmpty = 0;
+    var seenFilled = false;
     for (var i = 0; i < row.length; i++) {
-      if (row[i] !== '' && row[i] !== null && row[i] !== undefined) filled++;
+      var v = cellValue(row[i]);
+      if (v !== '' && v !== null && v !== undefined) {
+        seenFilled = true;
+        filled += cellColspan(row[i]);
+      } else if (!seenFilled) {
+        leadingEmpty++;
+      }
     }
+    if (leadingEmpty > 1) return false;
     return filled > 0 && filled * 3 <= colCount;
+  }
+
+  function cellValue(c) {
+    if (c && typeof c === 'object' && !Array.isArray(c)) {
+      return c.v != null ? c.v : (c.text != null ? c.text : '');
+    }
+    return c;
+  }
+
+  function cellColspan(c) {
+    if (c && typeof c === 'object' && !Array.isArray(c)) {
+      return c.cs || c.colspan || 1;
+    }
+    return 1;
+  }
+
+  function buildColspanCover(rows) {
+    var covered = {};
+    for (var ri = 0; ri < rows.length; ri++) {
+      for (var ci = 0; ci < rows[ri].length; ci++) {
+        var cs = cellColspan(rows[ri][ci]);
+        if (cs > 1) {
+          for (var k = 1; k < cs; k++) covered[ri + '_' + (ci + k)] = true;
+        }
+      }
+    }
+    return covered;
   }
 
   function isMarkerRow(row) {
@@ -304,18 +348,27 @@
     rows.forEach(function (row, ri) {
       if (isFullSpanRow(row, colCount)) {
         var parts = [];
-        row.forEach(function (c) { if (c !== '' && c !== null && c !== undefined) parts.push(String(c)); });
+        row.forEach(function (c) {
+          var v = cellValue(c);
+          if (v !== '' && v !== null && v !== undefined) parts.push(String(v));
+        });
         h += '<tr><td colspan="' + colCount + '" class="wh-cell-note">' + esc(parts.join('  ')) + '</td></tr>';
       } else {
         h += '<tr>';
-        row.forEach(function (c, ci) {
+        var ci = 0;
+        while (ci < row.length) {
+          var rawCell = row[ci];
           var m = mergeMap[ri + '_' + ci];
-          if (m === 0) return;
-          var cls = '';
-          if (typeof c === 'string' && c.length > 30) cls = ' wh-cell-note';
+          if (m === 0) { ci++; continue; }
+          var value = cellValue(rawCell);
+          var cs = cellColspan(rawCell);
+          var cls = 'wh-col-' + ci;
+          if (typeof value === 'string' && value.length > 30) cls += ' wh-cell-note';
           var rs = m > 1 ? ' rowspan="' + m + '"' : '';
-          h += '<td' + rs + (cls ? ' class="' + cls + '"' : '') + '>' + esc(c) + '</td>';
-        });
+          var csAttr = cs > 1 ? ' colspan="' + cs + '"' : '';
+          h += '<td' + rs + csAttr + ' class="' + cls + '">' + esc(value) + '</td>';
+          ci += cs;
+        }
         h += '</tr>';
       }
     });
@@ -327,12 +380,15 @@
     var map = {};
     if (!rows.length) return map;
     var cols = rows[0].length;
+    var covered = buildColspanCover(rows);
     for (var ci = 0; ci < cols; ci++) {
       var hasGrouping = false;
       for (var ri = 1; ri < rows.length; ri++) {
-        var v = rows[ri][ci];
+        if (covered[ri + '_' + ci]) continue;
+        var v = cellValue(rows[ri][ci]);
         if (v === '' || v === null || v === undefined) {
-          if (rows[ri - 1][ci] !== '' && rows[ri - 1][ci] !== null && rows[ri - 1][ci] !== undefined) {
+          var prevV = cellValue(rows[ri - 1][ci]);
+          if (prevV !== '' && prevV !== null && prevV !== undefined) {
             hasGrouping = true;
             break;
           }
@@ -342,7 +398,12 @@
 
       var anchor = -1;
       for (var ri = 0; ri < rows.length; ri++) {
-        var v = rows[ri][ci];
+        if (covered[ri + '_' + ci]) {
+          if (anchor >= 0) map[anchor + '_' + ci] = ri - anchor;
+          anchor = -1;
+          continue;
+        }
+        var v = cellValue(rows[ri][ci]);
         var isEmpty = (v === '' || v === null || v === undefined);
         var rowIsFullSpan = isFullSpanRow(rows[ri], cols);
         if (rowIsFullSpan) {
@@ -742,6 +803,104 @@
       .catch(function () {
         resultsEl.innerHTML = '<div class="wh-pc-no-result">查询失败</div>';
       });
+  }
+
+  function renderNextSheetHint() {
+    if (!sheetsIndex.length || !currentKey) return '';
+    var idx = -1;
+    for (var i = 0; i < sheetsIndex.length; i++) {
+      if (sheetsIndex[i].key === currentKey) { idx = i; break; }
+    }
+    if (idx < 0 || idx >= sheetsIndex.length - 1) return '';
+    var nextName = sheetsIndex[idx + 1].name;
+    return '<div class="wh-next-hint">继续向下滑动切换到「' + esc(nextName) + '」</div>';
+  }
+
+  function bindAutoNextSheet() {
+    var contentEl = $('#whContent');
+    if (!contentEl) return;
+    var lastTouchY = null;
+
+    function isDesktopScroll() {
+      return window.innerWidth > 768;
+    }
+
+    function isAtBottom() {
+      if (isDesktopScroll()) {
+        return contentEl.scrollHeight - (contentEl.scrollTop + contentEl.clientHeight) <= 4;
+      }
+      var scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      var viewport = window.innerHeight;
+      var docHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight
+      );
+      return docHeight - (scrollY + viewport) <= 4;
+    }
+
+    function findNextKey() {
+      if (!sheetsIndex.length || !currentKey) return null;
+      var idx = -1;
+      for (var i = 0; i < sheetsIndex.length; i++) {
+        if (sheetsIndex[i].key === currentKey) { idx = i; break; }
+      }
+      if (idx < 0 || idx >= sheetsIndex.length - 1) return null;
+      return sheetsIndex[idx + 1].key;
+    }
+
+    function triggerNext() {
+      var nextKey = findNextKey();
+      if (!nextKey) return false;
+      autoNextLock = true;
+      bottomOverscroll = 0;
+      loadSheet(nextKey);
+      setTimeout(function () {
+        if (isDesktopScroll()) {
+          contentEl.scrollTop = 0;
+        } else {
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+        setTimeout(function () { autoNextLock = false; }, 400);
+      }, 80);
+      return true;
+    }
+
+    function inContent(target) {
+      return target && contentEl.contains(target);
+    }
+
+    function onWheel(e) {
+      if (autoNextLock) return;
+      if (e.deltaY <= 0) { bottomOverscroll = 0; return; }
+      if (isDesktopScroll() && !inContent(e.target)) { bottomOverscroll = 0; return; }
+      if (!isAtBottom()) { bottomOverscroll = 0; return; }
+      bottomOverscroll += e.deltaY;
+      if (bottomOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerNext();
+    }
+
+    function onTouchStart(e) {
+      lastTouchY = e.touches && e.touches[0] ? e.touches[0].clientY : null;
+    }
+
+    function onTouchMove(e) {
+      if (autoNextLock) return;
+      if (lastTouchY === null || !e.touches || !e.touches[0]) return;
+      var curY = e.touches[0].clientY;
+      var dy = lastTouchY - curY;
+      lastTouchY = curY;
+      if (dy <= 0) { bottomOverscroll = 0; return; }
+      if (isDesktopScroll() && !inContent(e.target)) { bottomOverscroll = 0; return; }
+      if (!isAtBottom()) { bottomOverscroll = 0; return; }
+      bottomOverscroll += Math.min(dy, 40);
+      if (bottomOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerNext();
+    }
+
+    function onTouchEnd() { lastTouchY = null; }
+
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
   }
 
   if (document.readyState === 'loading') {
