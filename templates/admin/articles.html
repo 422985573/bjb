@@ -13,6 +13,7 @@
     <div class="admin-nav-channels">
         <a href="{{ url_for('admin.articles') }}" class="active">文章管理</a>
         <a href="{{ url_for('admin.channel_postcodes') }}">大件/纸箱无服务邮编</a>
+        <a href="{{ url_for('admin.phone_whitelist') }}">手机号池</a>
     </div>
     
     <div class="admin-content">
@@ -62,6 +63,7 @@
                             <th>标题</th>
                             <th>分类</th>
                             <th>状态</th>
+                            <th>权限</th>
                             <th>创建时间</th>
                             <th>修改时间</th>
                             <th>操作</th>
@@ -83,6 +85,15 @@
                                     onclick="togglePublishStatus({{ article['id'] }}, {{ 0 if article.get('is_published') else 1 }}, this)"
                                 >
                                     {{ '已发布' if article.get('is_published') else '未发布' }}
+                                </button>
+                            </td>
+                            <td>
+                                <button
+                                    class="btn btn-small {% if article.get('requires_phone_auth') %}btn-danger{% else %}btn-secondary{% endif %}"
+                                    onclick="toggleAuthStatus({{ article['id'] }}, {{ 0 if article.get('requires_phone_auth') else 1 }}, this)"
+                                    title="点击切换：开启后访客需输入手机号才能查看"
+                                >
+                                    {{ '需手机号' if article.get('requires_phone_auth') else '公开' }}
                                 </button>
                             </td>
                             <td>{{ article.get('created_at') | format_datetime_beijing }}</td>
@@ -139,6 +150,28 @@ async function togglePublishStatus(articleId, nextStatus, buttonEl) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_published: nextStatus })
+        });
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.success) {
+            location.reload();
+            return;
+        }
+        alert(data.message || '切换失败');
+    } catch (e) {
+        alert('切换失败');
+    }
+    buttonEl.disabled = false;
+    buttonEl.textContent = originalText;
+}
+async function toggleAuthStatus(articleId, nextStatus, buttonEl) {
+    const originalText = buttonEl.textContent;
+    buttonEl.disabled = true;
+    buttonEl.textContent = '切换中...';
+    try {
+        const response = await fetch('/api/article/' + articleId + '/auth-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requires_phone_auth: nextStatus })
         });
         const data = await response.json().catch(function() { return {}; });
         if (response.ok && data.success) {

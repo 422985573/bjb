@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}权限验证 - {{ article['title'] }}{% endblock %}
+
+{% block content %}
+<div class="auth-gate-wrap">
+    <div class="auth-gate-card">
+        <div class="auth-gate-title">该文章需要权限查看</div>
+        <div class="auth-gate-subtitle">请输入已授权的手机号</div>
+        <div class="auth-gate-article">《{{ article['title'] }}》</div>
+        <div class="auth-gate-form">
+            <input type="tel" id="authPhone" placeholder="手机号" maxlength="20" inputmode="tel" autocomplete="off">
+            <button type="button" id="authSubmitBtn" class="btn btn-primary" onclick="verifyPhone()">提交验证</button>
+        </div>
+        <div id="authError" class="auth-gate-error" hidden></div>
+        <div class="auth-gate-hint">如未授权，请联系管理员添加。</div>
+    </div>
+</div>
+
+<style>
+.auth-gate-wrap { display: flex; justify-content: center; align-items: center; padding: 60px 16px; }
+.auth-gate-card { background: #fff; border: 1px solid var(--border, #eee); border-radius: 10px; padding: 32px 28px; box-shadow: 0 4px 18px rgba(0,0,0,0.05); width: 100%; max-width: 420px; }
+.auth-gate-title { font-size: 18px; font-weight: 600; color: #222; margin-bottom: 6px; text-align: center; }
+.auth-gate-subtitle { font-size: 14px; color: #666; margin-bottom: 12px; text-align: center; }
+.auth-gate-article { font-size: 14px; color: #333; margin-bottom: 20px; text-align: center; word-break: break-all; }
+.auth-gate-form { display: flex; flex-direction: column; gap: 10px; }
+.auth-gate-form input { padding: 10px 12px; border: 1px solid var(--border, #ddd); border-radius: 6px; font-size: 15px; }
+.auth-gate-form input:focus { outline: none; border-color: #4a8cff; }
+.auth-gate-form button { padding: 10px 16px; font-size: 15px; }
+.auth-gate-error { color: #c0392b; font-size: 13px; margin-top: 10px; text-align: center; }
+.auth-gate-hint { color: #888; font-size: 12px; margin-top: 14px; text-align: center; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function verifyPhone() {
+    const phoneEl = document.getElementById('authPhone');
+    const btn = document.getElementById('authSubmitBtn');
+    const errEl = document.getElementById('authError');
+    const phone = (phoneEl.value || '').trim();
+    errEl.hidden = true;
+    errEl.textContent = '';
+    if (!phone) {
+        errEl.textContent = '请输入手机号';
+        errEl.hidden = false;
+        return;
+    }
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = '验证中...';
+    try {
+        const response = await fetch('/api/article/{{ article["article_code"] }}/verify-phone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone })
+        });
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.success) {
+            location.reload();
+            return;
+        }
+        errEl.textContent = data.message || '验证失败';
+        errEl.hidden = false;
+    } catch (e) {
+        errEl.textContent = '请求失败，请稍后重试';
+        errEl.hidden = false;
+    }
+    btn.disabled = false;
+    btn.textContent = originalText;
+}
+
+document.getElementById('authPhone').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') verifyPhone();
+});
+document.getElementById('authPhone').focus();
+</script>
+{% endblock %}

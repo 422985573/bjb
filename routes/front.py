@@ -112,6 +112,14 @@ def article_detail(article_code):
         if not row:
             return '文章不存在', 404
         article = dict(row)
+        # 手机号鉴权门控：管理员直通；普通访客需在 session 中已验证。
+        if article.get('requires_phone_auth') and not is_admin:
+            verified = session.get('phone_verified_articles') or []
+            if article_code not in verified:
+                return render_template(
+                    'article_auth_gate.html',
+                    article=article,
+                )
         cursor.execute(
             "SELECT * FROM modules WHERE article_id = ? ORDER BY sort_order",
             (article['id'],)

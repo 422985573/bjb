@@ -45,7 +45,7 @@ QUICK_LINKS = [
     ('TGE网站', 'https://teamglobalexp.com/'),
     ('TFM网站', 'https://www.tfmxpress.com.au/index.html'),
     ('Hunter网站', 'https://www.hunterexpress.com.au/'),
-    ('Alliede网站', 'https://www.alliedexpress.com.au/'),
+    ('Allied网站', 'https://www.alliedexpress.com.au/'),
 ]
 
 

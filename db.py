@@ -66,6 +66,17 @@ def init_db():
         if 'is_published' not in columns:
             cursor.execute('ALTER TABLE articles ADD COLUMN is_published INTEGER NOT NULL DEFAULT 1')
             cursor.execute('UPDATE articles SET is_published = 1 WHERE is_published IS NULL')
+        if 'requires_phone_auth' not in columns:
+            cursor.execute('ALTER TABLE articles ADD COLUMN requires_phone_auth INTEGER NOT NULL DEFAULT 0')
+            cursor.execute('UPDATE articles SET requires_phone_auth = 0 WHERE requires_phone_auth IS NULL')
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS phone_whitelist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS modules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

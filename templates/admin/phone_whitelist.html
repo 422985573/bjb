@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}手机号池 - 报价网站{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>手机号池</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('admin.articles') }}" class="btn btn-secondary">返回文章管理</a>
+        </div>
+    </div>
+    <div class="admin-nav-channels">
+        <a href="{{ url_for('admin.articles') }}">文章管理</a>
+        <a href="{{ url_for('admin.channel_postcodes') }}">大件/纸箱无服务邮编</a>
+        <a href="{{ url_for('admin.phone_whitelist') }}" class="active">手机号池</a>
+    </div>
+
+    <div class="admin-content">
+        <p class="section-desc">将文章设置为「需要权限查看」后，访客需输入此名单中的手机号才能查看。</p>
+
+        <div class="section">
+            <h2>添加手机号</h2>
+            <div class="phone-add-form">
+                <input type="text" id="newPhone" placeholder="手机号" maxlength="20" inputmode="tel" autocomplete="off">
+                <input type="text" id="newName" placeholder="姓名" maxlength="50" autocomplete="off">
+                <button type="button" class="btn btn-primary" onclick="addPhone()">添加</button>
+                <span id="addStatus" class="save-status"></span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>手机号列表（共 {{ phones|length }} 条）</h2>
+            <div class="article-table-wrapper">
+                <table class="article-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 220px;">手机号</th>
+                            <th>姓名</th>
+                            <th style="width: 200px;">添加时间</th>
+                            <th style="width: 120px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="phoneTableBody">
+                        {% for p in phones %}
+                        <tr data-phone-id="{{ p['id'] }}">
+                            <td>{{ p['phone'] }}</td>
+                            <td>{{ p['name'] or '-' }}</td>
+                            <td>{{ p.get('created_at') | format_datetime_beijing if p.get('created_at') else '-' }}</td>
+                            <td>
+                                <button class="btn btn-small btn-danger" onclick="deletePhone({{ p['id'] }})">删除</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if not phones %}
+                <div class="empty-message">暂无手机号，请在上方添加。</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.phone-add-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.phone-add-form input { padding: 8px 12px; border: 1px solid var(--border, #ddd); border-radius: 6px; font-size: 14px; min-width: 160px; }
+.section-desc { color: var(--text-gray, #666); margin-bottom: 20px; }
+.save-status { color: var(--text-gray); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function addPhone() {
+    const phoneEl = document.getElementById('newPhone');
+    const nameEl = document.getElementById('newName');
+    const statusEl = document.getElementById('addStatus');
+    const phone = (phoneEl.value || '').trim();
+    const name = (nameEl.value || '').trim();
+    if (!phone) { alert('请输入手机号'); return; }
+    statusEl.textContent = '添加中...';
+    statusEl.style.color = '';
+    try {
+        const response = await fetch('/api/phone-whitelist/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone, name: name })
+        });
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.success) {
+            statusEl.textContent = '已添加';
+            statusEl.style.color = 'green';
+            phoneEl.value = '';
+            nameEl.value = '';
+            setTimeout(function() { location.reload(); }, 300);
+            return;
+        }
+        statusEl.textContent = data.message || '添加失败';
+        statusEl.style.color = 'red';
+    } catch (e) {
+        statusEl.textContent = '请求失败';
+        statusEl.style.color = 'red';
+    }
+}
+
+async function deletePhone(id) {
+    if (!confirm('确定要删除该手机号吗？')) return;
+    try {
+        const response = await fetch('/api/phone-whitelist/' + id + '/delete', { method: 'POST' });
+        const data = await response.json().catch(function() { return {}; });
+        if (response.ok && data.success) {
+            const row = document.querySelector('tr[data-phone-id="' + id + '"]');
+            if (row) row.remove();
+            return;
+        }
+        alert(data.message || '删除失败');
+    } catch (e) {
+        alert('删除失败');
+    }
+}
+
+document.getElementById('newName').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addPhone();
+});
+document.getElementById('newPhone').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addPhone();
+});
+</script>
+{% endblock %}

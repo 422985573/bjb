@@ -481,6 +481,110 @@ def article_publish_status(article_id):
     return jsonify({'success': True, 'is_published': is_published})
 
 
+@api_bp.route('/article/<int:article_id>/auth-status', methods=['POST'])
+@admin_required
+def article_auth_status(article_id):
+    """切换文章是否需要手机号鉴权"""
+    data = request.json or {}
+    requires_auth = data.get('requires_phone_auth')
+    if requires_auth in (True, False):
+        requires_auth = 1 if requires_auth else 0
+    try:
+        requires_auth = int(requires_auth)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': '鉴权状态参数无效'}), 400
+    if requires_auth not in (0, 1):
+        return jsonify({'success': False, 'message': '鉴权状态参数无效'}), 400
+
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE articles SET requires_phone_auth = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            (requires_auth, article_id)
+        )
+        if cursor.rowcount == 0:
+            return jsonify({'success': False, 'message': '文章不存在'}), 404
+        conn.commit()
+    return jsonify({'success': True, 'requires_phone_auth': requires_auth})
+
+
+def _normalize_phone(value):
+    return ''.join(c for c in str(value or '') if c.isdigit())
+
+
+@api_bp.route('/phone-whitelist', methods=['GET'])
+@admin_required
+def phone_whitelist_list():
+    """获取手机号池"""
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, phone, name, created_at FROM phone_whitelist ORDER BY created_at DESC, id DESC')
+        rows = [dict(r) for r in cursor.fetchall()]
+        return jsonify({'success': True, 'data': rows})
+
+
+@api_bp.route('/phone-whitelist/add', methods=['POST'])
+@admin_required
+def phone_whitelist_add():
+    """添加手机号到白名单"""
+    data = request.json or {}
+    phone = _normalize_phone(data.get('phone'))
+    name = (data.get('name') or '').strip()
+    if not phone:
+        return jsonify({'success': False, 'message': '手机号不能为空'}), 400
+    if len(phone) < 6 or len(phone) > 20:
+        return jsonify({'success': False, 'message': '手机号长度不正确'}), 400
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM phone_whitelist WHERE phone = ?', (phone,))
+        if cursor.fetchone():
+            return jsonify({'success': False, 'message': '该手机号已存在'}), 400
+        cursor.execute(
+            'INSERT INTO phone_whitelist (phone, name) VALUES (?, ?)',
+            (phone, name)
+        )
+        new_id = cursor.lastrowid
+        conn.commit()
+        return jsonify({'success': True, 'id': new_id, 'phone': phone, 'name': name})
+
+
+@api_bp.route('/phone-whitelist/<int:phone_id>/delete', methods=['POST'])
+@admin_required
+def phone_whitelist_delete(phone_id):
+    """删除手机号"""
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM phone_whitelist WHERE id = ?', (phone_id,))
+        if cursor.rowcount == 0:
+            return jsonify({'success': False, 'message': '手机号不存在'}), 404
+        conn.commit()
+        return jsonify({'success': True})
+
+
+@api_bp.route('/article/<article_code>/verify-phone', methods=['POST'])
+def article_verify_phone(article_code):
+    """公开接口：校验手机号是否在白名单中；通过则在 session 标记本次会话已解锁此文章。"""
+    from flask import session
+    data = request.json or {}
+    phone = _normalize_phone(data.get('phone'))
+    if not phone:
+        return jsonify({'success': False, 'message': '请输入手机号'}), 400
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM articles WHERE article_code = ?', (article_code,))
+        if not cursor.fetchone():
+            return jsonify({'success': False, 'message': '文章不存在'}), 404
+        cursor.execute('SELECT id, name FROM phone_whitelist WHERE phone = ?', (phone,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'success': False, 'message': '手机号未授权，请联系管理员'}), 403
+    verified = list(session.get('phone_verified_articles') or [])
+    if article_code not in verified:
+        verified.append(article_code)
+        session['phone_verified_articles'] = verified
+    return jsonify({'success': True})
+
+
 @api_bp.route('/category/add', methods=['POST'])
 @admin_required
 def category_add():

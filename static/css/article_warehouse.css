@@ -436,27 +436,36 @@
     color: #dc2626;
 }
 
-/* Mobile floating TOC */
+/* Mobile floating TOC: right-side vertical tab + slide-in panel (类似专线渠道目录) */
 .wh-toc-fab {
     display: none;
     position: fixed;
-    bottom: 24px;
-    right: 20px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: #2563eb;
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 14px rgba(37,99,235,0.35);
-    font-size: 20px;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    min-height: 110px;
+    padding: 14px 0;
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-right: none;
+    border-top: 4px solid #2563eb;
+    border-radius: 14px 0 0 14px;
+    box-shadow: -4px 6px 26px rgba(37, 99, 235, 0.16), -2px 0 14px rgba(15, 23, 42, 0.08);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
     cursor: pointer;
     z-index: 1000;
     align-items: center;
     justify-content: center;
-    line-height: 1;
+    line-height: 1.2;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-.wh-toc-fab:active { transform: scale(0.92); }
+.wh-toc-fab:active { transform: translateY(-50%) translateX(-2px); }
 .wh-toc-overlay {
     display: none;
     position: fixed;
@@ -467,26 +476,29 @@
 .wh-toc-overlay.open { display: block; }
 .wh-toc-panel {
     position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    max-height: 60vh;
+    right: 0;
+    top: 50%;
+    transform: translate(100%, -50%);
+    width: min(360px, calc(100vw - 20px));
+    max-height: min(75vh, 540px);
     background: #fff;
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+    border: 1px solid #e2e8f0;
+    border-right: none;
+    border-top: 4px solid #2563eb;
+    border-radius: 16px 0 0 16px;
+    box-shadow: -8px 12px 34px rgba(37, 99, 235, 0.22), -3px 0 16px rgba(15, 23, 42, 0.12);
     z-index: 1002;
-    transform: translateY(100%);
     transition: transform 0.28s ease;
     overflow: hidden;
     display: flex;
     flex-direction: column;
 }
-.wh-toc-panel.open { transform: translateY(0); }
+.wh-toc-panel.open { transform: translate(0, -50%); }
 .wh-toc-panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 18px 10px;
+    padding: 12px 16px;
     border-bottom: 1px solid #e2e8f0;
     flex-shrink: 0;
 }
@@ -494,6 +506,7 @@
     font-size: 15px;
     font-weight: 700;
     color: #0f172a;
+    letter-spacing: 1px;
 }
 .wh-toc-close {
     background: none;

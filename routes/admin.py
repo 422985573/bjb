@@ -267,3 +267,14 @@ def channel_postcodes():
         rows = cursor.fetchall()
         data = {row[0]: (row[1] or '') for row in rows}
         return render_template('admin/channel_postcodes.html', data=data)
+
+
+@admin_bp.route('/phone-whitelist')
+@admin_required
+def phone_whitelist():
+    """手机号池管理页：可添加/删除手机号（带姓名），用于受限文章访问校验"""
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, phone, name, created_at FROM phone_whitelist ORDER BY created_at DESC, id DESC')
+        phones = [dict(r) for r in cursor.fetchall()]
+        return render_template('admin/phone_whitelist.html', phones=phones)
