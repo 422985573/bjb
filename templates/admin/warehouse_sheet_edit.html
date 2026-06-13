@@ -320,6 +320,56 @@
     max-height: 600px;
     overflow-y: auto;
 }
+
+.wse-note-merged-row td:first-child {
+    background: #fffbeb;
+}
+.wse-note-merged-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #fde68a;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #fff;
+    color: #92400e;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.wse-note-merged-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    background: #fff7ed;
+}
+.wse-add-row-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+.wse-add-note-row-btn {
+    border-color: #fde68a !important;
+    color: #b45309 !important;
+}
+.wse-add-note-row-btn:hover {
+    border-color: #f59e0b !important;
+    background: #fffbeb !important;
+}
+
+.wse-group-cell input {
+    width: 100%;
+    padding: 5px 7px;
+    border: none;
+    font-size: 12px;
+    background: transparent;
+    text-align: center;
+    font-weight: 700;
+    color: #1e40af;
+    box-sizing: border-box;
+}
+.wse-group-cell input:focus {
+    outline: none;
+    background: #eff6ff;
+}
 </style>
 {% endblock %}
 
@@ -471,14 +521,6 @@
 
     h += renderTable(sec, si, cols, usePaging);
 
-    var hasRspGroups = false;
-    if (sec.type !== 'price_table' && sec.type !== 'zone_table') {
-      var rspCheck = wseBuildRowspanMap(sec.rows || [], cols);
-      hasRspGroups = wseHasRowspanGroups(rspCheck);
-    }
-    if (!(sec.type === 'price_table' && (canGroupByCol0(sec.rows || []) || canGroupByMarkerRows(sec.rows || []))) && !hasRspGroups) {
-      h += '<button type="button" class="wse-add-row-btn" onclick="wseAddRow(' + si + ')">+ 添加行</button>';
-    }
     h += '</div>';
     return h;
   }
@@ -506,9 +548,150 @@
     if (rows.length < 3) return false;
     var markers = 0;
     for (var i = 0; i < rows.length; i++) {
-      if (isMarkerRow(rows[i])) markers++;
+      if (!isMarkerRow(rows[i])) continue;
+      markers++;
+      var next = rows[i + 1];
+      if (!next) return false;
+      var nextC0 = wseCellValue(next[0]);
+      if (nextC0 !== '' && nextC0 !== null && nextC0 !== undefined) return false;
+      var nextFilled = 0;
+      for (var j = 0; j < next.length; j++) {
+        var v = wseCellValue(next[j]);
+        if (v !== '' && v !== null && v !== undefined) nextFilled++;
+      }
+      if (nextFilled < 2) return false;
     }
     return markers >= 2 && markers <= rows.length / 3;
+  }
+
+  function isNoteRowForEdit(row, cols) {
+    if (cols < 2) return false;
+    var c0 = wseCellValue(row[0]);
+    if (c0 !== '' && c0 !== null && c0 !== undefined) return false;
+    var filled = 0;
+    for (var i = 0; i < row.length; i++) {
+      var v = wseCellValue(row[i]);
+      if (v !== '' && v !== null && v !== undefined) filled++;
+    }
+    return filled === 1;
+  }
+
+  function splitNotesAndData(rows, cols) {
+    var dataIdx = [], noteIdx = [];
+    rows.forEach(function(r, i) {
+      if (isNoteRowForEdit(r, cols)) noteIdx.push(i);
+      else dataIdx.push(i);
+    });
+    return { dataIdx: dataIdx, noteIdx: noteIdx };
+  }
+
+  function buildCol0Groups(rows, dataIdx) {
+    var groups = [];
+    var cur = null;
+    for (var i = 0; i < dataIdx.length; i++) {
+      var ri = dataIdx[i];
+      var v = wseCellValue(rows[ri][0]);
+      if (v !== '' && v !== null && v !== undefined) {
+        cur = { col0: v, indices: [ri] };
+        groups.push(cur);
+      } else if (cur) {
+        cur.indices.push(ri);
+      } else {
+        cur = { col0: '', indices: [ri] };
+        groups.push(cur);
+      }
+    }
+    return groups;
+  }
+
+  function renderPriceTable(sec, si, cols) {
+    var rows = sec.rows || [];
+    var headers = sec.headers || [];
+    var split = splitNotesAndData(rows, cols);
+    var dataIdx = split.dataIdx;
+    var noteIdx = split.noteIdx;
+    var groups = buildCol0Groups(rows, dataIdx);
+    var hasRowspanGroups = groups.some(function(g) { return g.indices.length >= 2; });
+
+    var h = '<div class="wse-table-wrap"><table class="wse-table">';
+    if (headers.length) {
+      h += '<thead><tr>';
+      for (var hi = 0; hi < cols; hi++) {
+        h += '<th>' + esc(headers[hi] || '') + '</th>';
+      }
+      h += '<th></th></tr></thead>';
+    }
+    h += '<tbody>';
+
+    if (hasRowspanGroups) {
+      groups.forEach(function(g) {
+        var cnt = g.indices.length;
+        g.indices.forEach(function(ri, gi) {
+          var row = rows[ri];
+          h += '<tr data-ri="' + ri + '">';
+          if (gi === 0) {
+            var col0Val = String(wseCellValue(row[0]) == null ? '' : wseCellValue(row[0]));
+            h += '<td rowspan="' + cnt + '" class="wse-group-cell"><input type="text" value="' + escAttr(col0Val) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="0"></td>';
+          }
+          for (var ci = 1; ci < cols; ci++) {
+            var val = ci < row.length ? wseCellValue(row[ci]) : '';
+            if (val === null || val === undefined) val = '';
+            h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+          }
+          h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除小项">&times;</button></td>';
+          h += '</tr>';
+        });
+        var lastRi = g.indices[cnt - 1];
+        h += '<tr class="wse-group-add"><td colspan="' + (cols + 1) + '"><button type="button" onclick="wseAddRowInGroup(' + si + ',' + lastRi + ')">+ 添加小项</button></td></tr>';
+      });
+    } else {
+      dataIdx.forEach(function(ri) {
+        var row = rows[ri];
+        h += '<tr data-ri="' + ri + '">';
+        for (var ci = 0; ci < cols; ci++) {
+          var val = ci < row.length ? wseCellValue(row[ci]) : '';
+          if (val === null || val === undefined) val = '';
+          h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+        }
+        h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除行">&times;</button></td>';
+        h += '</tr>';
+      });
+    }
+
+    noteIdx.forEach(function(ri) {
+      var row = rows[ri];
+      var noteText = '';
+      var noteCi = 1;
+      for (var k = 0; k < row.length; k++) {
+        var v = wseCellValue(row[k]);
+        if (v !== '' && v !== null && v !== undefined) {
+          noteText = String(v);
+          noteCi = k;
+          break;
+        }
+      }
+      h += '<tr class="wse-note-merged-row" data-ri="' + ri + '">';
+      h += '<td colspan="' + cols + '"><input type="text" class="wse-note-merged-input" value="' + escAttr(noteText) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + noteCi + '" data-merged="1" placeholder="整行说明"></td>';
+      h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除整行">&times;</button></td>';
+      h += '</tr>';
+    });
+
+    h += '</tbody></table></div>';
+
+    var blockAddGroup = (SHEET_KEY === 'fba' && si >= 2 && si <= 5);
+    h += '<div class="wse-add-row-actions">';
+    if (hasRowspanGroups) {
+      if (!blockAddGroup) {
+        var addGroupLabel = (SHEET_KEY === 'fba' && (si === 0 || si === 1)) ? '+ 添加国家' : '+ 添加分组';
+        h += '<button type="button" class="wse-add-row-btn" onclick="wseAddNewGroup(' + si + ')">' + addGroupLabel + '</button>';
+      }
+    } else {
+      h += '<button type="button" class="wse-add-row-btn" onclick="wseAddRow(' + si + ')">+ 添加行</button>';
+    }
+    h += '<button type="button" class="wse-add-row-btn wse-add-note-row-btn" onclick="wseAddMergedRow(' + si + ')">+ 添加整行</button>';
+    h += '</div>';
+
+    return h;
   }
 
   function renderGroupedTable(sec, si, cols) {
@@ -701,11 +884,12 @@
   function renderTable(sec, si, cols, usePaging) {
     var rows = sec.rows || [];
 
-    if (sec.type === 'price_table' && canGroupByMarkerRows(rows)) {
+    if (canGroupByMarkerRows(rows)) {
       return renderMarkerGroupedTable(sec, si, cols);
     }
-    if (sec.type === 'price_table' && canGroupByCol0(rows)) {
-      return renderGroupedTable(sec, si, cols);
+
+    if (sec.type !== 'zone_table') {
+      return renderPriceTable(sec, si, cols);
     }
 
     var display = rows;
@@ -807,7 +991,7 @@
   }
 
   function syncInputsToData() {
-    var inputs = document.querySelectorAll('.wse-table input[data-si]');
+    var inputs = document.querySelectorAll('.wse-section input[data-si]');
     inputs.forEach(function(inp) {
       var si = parseInt(inp.dataset.si);
       var ri = parseInt(inp.dataset.ri);
@@ -852,7 +1036,7 @@
   }
 
   function bindEvents() {
-    document.querySelectorAll('.wse-table input[data-si]').forEach(function(inp) {
+    document.querySelectorAll('.wse-section input[data-si]').forEach(function(inp) {
       inp.removeEventListener('change', onInputChange);
       inp.addEventListener('change', onInputChange);
     });
@@ -894,7 +1078,17 @@
     var cols = parseInt(document.querySelector('.wse-section[data-si="' + si + '"]').dataset.cols) || 1;
     var newRow = [];
     for (var i = 0; i < cols; i++) newRow.push('');
-    sec.rows.push(newRow);
+    var flatTable = (sec.rows || []).length > 0 && (sec.rows || []).every(function(r) {
+      if (cols >= 4 && isNoteRowForEdit(r, cols)) return true;
+      var c0 = wseCellValue(r[0]);
+      return c0 !== '' && c0 !== null && c0 !== undefined;
+    });
+    if (flatTable) newRow[0] = '新行';
+    var insertAt = sec.rows.length;
+    for (var i = 0; i < sec.rows.length; i++) {
+      if (isNoteRowForEdit(sec.rows[i], cols)) { insertAt = i; break; }
+    }
+    sec.rows.splice(insertAt, 0, newRow);
     if (PAGE_SIZE > 0 && sec.rows.length > PAGE_SIZE) {
       pageNums[si] = Math.ceil(sec.rows.length / PAGE_SIZE);
     }
@@ -909,6 +1103,35 @@
     var newRow = [];
     for (var i = 0; i < cols; i++) newRow.push('');
     sec.rows.splice(afterIdx + 1, 0, newRow);
+    rerenderSection(si);
+  };
+
+  window.wseAddNewGroup = function(si) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var cols = parseInt(document.querySelector('.wse-section[data-si="' + si + '"]').dataset.cols) || 1;
+    var newRow = [];
+    for (var i = 0; i < cols; i++) newRow.push('');
+    newRow[0] = (SHEET_KEY === 'fba' && (si === 0 || si === 1)) ? '新国家' : '新分组';
+    var insertAt = sec.rows.length;
+    for (var i = 0; i < sec.rows.length; i++) {
+      if (isNoteRowForEdit(sec.rows[i], cols)) { insertAt = i; break; }
+    }
+    sec.rows.splice(insertAt, 0, newRow);
+    rerenderSection(si);
+  };
+
+  window.wseAddMergedRow = function(si) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var cols = parseInt(document.querySelector('.wse-section[data-si="' + si + '"]').dataset.cols) || 1;
+    if (cols < 2) return;
+    var newRow = [''];
+    newRow.push('说明：');
+    for (var i = 2; i < cols; i++) newRow.push('');
+    sec.rows.push(newRow);
     rerenderSection(si);
   };
 

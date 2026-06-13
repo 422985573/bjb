@@ -15,8 +15,11 @@
   var sheetCache = {};
   var postcodeZoneMap = null;
   var postcodeZoneMaps = null;
+  var pendingPostcodeCode = '';
+  var pendingScrollToBottom = false;
   var autoNextLock = false;
   var bottomOverscroll = 0;
+  var topOverscroll = 0;
   var BOTTOM_OVERSCROLL_THRESHOLD = 120;
 
   function $(sel, ctx) { return (ctx || document).querySelector(sel); }
@@ -47,9 +50,6 @@
       li.className = 'wh-nav-item';
       li.dataset.key = s.key;
       li.innerHTML = esc(s.name);
-      if (s.row_count > 500) {
-        li.innerHTML += ' <span class="wh-nav-rows">' + s.row_count + '</span>';
-      }
       li.onclick = function () { loadSheet(s.key); };
       ul.appendChild(li);
 
@@ -95,12 +95,17 @@
     });
   }
 
-  function loadSheet(key) {
-    if (key === currentKey && currentData) return;
+  function loadSheet(key, postcodeToHighlight) {
+    if (key === currentKey && currentData) {
+      if (postcodeToHighlight) applyPostcodeHighlight(postcodeToHighlight);
+      return;
+    }
     currentKey = key;
     zonePageNum = 1;
     zoneSearchTerm = '';
     bottomOverscroll = 0;
+    topOverscroll = 0;
+    pendingPostcodeCode = postcodeToHighlight || '';
     setActiveNav(key);
 
     if (sheetCache[key]) {
@@ -174,6 +179,45 @@
 
     bindPostcodeQuery();
     bindPerSectionPostcodeQuery();
+
+    if (pendingPostcodeCode) {
+      applyPostcodeHighlight(pendingPostcodeCode);
+      pendingPostcodeCode = '';
+    }
+
+    if (pendingScrollToBottom) {
+      pendingScrollToBottom = false;
+      setTimeout(function () {
+        var ce = $('#whContent');
+        if (window.innerWidth > 768 && ce) {
+          ce.scrollTop = ce.scrollHeight;
+        } else {
+          var h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+          window.scrollTo({ top: h, behavior: 'auto' });
+        }
+      }, 0);
+    }
+  }
+
+  function applyPostcodeHighlight(code) {
+    if (!code) return;
+    if (postcodeZoneMap) {
+      var inp = document.getElementById('whPostcodeInput');
+      if (inp) inp.value = code;
+      doPostcodeLookup(code);
+      return;
+    }
+    if (postcodeZoneMaps) {
+      $$('.wh-postcode-query[data-map-key]').forEach(function (box) {
+        var mapKey = box.dataset.mapKey;
+        if (!postcodeZoneMaps[mapKey] || !postcodeZoneMaps[mapKey][code]) return;
+        var si = parseInt(box.dataset.sectionIdx);
+        var inp = box.querySelector('.wh-postcode-input');
+        var resultEl = box.querySelector('.wh-postcode-result');
+        if (inp) inp.value = code;
+        doPerSectionLookup(code, mapKey, si, resultEl);
+      });
+    }
   }
 
   function renderSection(sec, si) {
@@ -795,7 +839,7 @@
 
         resultsEl.querySelectorAll('.wh-pc-result-item').forEach(function (el) {
           el.addEventListener('click', function () {
-            loadSheet(el.dataset.key);
+            loadSheet(el.dataset.key, code);
             closeTocPanel();
           });
         });
@@ -838,6 +882,14 @@
       return docHeight - (scrollY + viewport) <= 4;
     }
 
+    function isAtTop() {
+      if (isDesktopScroll()) {
+        return contentEl.scrollTop <= 4;
+      }
+      var scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      return scrollY <= 4;
+    }
+
     function findNextKey() {
       if (!sheetsIndex.length || !currentKey) return null;
       var idx = -1;
@@ -846,6 +898,16 @@
       }
       if (idx < 0 || idx >= sheetsIndex.length - 1) return null;
       return sheetsIndex[idx + 1].key;
+    }
+
+    function findPrevKey() {
+      if (!sheetsIndex.length || !currentKey) return null;
+      var idx = -1;
+      for (var i = 0; i < sheetsIndex.length; i++) {
+        if (sheetsIndex[i].key === currentKey) { idx = i; break; }
+      }
+      if (idx <= 0) return null;
+      return sheetsIndex[idx - 1].key;
     }
 
     function triggerNext() {
@@ -865,17 +927,39 @@
       return true;
     }
 
+    function triggerPrev() {
+      var prevKey = findPrevKey();
+      if (!prevKey) return false;
+      autoNextLock = true;
+      topOverscroll = 0;
+      pendingScrollToBottom = true;
+      loadSheet(prevKey);
+      setTimeout(function () { autoNextLock = false; }, 480);
+      return true;
+    }
+
     function inContent(target) {
       return target && contentEl.contains(target);
     }
 
     function onWheel(e) {
       if (autoNextLock) return;
-      if (e.deltaY <= 0) { bottomOverscroll = 0; return; }
-      if (isDesktopScroll() && !inContent(e.target)) { bottomOverscroll = 0; return; }
-      if (!isAtBottom()) { bottomOverscroll = 0; return; }
-      bottomOverscroll += e.deltaY;
-      if (bottomOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerNext();
+      if (isDesktopScroll() && !inContent(e.target)) {
+        bottomOverscroll = 0;
+        topOverscroll = 0;
+        return;
+      }
+      if (e.deltaY > 0) {
+        topOverscroll = 0;
+        if (!isAtBottom()) { bottomOverscroll = 0; return; }
+        bottomOverscroll += e.deltaY;
+        if (bottomOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerNext();
+      } else if (e.deltaY < 0) {
+        bottomOverscroll = 0;
+        if (!isAtTop()) { topOverscroll = 0; return; }
+        topOverscroll += -e.deltaY;
+        if (topOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerPrev();
+      }
     }
 
     function onTouchStart(e) {
@@ -888,11 +972,22 @@
       var curY = e.touches[0].clientY;
       var dy = lastTouchY - curY;
       lastTouchY = curY;
-      if (dy <= 0) { bottomOverscroll = 0; return; }
-      if (isDesktopScroll() && !inContent(e.target)) { bottomOverscroll = 0; return; }
-      if (!isAtBottom()) { bottomOverscroll = 0; return; }
-      bottomOverscroll += Math.min(dy, 40);
-      if (bottomOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerNext();
+      if (isDesktopScroll() && !inContent(e.target)) {
+        bottomOverscroll = 0;
+        topOverscroll = 0;
+        return;
+      }
+      if (dy > 0) {
+        topOverscroll = 0;
+        if (!isAtBottom()) { bottomOverscroll = 0; return; }
+        bottomOverscroll += Math.min(dy, 40);
+        if (bottomOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerNext();
+      } else if (dy < 0) {
+        bottomOverscroll = 0;
+        if (!isAtTop()) { topOverscroll = 0; return; }
+        topOverscroll += Math.min(-dy, 40);
+        if (topOverscroll >= BOTTOM_OVERSCROLL_THRESHOLD) triggerPrev();
+      }
     }
 
     function onTouchEnd() { lastTouchY = null; }
