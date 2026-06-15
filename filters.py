@@ -2,6 +2,7 @@
 """Jinja2 自定义过滤器与模板上下文"""
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 
@@ -125,12 +126,33 @@ def from_json_filter(value):
         return {}
 
 
+_EMPTY_P_RE = re.compile(r'<p[^>]*>\s*(?:<br\s*/?>|&nbsp;| |\s)?\s*</p>', re.IGNORECASE)
+_P_LEADING_BR_RE = re.compile(r'<p([^>]*)>\s*<br\s*/?>', re.IGNORECASE)
+_P_TRAILING_BR_RE = re.compile(r'<br\s*/?>\s*</p>', re.IGNORECASE)
+
+
+def _clean_richtext_html(value):
+    """去掉富文本里 wangEditor 加粗/换色时残留的空段落和首尾 <br>"""
+    if not value:
+        return value
+    text = str(value)
+    while True:
+        new_text = _EMPTY_P_RE.sub('', text)
+        if new_text == text:
+            break
+        text = new_text
+    text = _P_LEADING_BR_RE.sub(r'<p\1>', text)
+    text = _P_TRAILING_BR_RE.sub('</p>', text)
+    return text
+
+
 def safe_html_filter(value):
     """富文本白名单过滤，降低 XSS 风险"""
     if not value:
         return ''
+    cleaned = _clean_richtext_html(value)
     sanitizer = _BasicHTMLSanitizer(ALLOWED_TAGS_HTML, ALLOWED_ATTRS_HTML)
-    sanitizer.feed(str(value))
+    sanitizer.feed(str(cleaned))
     sanitizer.close()
     return Markup(sanitizer.get_html())
 

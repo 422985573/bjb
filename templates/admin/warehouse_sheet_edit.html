@@ -320,6 +320,19 @@
     max-height: 600px;
     overflow-y: auto;
 }
+/* 覆盖 wangEditor 默认 p{margin:15px 0}，与前端 .wh-richtext p 一致，
+   避免对某行加粗/改色时，该行被拆成独立段落导致上下出现空行。 */
+.wse-richtext-editor .w-e-text-container [data-slate-editor] p {
+    margin: 4px 0;
+    line-height: 1.6;
+}
+.wse-richtext-editor .w-e-text-container [data-slate-editor] h1,
+.wse-richtext-editor .w-e-text-container [data-slate-editor] h2,
+.wse-richtext-editor .w-e-text-container [data-slate-editor] h3,
+.wse-richtext-editor .w-e-text-container [data-slate-editor] h4,
+.wse-richtext-editor .w-e-text-container [data-slate-editor] h5 {
+    margin: 8px 0;
+}
 
 .wse-note-merged-row td:first-child {
     background: #fffbeb;
@@ -417,6 +430,32 @@
 
   var rtEditors = {};
 
+  function cleanRichtextHtml(html) {
+    if (!html) return '';
+    var prev;
+    do {
+      prev = html;
+      html = html.replace(/<p[^>]*>(?:\s|&nbsp;|&#160;|&#xA0;| |​|﻿|<br\s*\/?>)*<\/p>/gi, '');
+    } while (html !== prev);
+    html = html.replace(/<p([^>]*)>\s*<br\s*\/?>/gi, '<p$1>');
+    html = html.replace(/<br\s*\/?>\s*<\/p>/gi, '</p>');
+    return html;
+  }
+
+  // wangEditor 对 <br> 分隔的整段文本不友好：整段被视作一个 <p>，
+  // 对其中一行加粗/改色时 Slate 会强制拆段，造成视觉上多出空行。
+  // 这里把"无 <p> 包裹、用 <br> 分隔"的旧数据提前转成多个 <p>，规避此问题。
+  function brToParagraphs(html) {
+    if (!html) return '';
+    if (/<p[\s>]/i.test(html)) return html;
+    var parts = html.split(/<br\s*\/?>/i);
+    var out = parts.map(function(p) {
+      p = p.replace(/^\s+|\s+$/g, '');
+      return p ? '<p>' + p + '</p>' : '';
+    }).filter(Boolean).join('');
+    return out || html;
+  }
+
   function render() {
     var sections = sheetData.sections || [];
     var html = '';
@@ -437,13 +476,16 @@
       var editorEl = document.getElementById('wseRtEditor' + si);
       if (!toolbarEl || !editorEl) return;
 
+      var initialHtml = cleanRichtextHtml(brToParagraphs(sec.html || ''));
+      sheetData.sections[si].html = initialHtml;
+
       var editor = wang.createEditor({
         selector: '#wseRtEditor' + si,
-        html: sec.html || '',
+        html: initialHtml,
         config: {
           placeholder: '请输入内容…',
           onChange: function(ed) {
-            sheetData.sections[si].html = ed.getHtml();
+            sheetData.sections[si].html = cleanRichtextHtml(ed.getHtml());
           }
         },
         mode: 'default'
@@ -1214,11 +1256,18 @@
 
   window.wseDoSave = function() {
     syncInputsToData();
+    // 确保所有富文本编辑器的最新内容已同步并清洗
+    Object.keys(rtEditors).forEach(function(si) {
+      var ed = rtEditors[si];
+      if (ed && sheetData.sections[si]) {
+        sheetData.sections[si].html = cleanRichtextHtml(ed.getHtml());
+      }
+    });
     var result = document.getElementById('wseResult');
     var saveBtn = document.getElementById('wseSaveBtn');
     var sections = sheetData.sections.map(function(sec) {
       if (sec.type === 'richtext') {
-        return {type: 'richtext', html: sec.html || ''};
+        return {type: 'richtext', html: cleanRichtextHtml(sec.html || '')};
       }
       return {rows: sec.rows || []};
     });

@@ -25,6 +25,31 @@
   function $(sel, ctx) { return (ctx || document).querySelector(sel); }
   function $$(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
 
+  function cleanRichtextHtml(html) {
+    if (!html) return '';
+    var prev;
+    do {
+      prev = html;
+      html = html.replace(/<p[^>]*>(?:\s|&nbsp;|&#160;|&#xA0;|<br\s*\/?>)*<\/p>/gi, '');
+    } while (html !== prev);
+    html = html.replace(/<p([^>]*)>\s*<br\s*\/?>/gi, '<p$1>');
+    html = html.replace(/<br\s*\/?>\s*<\/p>/gi, '</p>');
+    return html;
+  }
+
+  // 旧数据用 <br> 分隔的整段文本，前端展示时也补一下 <p> 包裹，
+  // 让 .wh-richtext p 的间距与编辑器端一致。
+  function brToParagraphs(html) {
+    if (!html) return '';
+    if (/<p[\s>]/i.test(html)) return html;
+    var parts = html.split(/<br\s*\/?>/i);
+    var out = parts.map(function(p) {
+      p = p.replace(/^\s+|\s+$/g, '');
+      return p ? '<p>' + p + '</p>' : '';
+    }).filter(Boolean).join('');
+    return out || html;
+  }
+
   function init() {
     fetch(API_INDEX)
       .then(function (r) { return r.json(); })
@@ -242,7 +267,7 @@
       });
       h += '</ul>';
     } else if (sec.type === 'richtext') {
-      h += '<div class="wh-richtext">' + (sec.html || '') + '</div>';
+      h += '<div class="wh-richtext">' + cleanRichtextHtml(brToParagraphs(sec.html || '')) + '</div>';
     } else if (sec.type === 'zone_table') {
       // Hide zone_table on display page when postcode query is available
       if (postcodeZoneMap || postcodeZoneMaps) {

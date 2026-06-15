@@ -427,6 +427,10 @@
 .remark-section[data-remark-richtext="1"] .module-remark-editor-container .w-e-text-container {
     height: 100%;
 }
+.remark-section[data-remark-richtext="1"] .module-remark-editor-container .w-e-text-container [data-slate-editor] p {
+    margin: 4px 0;
+    line-height: 1.6;
+}
 .remark-section[data-remark-richtext="1"] .w-e-bar-item-menus-container,
 .remark-section[data-remark-richtext="1"] .w-e-drop-panel,
 .remark-section[data-remark-richtext="1"] .w-e-select-list {
@@ -2375,9 +2379,21 @@ const INLINE_PRICE_ADJUST_STATE = new WeakMap();
 
 const DG_REMARK_EDITORS = new WeakMap();
 
+function cleanRichtextHtml(html) {
+    if (!html) return '';
+    let prev;
+    do {
+        prev = html;
+        html = html.replace(/<p[^>]*>\s*(?:<br\s*\/?>|&nbsp;| )?\s*<\/p>/gi, '');
+    } while (html !== prev);
+    html = html.replace(/<p([^>]*)>\s*<br\s*\/?>/gi, '<p$1>');
+    html = html.replace(/<br\s*\/?>\s*<\/p>/gi, '</p>');
+    return html;
+}
+
 function dgRemarkInitialHtml(raw) {
-    const s = String(raw || '').trim();
-    return s ? s : '<p><br></p>';
+    const cleaned = cleanRichtextHtml(String(raw || '').trim());
+    return cleaned ? cleaned : '<p><br></p>';
 }
 
 function getDgRemarkToolbarConfig() {
@@ -2423,7 +2439,7 @@ function initDgRemarkRichTextSection(section) {
             config: {
                 placeholder: '请输入模块备注…',
                 onChange(ed) {
-                    textarea.value = ed.getHtml();
+                    textarea.value = cleanRichtextHtml(ed.getHtml());
                 }
             },
             mode: 'default'
@@ -2441,7 +2457,7 @@ function initDgRemarkRichTextSection(section) {
         return;
     }
 
-    textarea.value = editor.getHtml();
+    textarea.value = cleanRichtextHtml(editor.getHtml());
     section.dataset.dgRemarkRichTextReady = '1';
     DG_REMARK_EDITORS.set(section, editor);
 }
@@ -2462,7 +2478,7 @@ function syncDgRemarkRichTextEditors() {
         const editor = DG_REMARK_EDITORS.get(section);
         const textarea = section.querySelector('textarea.remark-editor');
         if (editor && textarea) {
-            textarea.value = editor.getHtml();
+            textarea.value = cleanRichtextHtml(editor.getHtml());
         }
     });
 }

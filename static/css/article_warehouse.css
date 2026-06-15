@@ -274,6 +274,30 @@
 .wh-richtext p {
     margin: 4px 0;
 }
+.wh-richtext table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8px 0;
+    font-size: 12px;
+}
+.wh-richtext th,
+.wh-richtext td {
+    border: 1px solid #e2e8f0;
+    padding: 6px 8px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.5;
+    background: #fff;
+}
+.wh-richtext th {
+    background: #dbeafe;
+    color: #1e40af;
+    font-weight: 600;
+}
+.wh-richtext td[rowspan] {
+    background: #f8fafc;
+    font-weight: 500;
+}
 
 /* Info cards (for 目录 etc) */
 .wh-info-list {
