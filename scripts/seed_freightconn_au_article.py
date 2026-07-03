@@ -294,6 +294,9 @@ def main():
 
     with db.get_db() as conn:
         cursor = conn.cursor()
+        # 允许把文章挂到暂时不存在的 category_id（例如外部约定 id=16）。
+        if CATEGORY_ID_OVERRIDE is not None:
+            cursor.execute('PRAGMA foreign_keys = OFF')
         category_id = _get_or_create_category(cursor)
         article_id, do_reset = _upsert_article(cursor, category_id, args.force)
         if do_reset:
