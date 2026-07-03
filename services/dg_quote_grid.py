@@ -1012,6 +1012,10 @@ def render_dg_table_editable_html(
     include_row_action_column=True,
     readonly_row_set=None,
     fee_group_anchor_col=None,
+    single_row_groups=False,
+    group_header_rows=None,
+    group_add_row_label="+ 费用",
+    group_delete_label="删类别",
 ):
     """
     与 render_dg_table_html 同布局；可编辑单元格一般为单行 <input type="text">。
@@ -1020,12 +1024,16 @@ def render_dg_table_editable_html(
     include_row_action_column：为 False 时不输出右侧删行列（抬头段不落占位 td，避免多出空白竖列）。
     readonly_row_set：行号集合（相对本表）；这些行 input 加 readonly + 灰底（用于表头行）。
     fee_group_anchor_col：在该列上的 rowspan(>1) 合并块视为「费用类别」，块的最末行在 row-action 列追加「+添加行」按钮。
+    single_row_groups：True 时，anchor 列上非空的单行（无 rs>1 合并）也视为一个「主单」，同样在末行加「+费用」按钮；
+        典型场景：Freightconn 类的 CODE + 主单 首列表，允许在单行主单下继续增加费用行。
+    group_header_rows：行号集合；这些行是表头 / 横幅（例如 CODE 那行），即使 anchor 列非空也不视为主单。
     """
     raw = [list(r) for r in (cells or [])] if cells else [[]]
     cells, merges, n, m, omit, header_orange_row = _prepare_dg_table_structure(
         raw, merges, header_orange_row
     )
     ro_set = set(int(x) for x in (readonly_row_set or []))
+    header_rows_set = set(int(x) for x in (group_header_rows or []))
     # 预计算「费用类别」rowspan 块的末行索引（按 fee_group_anchor_col 列上 rs>1 的合并）
     group_last_rows = set()
     group_meta = {}  # last_row -> (anchor_r, rs)
@@ -1038,6 +1046,21 @@ def render_dg_table_editable_html(
                 last = r0 + rs0 - 1
                 group_last_rows.add(last)
                 group_meta[last] = (r0, rs0)
+        if single_row_groups and 0 <= anchor_c < m:
+            merged_anchor_rows = {int(mg['r']) for mg in merges
+                                  if int(mg.get('c', -1)) == anchor_c and int(mg.get('rs', 1)) > 1}
+            for r in range(n):
+                if r in header_rows_set or r in ro_set:
+                    continue
+                if r in merged_anchor_rows:
+                    continue
+                if omit[r][anchor_c] is True:
+                    continue
+                val = cells[r][anchor_c] if anchor_c < len(cells[r]) else ''
+                if not str(val or '').strip():
+                    continue
+                group_last_rows.add(r)
+                group_meta[r] = (r, 1)
 
     tcls = "dg-grid-table dg-grid-table--editable dg-quote-v2-fee"
     if table_extra_class and str(table_extra_class).strip():
@@ -1077,7 +1100,11 @@ def render_dg_table_editable_html(
                 del_grp = (
                     f'<button type="button" class="dg-fee-del-group-btn dg-fee-del-group-btn--merged-cell" '
                     f'data-dg-act="remove-fee-group" data-dg-group-anchor-r="{g_drx}" '
-                    f'data-dg-group-anchor-c="{fac}" title="删除整个费用类别（本组合并行）">删类别</button>'
+                    f'data-dg-group-anchor-c="{fac}" title="删除整个费用类别（本组合并行）"'
+                    f' aria-label="删除本主单">'
+                    f'<span class="dg-fee-del-group-btn__icon" aria-hidden="true">🗑</span>'
+                    f'<span class="dg-fee-del-group-btn__text">{html.escape(group_delete_label, quote=True)}</span>'
+                    f'</button>'
                 )
             if op == "anchor":
                 full = " dg-grid-cell--fullrow" if cs2 >= m else ""
@@ -1137,7 +1164,7 @@ def render_dg_table_editable_html(
                     extra_btn = (
                         f'<button type="button" class="dg-fee-add-row-btn" '
                         f'data-dg-act="append-row-in-group" data-dg-group-anchor-r="{g_dr}" '
-                        f'data-dg-group-anchor-c="{fac}" title="本组添加行">+行</button>'
+                        f'data-dg-group-anchor-c="{fac}" title="在本主单下加费用行">{html.escape(group_add_row_label, quote=True)}</button>'
                     )
                 if hide_del:
                     if extra_btn:

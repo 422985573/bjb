@@ -20,9 +20,13 @@
                    oninput="updateModuleTitle({{ module.id }}, this.value)">
         </div>
         <div class="dg-grid-editor-section">
+            {% set _dg_tid = (dg.template_id or '')|string %}
+            {% set _is_cabinet_tpl = _dg_tid in ('9类电池柜', '普柜') %}
+            {% if _is_cabinet_tpl %}
             <div class="channel-section-header">
                 <h4>📊 报价表</h4>
             </div>
+            {% endif %}
             <div class="dg-table-editor">
                 <div class="dg-quote-v2 dg-quote-v2--grid dg-excel-quote-layout">
                     <div class="dg-quote-v2-section dg-quote-v2-fee-block">
@@ -32,10 +36,18 @@
                     </div>
                 </div>
                 <div class="dg-excel-fee-toolbar-btns">
+                    {% if _is_cabinet_tpl %}
                     <button type="button" class="ch-tool-btn add-row-btn" data-dg-act="append-fee-merge" data-dg-target="{{ module.id }}" title="在总合计前新增一个费用大类（首列纵向合并）">新增费用</button>
                     <button type="button" class="ch-tool-btn add-row-btn dg-excel-toolbar-secondary-btn" data-dg-act="append-subtotal-like-row" data-dg-target="{{ module.id }}" title="在表格末尾（汇率等说明行之后）追加一行，合并版式与「总合计」行一致">添加行</button>
+                    {% else %}
+                    <button type="button" class="ch-tool-btn add-row-btn" data-dg-act="append-fee-merge" data-dg-target="{{ module.id }}" title="在总合计前新增一个主单（首列纵向合并）">新增主单</button>
+                    {% endif %}
                 </div>
+                {% if _is_cabinet_tpl %}
                 <p class="dg-excel-fee-hint">普柜与 9类电池柜共用上述规则：「新增费用」插在「总合计」行之前；「添加行」在表格末尾追加（汇率说明等行之下），版式与「总合计」行一致，若无总合计则参照其它含「合计」的行；删除整个大类在左侧大类合并格内点「删类别」。</p>
+                {% else %}
+                <p class="dg-excel-fee-hint">「新增主单」会在表格末尾追加一段新的主单（CODE 与主单列纵向合并）；每个主单最后一行右侧的 <span style="color:var(--primary);font-weight:700;">「添加」</span> 可在该主单下继续加费用行；删除整个主单点主单左侧合并格底部的 🗑 删除 图标。</p>
+                {% endif %}
             </div>
         </div>
         {% set remark_content = dg.remark if dg else '' %}

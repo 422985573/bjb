@@ -1393,9 +1393,10 @@
     background: #eff6ff;
 }
 
-/* 费用子表：表头只读行 */
-.dg-editor .dg-grid-table--excel-fee .dg-grid-tr--readonly .dg-grid-cell {
-    background: #eff6ff;
+/* 费用子表 / 非分段表：表头只读行统一浅蓝底 */
+.dg-editor .dg-grid-table--excel-fee .dg-grid-tr--readonly .dg-grid-cell,
+.dg-editor .dg-grid-table--editable .dg-grid-tr--readonly .dg-grid-cell {
+    background: #dbeafe;
 }
 .dg-editor .dg-grid-cell-input--ro {
     background: transparent !important;
@@ -1423,23 +1424,38 @@
     background: var(--primary-dark);
 }
 
-/* 整块删除费用类别（默认显示在大类左侧合并格底部） */
+/* 整块删除费用类别（默认显示在大类左侧合并格底部）：低调的图标 + 文字胶囊按钮 */
 .dg-fee-del-group-btn {
-    background: #fff;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-    border-radius: 4px;
-    padding: 2px 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    color: #94a3b8;
+    border: 1px dashed #cbd5e1;
+    border-radius: 999px;
+    padding: 3px 10px;
     font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
     cursor: pointer;
-    margin-top: 4px;
-    display: block;
-    width: 100%;
+    margin-top: 6px;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    max-width: 100%;
+    width: auto;
     box-sizing: border-box;
+}
+.dg-fee-del-group-btn__icon {
+    font-size: 12px;
+    line-height: 1;
+}
+.dg-fee-del-group-btn__text {
+    white-space: nowrap;
 }
 .dg-fee-del-group-btn:hover {
     background: #fef2f2;
-    border-color: #f87171;
+    color: #b91c1c;
+    border-color: #fca5a5;
+    border-style: solid;
 }
 
 /* 「删类别」在左侧大类合并格内 */
@@ -1457,7 +1473,7 @@
 }
 .dg-editor .dg-fee-del-group-btn--merged-cell {
     margin-top: auto;
-    align-self: stretch;
+    align-self: flex-start;
 }
 
 .dg-editor .dg-grid-table td .dg-fee-td-merged-category {
@@ -1466,10 +1482,11 @@
     min-height: 48px;
     gap: 8px;
     box-sizing: border-box;
+    align-items: flex-start;
 }
 .dg-editor .dg-grid-table td .dg-fee-td-merged-category .dg-fee-del-group-btn--merged-cell {
     margin-top: auto;
-    align-self: stretch;
+    align-self: flex-start;
 }
 
 .dg-excel-fee-hint {
@@ -2181,11 +2198,19 @@
                         {% if module.type == 'channel' %}📊 渠道模块{% endif %}
                         {% if module.type == 'dg_grid' %}
                             {% set dg_ic = module.content | from_json %}
-                            {% if (dg_ic.schema|default(0))|int == 2 %}📋 DG报价表{% else %}📊 {{ dg_ic.title or 'Excel栅格' }}{% endif %}
+                            {% if (dg_ic.schema|default(0))|int == 2 %}
+                                📋 DG报价表
+                            {% elif dg_ic.template_id in ('9类电池柜', '普柜') %}
+                                📊 {{ dg_ic.title or 'Excel栅格' }}
+                            {% endif %}
                         {% endif %}
                     </span>
                     <div class="module-actions">
+                        {% if module.type == 'dg_grid' and (module.content|from_json).template_id not in ('9类电池柜', '普柜') and ((module.content|from_json).schema|default(0))|int != 2 %}
+                        {# 报价表模块（非柜类模板）易误删，删除入口从左侧「模块列表」的 复制/删除 走 #}
+                        {% else %}
                         <button type="button" class="btn-delete" onclick="deleteModule({{ module.id }})">删除</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="module-body">
@@ -3221,6 +3246,12 @@ async function dgExcelEditorReload(root, override) {
     const split = root.querySelector('.dg-excel-editor-split');
     if (split) {
         split.outerHTML = j.html;
+    } else if ((j.mode || '') === 'plain') {
+        // 非分段（Freightconn 类）：整块替换 fee-wrap 内的 <table>
+        const wrap = root.querySelector('.dg-quote-v2-fee-wrap');
+        if (wrap) {
+            wrap.innerHTML = j.html;
+        }
     }
     const structEl = root.querySelector('script.dg-grid-struct');
     if (structEl) {
@@ -3471,20 +3502,56 @@ async function dgGridAppendMergedFeeBlockAtEnd(root) {
     let feeCol = inferDgFeeNameColumn(root, nC);
     if (feeCol >= nC) feeCol = Math.max(0, nC - 2);
     const startR = maxR + 1;
+    // 「新增主单」需要把 CODE 等左侧列也纵向合并（与已有主单的行首列一致，如「1、」+「Arrival - Air」）。
+    // 优先复用最后一段已有主单的纵向合并列集合；否则默认合并 0..min(feeCol, 1)。
+    const mergedCols = new Set();
+    (function pickMergedCols() {
+        let structMerges = [];
+        const structEl = root.querySelector('script.dg-grid-struct');
+        if (structEl && structEl.textContent) {
+            try {
+                const o = JSON.parse(structEl.textContent);
+                if (Array.isArray(o.merges)) structMerges = o.merges;
+            } catch (e) { /* ignore */ }
+        }
+        let lastR = -1;
+        const byRow = {};
+        structMerges.forEach(function(mg) {
+            const r0 = parseInt(mg.r, 10);
+            const c0 = parseInt(mg.c, 10);
+            const rs0 = parseInt(mg.rs, 10) || 1;
+            const cs0 = parseInt(mg.cs, 10) || 1;
+            if (Number.isNaN(r0) || Number.isNaN(c0)) return;
+            if (rs0 <= 1) return;             // 只关心纵向合并
+            if (cs0 !== 1) return;             // 只关心「单列多行」的左侧列合并
+            if (c0 > feeCol) return;           // 只取 item 名之前的左侧列
+            if (!byRow[r0]) byRow[r0] = [];
+            byRow[r0].push(c0);
+            if (r0 > lastR) lastR = r0;
+        });
+        if (lastR >= 0 && byRow[lastR]) {
+            byRow[lastR].forEach(function(cc) { mergedCols.add(cc); });
+            return;
+        }
+        // 兜底：合并 0..min(1, feeCol)
+        const upto = Math.min(1, feeCol);
+        for (let mc = 0; mc <= upto; mc++) mergedCols.add(mc);
+    })();
+    if (mergedCols.size === 0) mergedCols.add(0);
 
     for (let kr = 0; kr < rs; kr++) {
         const tr = document.createElement('tr');
         tr.className = 'dg-grid-tr';
         const rowAbs = startR + kr;
         for (let c = 0; c < nC; c++) {
-            if (c === feeCol && kr > 0) continue;
+            if (mergedCols.has(c) && kr > 0) continue;
             const td = document.createElement('td');
             td.className = 'dg-grid-cell';
-            if (c === feeCol && kr === 0) td.rowSpan = rs;
+            if (mergedCols.has(c) && kr === 0) td.rowSpan = rs;
             const inp = document.createElement('input');
             inp.type = 'text';
             inp.className = 'dg-grid-cell-input';
-            const cellR = (c === feeCol) ? startR : rowAbs;
+            const cellR = mergedCols.has(c) ? startR : rowAbs;
             inp.setAttribute('data-r', String(cellR));
             inp.setAttribute('data-c', String(c));
             inp.setAttribute('spellcheck', 'false');
@@ -3506,8 +3573,19 @@ async function dgGridAppendMergedFeeBlockAtEnd(root) {
         tr.appendChild(actionTd);
         tbody.appendChild(tr);
     }
-    dgGridStructPushMerge(root, { r: startR, c: feeCol, rs: rs, cs: 1 });
+    mergedCols.forEach(function(mc) {
+        dgGridStructPushMerge(root, { r: startR, c: mc, rs: rs, cs: 1 });
+    });
     syncDgGridDatasetFromTextareas(root);
+    // 非分段（Freightconn 类）非表头模板：调后端重渲染，让新主单末行出现「添加」按钮。
+    const dgTid = (root.dataset.dgTemplateId || '').trim();
+    if (dgTid !== '9类电池柜' && dgTid !== '普柜') {
+        try {
+            await dgExcelEditorReload(root);
+        } catch (err) {
+            // 忽略：数据结构已就位，仅是没有「添加」快捷按钮
+        }
+    }
 }
 
 /** 在指定费用类别（rowspan 块）末尾追加一行明细 */
@@ -3554,7 +3632,13 @@ async function dgGridAppendRowInFeeGroup(root, anchorR, anchorC) {
     const feeTable = root.querySelector('table.dg-grid-table--excel-fee');
     const tbody = feeTable && feeTable.querySelector('tbody');
     if (!tbody) {
-        alert('未找到费用表。');
+        // 非分段（Freightconn 类）：用整表 tbody
+        const anyTbody = root.querySelector('table.dg-grid-table tbody');
+        if (!anyTbody) {
+            alert('未找到费用表。');
+            return;
+        }
+        await dgGridAppendRowInFeeGroupPlainTable(root, anyTbody, anchorR, anchorC);
         return;
     }
     const structEl = root.querySelector('script.dg-grid-struct');
@@ -3667,6 +3751,71 @@ async function dgGridAppendRowInFeeGroup(root, anchorR, anchorC) {
         tbody.appendChild(newTr);
     }
     syncDgGridDatasetFromTextareas(root);
+}
+
+/** 非分段（Freightconn）表格：在指定主单末尾插入费用行；单行主单则合并 CODE / 主单列。 */
+async function dgGridAppendRowInFeeGroupPlainTable(root, tbody, anchorR, anchorC) {
+    const d = getDgGridEditorData(root);
+    const cells = dgCloneCells(d.cells);
+    const merges = dgNormalizeMerges(d.merges);
+    let anchorIdx = -1;
+    for (let mi = 0; mi < merges.length; mi++) {
+        const mg = merges[mi];
+        if (mg.r === anchorR && mg.c === anchorC && mg.rs > 1) {
+            anchorIdx = mi;
+            break;
+        }
+    }
+    let oldLastR;
+    let nextMerges;
+    if (anchorIdx >= 0) {
+        // 已有 rs>1 合并：直接延长
+        const oldRs = merges[anchorIdx].rs;
+        oldLastR = anchorR + oldRs - 1;
+        nextMerges = merges.map(function(mg, idx) {
+            if (idx === anchorIdx) return { r: mg.r, c: mg.c, rs: mg.rs + 1, cs: mg.cs };
+            if (mg.r > oldLastR) return { r: mg.r + 1, c: mg.c, rs: mg.rs, cs: mg.cs };
+            return mg;
+        });
+        // 同一起点行、cs==1 的其他列（如主单名列）也一同延长
+        nextMerges = nextMerges.map(function(mg) {
+            if (mg.r === anchorR && mg.c !== anchorC && mg.cs === 1 && (mg.rs + 1 === (merges[anchorIdx].rs + 1) || mg.rs === merges[anchorIdx].rs)) {
+                return { r: mg.r, c: mg.c, rs: mg.rs + 1, cs: mg.cs };
+            }
+            return mg;
+        });
+    } else {
+        // 单行主单：无既有合并，新建 rs=2 合并。列范围复用同表其它主单已有的纵向列集合。
+        oldLastR = anchorR;
+        const colSet = new Set();
+        merges.forEach(function(mg) {
+            if (mg.rs > 1 && mg.cs === 1 && mg.c <= (parseInt(d.cols || 0, 10) - 1)) {
+                colSet.add(mg.c);
+            }
+        });
+        if (colSet.size === 0) colSet.add(anchorC);
+        nextMerges = merges.slice().map(function(mg) {
+            if (mg.r > oldLastR) return { r: mg.r + 1, c: mg.c, rs: mg.rs, cs: mg.cs };
+            return mg;
+        });
+        colSet.forEach(function(cc) {
+            nextMerges.push({ r: anchorR, c: cc, rs: 2, cs: 1 });
+        });
+    }
+    const newRow = new Array(d.cols).fill('');
+    const head = cells.slice(0, oldLastR + 1);
+    const tail = cells.slice(oldLastR + 1);
+    const newCells = head.concat([newRow]).concat(tail);
+    let header_orange_row = d.header_orange_row;
+    if (header_orange_row != null && header_orange_row !== '') {
+        const h = parseInt(header_orange_row, 10);
+        if (!Number.isNaN(h) && h > oldLastR) header_orange_row = h + 1;
+    }
+    await dgExcelEditorReload(root, {
+        cells: newCells,
+        merges: nextMerges,
+        header_orange_row: header_orange_row
+    });
 }
 
 async function dgGridAppendRowAtEnd(root) {
@@ -3791,6 +3940,29 @@ function dgGridRemoveOneRow(root, tr) {
     const deletedAbsR = probe ? parseInt(probe.getAttribute('data-r'), 10) : NaN;
     const deletedIndexInTbody = Array.prototype.indexOf.call(allTr, tr);
     if (deletedIndexInTbody < 0) return;
+    // 非分段表格（Freightconn 类）：通过后端重渲染以保证合并/列对齐正确
+    const dgTid = (root.dataset.dgTemplateId || '').trim();
+    const isCabinet = dgTid === '9类电池柜' || dgTid === '普柜';
+    const hasSplit = !!root.querySelector('.dg-fee-div-editor');
+    if (!isCabinet && !hasSplit && !Number.isNaN(deletedAbsR) && deletedAbsR >= 0) {
+        const d = getDgGridEditorData(root);
+        if (!d.cells || d.cells.length <= 1) {
+            alert('至少保留一行表格。');
+            return;
+        }
+        if (deletedAbsR >= d.cells.length) return;
+        const cells = dgCloneCells(d.cells);
+        cells.splice(deletedAbsR, 1);
+        const adj = dgApplyMergeAndHeaderAfterRowDelete(d.merges, d.header_orange_row, deletedAbsR);
+        dgExcelEditorReload(root, {
+            cells: cells,
+            merges: adj.merges,
+            header_orange_row: adj.header_orange_row
+        }).catch(function() {
+            alert('删除行失败，请刷新后重试。');
+        });
+        return;
+    }
     tr.remove();
     if (!Number.isNaN(deletedAbsR) && deletedAbsR >= 0) {
         adjustDgGridStructAfterRowDelete(root, deletedAbsR);

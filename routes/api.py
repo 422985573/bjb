@@ -352,23 +352,44 @@ def module_add():
 @api_bp.route('/dg/excel_editor_reload', methods=['POST'])
 @admin_required
 def dg_excel_editor_reload():
-    """Excel 栅格拆分编辑器：根据 cells/merges 重渲染抬头+费用 div 片段（用于非 table 费用块增删行后刷新）。"""
-    from services.dg_quote_grid import render_dg_excel_grid_editable_split_html
+    """Excel 栅格：根据 cells/merges 重渲染当前编辑器片段。
+    - 若 cells 里含「费用项目」+「币别/币种」或「提单号」，走分段抬头/费用编辑器；
+    - 否则走非分段的整表编辑器（Freightconn 类），并把主单锚点参数一并透出。
+    """
+    from services.dg_quote_grid import (
+        find_excel_quote_fee_header_row,
+        render_dg_excel_grid_editable_split_html,
+        render_dg_table_editable_html,
+    )
 
     d = request.json or {}
     cells = d.get('cells')
     merges = d.get('merges')
     hr = d.get('header_orange_row')
+    mode = str(d.get('mode') or '').strip().lower()
     if not isinstance(cells, list):
         cells = []
     if not isinstance(merges, list):
         merges = []
-    html = render_dg_excel_grid_editable_split_html(cells, merges, hr)
+    is_split = mode == 'split' or (mode != 'plain' and find_excel_quote_fee_header_row(cells) is not None)
+    if is_split:
+        html = render_dg_excel_grid_editable_split_html(cells, merges, hr)
+    else:
+        html = render_dg_table_editable_html(
+            cells, merges, hr,
+            fee_group_anchor_col=0,
+            single_row_groups=True,
+            group_header_rows={0},
+            readonly_row_set={0},
+            group_add_row_label='添加',
+            group_delete_label='删除',
+        )
     nrows = len(cells)
     ncols = max((len(r) for r in cells), default=1) if cells else 1
     return jsonify({
         'success': True,
         'html': html,
+        'mode': 'split' if is_split else 'plain',
         'merges': merges,
         'header_orange_row': hr,
         'rows': nrows,

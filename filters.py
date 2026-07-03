@@ -313,6 +313,19 @@ def dg_grid_editable_table_filter(module_content):
     variant = str((c.get('variant') or '')).strip().lower()
     if variant == 'excel_grid' and find_excel_quote_fee_header_row(cells) is not None:
         return Markup(render_dg_excel_grid_editable_split_html(cells, merges, hr))
+    # 非柜类模板（Freightconn 等）的 excel_grid：首列作为主单锚点，允许单行主单也生成「添加」按钮，
+    # 首行按约定为多列表头（CODE/UOM 等）：只读且不显示删除按钮，也不算作主单。
+    tid = str((c.get('template_id') or '')).strip()
+    if variant == 'excel_grid' and tid not in ('9类电池柜', '普柜'):
+        return Markup(render_dg_table_editable_html(
+            cells, merges, hr,
+            fee_group_anchor_col=0,
+            single_row_groups=True,
+            group_header_rows={0},
+            readonly_row_set={0},
+            group_add_row_label='添加',
+            group_delete_label='删除',
+        ))
     return Markup(render_dg_table_editable_html(cells, merges, hr))
 
 

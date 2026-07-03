@@ -181,6 +181,20 @@
     white-space: normal;
     word-break: break-word;
 }
+/* 首行为多列表头（非整行合并）时统一渲染成蓝底表头（Freightconn 类报价表用） */
+.module-dg-grid:not(.module-dg-grid--v2) .dg-excel-quote-layout .dg-grid-tr:first-child .dg-grid-cell:not(.dg-grid-cell--fullrow),
+.module-dg-grid--excel-grid .dg-excel-quote-layout .dg-grid-tr:first-child .dg-grid-cell:not(.dg-grid-cell--fullrow) {
+    background: #dbeafe;
+    color: #1e3a5f;
+    font-weight: 600;
+    text-align: center;
+}
+.module-dg-grid:not(.module-dg-grid--v2) .dg-excel-quote-layout .dg-grid-tr:first-child .dg-grid-cell:not(.dg-grid-cell--fullrow) .dg-grid-cell-input,
+.module-dg-grid--excel-grid .dg-excel-quote-layout .dg-grid-tr:first-child .dg-grid-cell:not(.dg-grid-cell--fullrow) .dg-grid-cell-input {
+    font-weight: 600;
+    color: #1e3a5f;
+    text-align: center;
+}
 .module-dg-grid:not(.module-dg-grid--v2) .dg-excel-quote-layout .dg-grid-table.dg-quote-v2-fee td.dg-grid-cell:last-child:not(.dg-grid-cell--fullrow),
 .module-dg-grid--excel-grid .dg-excel-quote-layout .dg-grid-table.dg-quote-v2-fee td.dg-grid-cell:last-child:not(.dg-grid-cell--fullrow) {
     min-width: 6.5rem;
