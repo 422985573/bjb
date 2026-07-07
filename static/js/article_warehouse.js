@@ -682,12 +682,13 @@
 
     // Highlight matching rows only within this section
     if (!sectionEl) return;
+    var zoneMatcher = makeZoneMatcher(zone);
     var firstMatch = null;
     sectionEl.querySelectorAll('.wh-table tbody tr').forEach(function (tr) {
       var cells = tr.querySelectorAll('td');
       var matched = false;
       for (var i = 0; i < cells.length; i++) {
-        if (cells[i].textContent.trim() === zone) {
+        if (zoneMatcher(cells[i].textContent.trim())) {
           matched = true;
           break;
         }
@@ -733,12 +734,13 @@
     }
 
     // Highlight matching rows in all price tables
+    var zoneMatcher = makeZoneMatcher(zone);
     var firstMatch = null;
     $$('.wh-table tbody tr').forEach(function (tr) {
       var cells = tr.querySelectorAll('td');
       var matched = false;
       for (var i = 0; i < cells.length; i++) {
-        if (cells[i].textContent.trim() === zone) {
+        if (zoneMatcher(cells[i].textContent.trim())) {
           matched = true;
           break;
         }
@@ -773,6 +775,18 @@
     var d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
+  }
+
+  // 分区名匹配：精确 或 「分区名 + 尾随数字」（例：SYD → SYD1/SYD2、MEL → MEL1/MEL2）。
+  // 只允许尾随数字，避免 NT 误命中 NTL、CBR 误命中 CBRA 等真分区。
+  function makeZoneMatcher(zone) {
+    var z = String(zone == null ? '' : zone).trim();
+    if (!z) return function () { return false; };
+    var reSuffix = new RegExp('^' + z.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\d+$');
+    return function (cellText) {
+      var t = cellText == null ? '' : String(cellText).trim();
+      return t === z || reSuffix.test(t);
+    };
   }
 
   function debounce(fn, ms) {

@@ -1272,3 +1272,9 @@ white-space: pre-line !important;
         font-size: 9px;
     }
 }
+
+/* 文章 202607030001（Freightconn 澳洲专线清拆派）：dg_grid 单元格文本水平居中 */
+#articleContainer[data-article-code="202607030001"] .module-dg-grid .dg-grid-table td.dg-grid-cell,
+#articleContainer[data-article-code="202607030001"] .module-dg-grid .dg-grid-table td.dg-grid-cell .dg-grid-cell-input {
+    text-align: center;
+}
