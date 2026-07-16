@@ -1271,13 +1271,6 @@ function unmergeSingleChannelTable(table) {
         Array.from(row.cells).forEach(cell => {
             if (cell.rowSpan > 1) cell.rowSpan = 1;
             if (cell.colSpan > 1) cell.colSpan = 1;
-            // 恢复被“整行提示行”合并时覆盖的原始文本
-            if (cell.classList.contains('row-note-cell')) {
-                if (Object.prototype.hasOwnProperty.call(cell.dataset, 'originalText')) {
-                    cell.textContent = cell.dataset.originalText;
-                }
-                cell.classList.remove('row-note-cell');
-            }
         });
     });
     tbody.querySelectorAll('td').forEach(td => {
@@ -1314,24 +1307,13 @@ function mergeSingleChannelTable(table) {
     columnGroups.priceColIndices.forEach(colIndex => mergeRemarkColumn(table, colIndex));
     columnGroups.feePriceColIndices.forEach(colIndex => mergeRemarkColumn(table, colIndex));
 
-    // 横向合并：从“邮编”列开始向右，同一行内相邻单元格内容相同即合并成一格；
-    // 当出现跨多列的说明性文本（如“如符合卡派渠道，可查看卡派价格”）时，整行从邮编列起合并成一格。
+    // 横向合并：从“邮编”列开始向右到“到门时效”列之前，
+    // 同一行相邻单元格内容相同即合并成一格（相同就合并，不限个数）。
     mergeChannelTableHorizontally(table, colIndexPostcode, colIndexDelivery);
 }
 
-// 判断文本是否为“说明性文案”（非纯价格数字，如卡派提示、请看卡派渠道等）
-function isNoteLikeText(text) {
-    if (!text) return false;
-    const t = text.trim();
-    if (!t || t === '—' || t === '-') return false;
-    // 纯数字 / 价格（含小数、单位）视为数据，不算说明文案
-    if (/^[0-9.,，/\s]+$/.test(t)) return false;
-    if (/^\d+(\.\d+)?\s*(kg|KG|元|rmb|RMB)?$/.test(t)) return false;
-    return true;
-}
-
-// 横向合并：逐行扫描，从 startColIndex 起，相邻可见单元格内容相同则用 colSpan 合并。
-// dataEndIndex 为“到门时效”列索引（不含），用于判定价格数据区的整段说明文本。
+// 横向合并：逐行扫描，从 startColIndex 起到 dataEndIndex 之前，
+// 相邻可见单元格内容相同则用 colSpan 合并。
 function mergeChannelTableHorizontally(table, startColIndex, dataEndIndex) {
     const tbody = table.tBodies[0];
     if (!tbody) return;
@@ -1339,37 +1321,14 @@ function mergeChannelTableHorizontally(table, startColIndex, dataEndIndex) {
     Array.from(tbody.rows).forEach(row => {
         if (row.classList.contains('hidden-by-search')) return;
 
-        // 1) 优先识别“整行提示行”：价格数据区(区域列之后 ~ 到门时效列之前)出现跨列相同的说明文本，
-        //    则从邮编列起，把邮编/区域/该说明段整体合并成一格，只显示说明文本。
-        const noteInfo = findRowNoteSpan(row, startColIndex, dataEndIndex);
-        if (noteInfo) {
-            const anchor = row.cells[startColIndex];
-            if (anchor && anchor.style.display !== 'none') {
-                let spanCount = 0;
-                for (let c = startColIndex; c <= noteInfo.endIndex; c++) {
-                    const cell = row.cells[c];
-                    if (!cell) continue;
-                    // 跳过被纵向合并隐藏的格（理论上此区间不会有，稳妥处理）
-                    if (cell.style.display === 'none' && c !== startColIndex) continue;
-                    spanCount += 1;
-                    if (c !== startColIndex) cell.style.display = 'none';
-                }
-                anchor.colSpan = spanCount;
-                if (!Object.prototype.hasOwnProperty.call(anchor.dataset, 'originalText')) {
-                    anchor.dataset.originalText = anchor.textContent;
-                }
-                anchor.textContent = noteInfo.text;
-                anchor.classList.add('row-note-cell');
-            }
-            return;
-        }
+        const end = (typeof dataEndIndex === 'number' && dataEndIndex > 0)
+            ? dataEndIndex : row.cells.length;
 
-        // 2) 普通行：相邻可见单元格内容相同则合并
         let anchorCell = null;   // 当前合并段的首格
         let anchorText = null;   // 当前合并段的文本
         let spanCount = 1;
 
-        for (let colIndex = startColIndex; colIndex < row.cells.length; colIndex++) {
+        for (let colIndex = startColIndex; colIndex < end; colIndex++) {
             const cell = row.cells[colIndex];
             if (!cell) continue;
             // 跳过被纵向合并（rowSpan）隐藏的单元格，避免破坏已有列合并
@@ -1393,40 +1352,6 @@ function mergeChannelTableHorizontally(table, startColIndex, dataEndIndex) {
             }
         }
     });
-}
-
-// 在价格数据区(区域列之后 ~ dataEndIndex 之前)查找“跨多列相同的说明文本”段。
-// 命中时返回 { text, endIndex }，endIndex 为说明段最后一列索引；否则返回 null。
-function findRowNoteSpan(row, startColIndex, dataEndIndex) {
-    const areaIndex = startColIndex + 1;        // 区域列
-    const dataStart = areaIndex + 1;            // 价格数据区首列
-    const end = (typeof dataEndIndex === 'number' && dataEndIndex > 0)
-        ? dataEndIndex : row.cells.length;
-    if (dataStart >= end) return null;
-
-    // 收集价格数据区内可见单元格文本
-    let noteText = null;
-    let matchCount = 0;
-    let lastIndex = -1;
-    for (let c = dataStart; c < end; c++) {
-        const cell = row.cells[c];
-        if (!cell || cell.style.display === 'none') continue;
-        const text = cell.textContent.trim();
-        if (!isNoteLikeText(text)) return null; // 数据区含数字/普通数据 → 不是提示行
-        if (noteText === null) {
-            noteText = text;
-        } else if (text !== noteText) {
-            return null; // 数据区文本不一致 → 不整行合并
-        }
-        matchCount += 1;
-        lastIndex = c;
-    }
-
-    // 至少两列相同的说明文本才认定为“整行提示行”
-    if (noteText && matchCount >= 2) {
-        return { text: noteText, endIndex: lastIndex };
-    }
-    return null;
 }
 
 function mergeAllChannelTables() {
