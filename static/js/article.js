@@ -1270,6 +1270,7 @@ function unmergeSingleChannelTable(table) {
     Array.from(tbody.rows).forEach(row => {
         Array.from(row.cells).forEach(cell => {
             if (cell.rowSpan > 1) cell.rowSpan = 1;
+            if (cell.colSpan > 1) cell.colSpan = 1;
         });
     });
     tbody.querySelectorAll('td').forEach(td => {
@@ -1305,6 +1306,47 @@ function mergeSingleChannelTable(table) {
     columnGroups.standardColIndices.forEach(colIndex => mergeRemarkColumn(table, colIndex));
     columnGroups.priceColIndices.forEach(colIndex => mergeRemarkColumn(table, colIndex));
     columnGroups.feePriceColIndices.forEach(colIndex => mergeRemarkColumn(table, colIndex));
+
+    // 横向合并：从“邮编”列开始向右，同一行内相邻单元格内容相同即合并成一格
+    mergeChannelTableHorizontally(table, colIndexPostcode);
+}
+
+// 横向合并：逐行扫描，从 startColIndex 起，相邻可见单元格内容相同则用 colSpan 合并
+function mergeChannelTableHorizontally(table, startColIndex) {
+    const tbody = table.tBodies[0];
+    if (!tbody) return;
+
+    Array.from(tbody.rows).forEach(row => {
+        if (row.classList.contains('hidden-by-search')) return;
+
+        let anchorCell = null;   // 当前合并段的首格
+        let anchorText = null;   // 当前合并段的文本
+        let spanCount = 1;
+
+        for (let colIndex = startColIndex; colIndex < row.cells.length; colIndex++) {
+            const cell = row.cells[colIndex];
+            if (!cell) continue;
+            // 跳过被纵向合并（rowSpan）隐藏的单元格，避免破坏已有列合并
+            if (cell.style.display === 'none') {
+                anchorCell = null;
+                anchorText = null;
+                spanCount = 1;
+                continue;
+            }
+
+            const text = cell.textContent.trim();
+
+            if (anchorCell && text && text === anchorText) {
+                spanCount += 1;
+                anchorCell.colSpan = spanCount;
+                cell.style.display = 'none';
+            } else {
+                anchorCell = cell;
+                anchorText = text;
+                spanCount = 1;
+            }
+        }
+    });
 }
 
 function mergeAllChannelTables() {

@@ -278,6 +278,13 @@
     white-space: nowrap !important;
     text-align: center !important;
 }
+/* 横向合并（colspan>1）单元格：跨多列的说明文本需居中并允许换行 */
+.channel-table td[colspan]:not([colspan="1"]) {
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
 /* 搜索模式下隐藏的模块和行 */
 .module-channel.hidden-by-search {
     display: none !important;
