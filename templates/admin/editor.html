@@ -2121,6 +2121,8 @@
             <button type="button" class="module-btn" onclick="addModule('text')">📝 添加文本</button>
             <button type="button" class="module-btn" onclick="addModule('image')">🖼️ 添加图片</button>
             <button type="button" class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
+            <button type="button" class="module-btn" onclick="addModule('surcharge_cn')">🧾 添加 国内附加明细</button>
+            <button type="button" class="module-btn" onclick="addModule('surcharge_intl')">🧾 添加 国外附加明细</button>
             <p class="sidebar-hint-channel" style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">含「费用项目」与表格增删行</p>
             <button type="button" class="module-btn" onclick="addModule('dg_grid_v2')">📋 添加 精准整柜报价表</button>
             <button type="button" class="module-btn" onclick="addModule('dg_excel_9battery')">📊 添加 9类电池柜报价表</button>
@@ -2138,6 +2140,7 @@
                         {% if module.type == 'text' %}📝{% endif %}
                         {% if module.type == 'image' %}🖼️{% endif %}
                         {% if module.type == 'channel' %}📊{% endif %}
+                        {% if module.type in ('surcharge_cn', 'surcharge_intl') %}🧾{% endif %}
                         {% if module.type == 'dg_grid' %}
                             {% if (content.schema|default(0))|int == 2 %}📋{% else %}📊{% endif %}
                         {% endif %}
@@ -2196,6 +2199,8 @@
                         {% if module.type == 'text' %}📝 文本模块{% endif %}
                         {% if module.type == 'image' %}🖼️ 图片模块{% endif %}
                         {% if module.type == 'channel' %}📊 渠道模块{% endif %}
+                        {% if module.type == 'surcharge_cn' %}🧾 国内附加明细{% endif %}
+                        {% if module.type == 'surcharge_intl' %}🧾 国外附加明细{% endif %}
                         {% if module.type == 'dg_grid' %}
                             {% set dg_ic = module.content | from_json %}
                             {% if (dg_ic.schema|default(0))|int == 2 %}
@@ -2364,6 +2369,16 @@
                         {% else %}
                             {% include 'admin/dg/dg_excel_grid_editor.html' %}
                         {% endif %}
+                    {% elif module.type == 'surcharge_cn' %}
+                        <div class="surcharge-fixed-editor" data-module-type="surcharge_cn">
+                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">该模块为固定内容表格（国内附加明细），文章页自动展示完整表格，无需编辑。</p>
+                            {% include 'partials/surcharge_cn_block.html' %}
+                        </div>
+                    {% elif module.type == 'surcharge_intl' %}
+                        <div class="surcharge-fixed-editor" data-module-type="surcharge_intl">
+                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">该模块为固定内容表格（国外附加明细），文章页自动展示完整表格，无需编辑。</p>
+                            {% include 'partials/surcharge_intl_block.html' %}
+                        </div>
                     {% endif %}
                 </div>
             </div>
@@ -2780,6 +2795,10 @@ function getModuleContentFromItem(moduleItem) {
         }
     } else if (moduleBody.querySelector('.dg-grid-editor')) {
         content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
+    } else if (moduleBody.querySelector('.surcharge-fixed-editor')) {
+        // 固定内容模块（国内/国外附加明细）：内容不可编辑，保存时保持固定标题
+        const fixedType = moduleBody.querySelector('.surcharge-fixed-editor').dataset.moduleType;
+        content = { title: fixedType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细' };
     } else {
         content = { title: '' };
     }
@@ -2885,6 +2904,10 @@ async function addModule(type) {
 
     if (type === 'text') {
         content = { title: '', text: '', remark: '' };
+    } else if (type === 'surcharge_cn') {
+        content = { title: '国内附加明细' };
+    } else if (type === 'surcharge_intl') {
+        content = { title: '国外附加明细' };
     } else if (type === 'image') {
         content = { title: '', url: '', alt: '', caption: '', remark: '' };
     } else if (type === 'dg_grid_v2') {
@@ -4714,6 +4737,8 @@ async function copyModule(moduleId) {
         moduleType = 'channel';
     } else if (moduleBody.querySelector('.dg-grid-editor')) {
         moduleType = 'dg_grid';
+    } else if (moduleBody.querySelector('.surcharge-fixed-editor')) {
+        moduleType = moduleBody.querySelector('.surcharge-fixed-editor').dataset.moduleType;
     } else {
         alert('无法识别模块类型');
         return;
@@ -4754,6 +4779,8 @@ async function copyModule(moduleId) {
         }
     } else if (moduleType === 'dg_grid') {
         content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
+    } else if (moduleType === 'surcharge_cn' || moduleType === 'surcharge_intl') {
+        content = { title: moduleType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细' };
     }
     
     // 创建新模块

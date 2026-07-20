@@ -1285,3 +1285,86 @@ white-space: pre-line !important;
 #articleContainer[data-article-code="202607030001"] .module-dg-grid .dg-grid-table td.dg-grid-cell .dg-grid-cell-input {
     text-align: center;
 }
+
+/* 国内/国外附加明细模块（surcharge_cn / surcharge_intl，固定内容表格） */
+.module-surcharge {
+    margin: 1.5rem 0;
+}
+.module-surcharge .surcharge-title-bar {
+    background: #1f6fc4;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.5em;
+    text-align: center;
+    padding: 10px 6px;
+    border-radius: 6px 6px 0 0;
+}
+.module-surcharge .surcharge-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 2px solid #1f6fc4;
+    border-top: none;
+    background: #fff;
+}
+.module-surcharge .surcharge-table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    font-size: 13px;
+    color: #1e3a5f;
+}
+.module-surcharge .surcharge-table th,
+.module-surcharge .surcharge-table td {
+    border: 1px solid #2e75b6;
+    padding: 6px 8px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.6;
+    word-break: break-word;
+}
+.module-surcharge .surcharge-table th {
+    background: #fff;
+    color: #1e3a5f;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.module-surcharge .surcharge-table th.sc-col-channel {
+    color: #e11d1d;
+}
+.module-surcharge .surcharge-table th.sc-col-idx {
+    width: 3.5em;
+}
+.module-surcharge .surcharge-table th.sc-col-name {
+    width: 9em;
+}
+.module-surcharge .surcharge-table th.sc-col-fee {
+    width: 30%;
+}
+.module-surcharge .surcharge-table td.sc-left {
+    text-align: left;
+}
+.module-surcharge .surcharge-table .sc-red {
+    color: #e11d1d;
+    font-weight: 600;
+}
+.module-surcharge .surcharge-table td.sc-channel-cell {
+    width: 2.5em;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #1e3a5f;
+    padding: 6px 10px;
+}
+.module-surcharge .surcharge-table td.sc-note-row {
+    background: #f6faff;
+}
+@media (max-width: 768px) {
+    .module-surcharge .surcharge-title-bar {
+        font-size: 1rem;
+        letter-spacing: 0.3em;
+    }
+    .module-surcharge .surcharge-table {
+        font-size: 12px;
+    }
+}

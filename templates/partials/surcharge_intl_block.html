@@ -1,0 +1,107 @@
+{# surcharge_intl：国外附加明细（固定内容表格） #}
+<div class="module module-surcharge module-surcharge-intl">
+    <div class="surcharge-title-bar">国外附加明细</div>
+    <div class="surcharge-table-wrapper">
+        <table class="surcharge-table">
+            <thead>
+                <tr>
+                    <th class="sc-col-idx">序号</th>
+                    <th class="sc-col-name">明细</th>
+                    <th class="sc-col-note">注明</th>
+                    <th class="sc-col-fee">收费</th>
+                    <th class="sc-col-channel">适用渠道</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="2">1</td>
+                    <td rowspan="2">查验费</td>
+                    <td>EMPP</td>
+                    <td>AUD 90</td>
+                    <td class="sc-channel-cell" rowspan="16">全渠道均可适用</td>
+                </tr>
+                <tr>
+                    <td>AQIS</td>
+                    <td>AUD 100</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>扣货费</td>
+                    <td>因改收件人地址、换亚马逊标签等</td>
+                    <td>AUD200</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>修改派送渠道</td>
+                    <td>我司已经安排货物出运，客户要求修改派送渠道需要加收扣货费和二次清关费</td>
+                    <td>清关费AUD 85+扣货费AUD200+派送费单询</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>二次清关</td>
+                    <td>装柜或者航班起飞之后客户要求更换地址、更改贸易条款等收费标准</td>
+                    <td class="sc-left">（1）海运，以装柜7后天为准，7天内可免费更改地址信息，超过7天更改地址就需要重新申报清关，收费：AUD135/票+换单贴标费 AUD 1.5/张+AUD10/票操作费<br>（2）空运，无法免费更改地址，全部都要收费，收费：AUD135/票+换单贴标费AUD 1.5/张+AUD10/票操作费<br><span class="sc-red">注意：如确定更改地址会涉及到扣货费</span></td>
+                </tr>
+                <tr>
+                    <td rowspan="2">5</td>
+                    <td rowspan="2">悉尼/墨尔本仓操作</td>
+                    <td>海外仓及监管仓操作收费标准</td>
+                    <td class="sc-left">（1）海外仓进仓费：AUD10/方，不足一方按一方收费；<br>（2）海外仓贴标费(包含清点费，如只清点不贴标同样收费)：AUD1/张（外箱标和SKU标同价）<br>（3）托盘费：AUD25/个；<br>（4）海外仓派送费需单独询价（可卡派、卡快递，一般建议卡派不容易丢件）；<br>（5）小包退件超7天免仓期后未处理，按照AUD5/天进行收费；</td>
+                </tr>
+                <tr>
+                    <td>海外仓及监管仓仓储收费标准</td>
+                    <td class="sc-left">（1）海外仓7个自然日免仓期，超时收费，≤20方=AUD30/天/立方；&gt;20 方=AUD15/天/立方；<br>（2）监管仓3个自然日免仓期，如由于客户原因，导致货物在监管仓3个自然日内未支付税金的，超时收费AUD 0.3/day/KG，MIN：AUD30/day，正常海关查验未放行的，不收取仓储费。</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>自提费</td>
+                    <td>悉尼/墨尔本自提费收费标准</td>
+                    <td class="sc-left">（1）小于一个托盘的散箱交货的按散箱收费，AUD2/箱<br>（2）大于一个托盘的大箱/木架等需要叉车上下交货的按托盘收费，AUD25/板<br>一个托盘按照1.5cbm计算，不足按一个托盘</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>销毁费</td>
+                    <td>销毁费收费标准</td>
+                    <td class="sc-left">（1）海关扣件货物导致无法清关或不能在入仓后 30(自然)天内需按照海关指定要求销毁弃件，AUD88/票+AUD1/kg<br>（2）货物清关后按照客户要求需销毁弃件的按照AUD22/票+AUD 0.45/kg，小包件统一按 AUD35/票；</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>汇率转换标准</td>
+                    <td>客户运费需要进行汇率转换的标准</td>
+                    <td class="sc-left">（1）如果客户澳币要转换人民币进行付费，则按实时汇率+0.2进行兑换收费，比如实时汇率是4.8，即4.8+0.2=5，汇率按5进行兑换<br>（2）反之，客户人民币要转换澳币支付，则按实时汇率-0.2进行兑换收费，比如实时汇率是4.8，即4.8-0.2=4.6，汇率按4.6进行兑换；</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>二次派送费</td>
+                    <td>第一次收货未成功，需二次派送的退件重派收费标准</td>
+                    <td class="sc-left">（1）小包退件重派收费标准，AUD15/票+AUD3/KG<br>（2）小包自提改派送收费标准，单询<br>（3）大货快递二次派送收费标准，AUD30/票+AUD1.5/KG<br>（4）大货卡派二次派送收费标准，单询<br>（5）派送改自提，不退费用（优质客户另算）<br><span class="sc-red">PS：以上重量取结算重，退件收到后30天未有指示，则我司自动按弃件处理</span></td>
+                </tr>
+                <tr>
+                    <td rowspan="4">10</td>
+                    <td rowspan="2">悉尼发出亚马逊转运</td>
+                    <td rowspan="2">货在悉尼海外仓，需要派送至亚马逊FBA仓库</td>
+                    <td class="sc-left">悉尼所有仓：0.53AUD/kg（最低收费50AUD）</td>
+                </tr>
+                <tr>
+                    <td class="sc-left">墨尔本所有仓：0.9 AUD/kg（最低收费50AUD）</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">墨尔本发出亚马逊转运</td>
+                    <td rowspan="2">货在墨尔本海外仓，需要派送至亚马逊FBA仓库</td>
+                    <td class="sc-left">悉尼所有仓：0.53AUD/kg（最低收费50AUD）</td>
+                </tr>
+                <tr>
+                    <td class="sc-left">墨尔本所有仓：0.53AUD/kg（最低收费50AUD）</td>
+                </tr>
+                <tr>
+                    <td colspan="4" class="sc-left sc-note-row">计费重取材积重和实重相比最大值，材积重算法= L(m)*W(m)*H(m) X 250。<br>
+                        FBA预约送仓时间费用：20AUD/次（必须收取）；FBA送仓要求必须是标准托盘：25AUD/托（必须收取）。<br>
+                        备注：<br>
+                        1. 不足最低收费按照最低收费收取；<br>
+                        2. 我们只管送仓，如果货物超重超标，导致取消预约，需要支付一次派送费；<br>
+                        3. 按照亚马逊托盘送仓要求，每个托盘最多1.2立方米，超过1则需要再加一个托盘。</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

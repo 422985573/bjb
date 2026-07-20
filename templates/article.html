@@ -176,6 +176,12 @@
 
                 {% elif module.type == 'dg_grid' %}
                 {% include 'partials/dg_grid_article_block.html' %}
+
+                {% elif module.type == 'surcharge_cn' %}
+                {% include 'partials/surcharge_cn_block.html' %}
+
+                {% elif module.type == 'surcharge_intl' %}
+                {% include 'partials/surcharge_intl_block.html' %}
                 {% endif %}
             {% endfor %}
         </div>

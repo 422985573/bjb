@@ -76,6 +76,8 @@ def build_article_workbook(article, modules, exported_at_text):
             row = _write_channel_module(sheet, row, content)
         elif module_type == 'dg_grid':
             row = _write_dg_grid_module(sheet, row, content)
+        elif module_type in {'surcharge_cn', 'surcharge_intl'}:
+            row = _write_surcharge_module(sheet, row, module_type)
         else:
             row = _write_unknown_module(sheet, row, content)
         row += 1
@@ -434,6 +436,17 @@ def _write_dg_grid_module(sheet, row, content):
 def _write_unknown_module(sheet, row, content):
     text = json.dumps(content, ensure_ascii=False, indent=2) if content else ''
     return _write_merged_text(sheet, row, text, font=BODY_FONT, alignment=TEXT_ALIGNMENT)
+
+
+def _write_surcharge_module(sheet, row, module_type):
+    """国内/国外附加明细：固定内容表格，导出为提示行（详情见网页版）。"""
+    title = '国外附加明细' if module_type == 'surcharge_intl' else '国内附加明细'
+    row = _write_section_title(sheet, row, title)
+    return _write_merged_text(
+        sheet, row,
+        f'{title}为固定收费标准表，请在网页版文章中查看完整表格。',
+        font=BODY_FONT, alignment=TEXT_ALIGNMENT,
+    )
 
 
 def _write_quick_links(sheet, row):
