@@ -33,6 +33,11 @@ SHEET_KEY_MAP = {
     "渠道赔偿标准": "peichang",
 }
 
+# Excel sheet 名 → 页面展示名（不改 Excel 的情况下覆盖展示文案）
+DISPLAY_NAME_MAP = {
+    "FBA退货换标": "退货换标",
+}
+
 LARGE_THRESHOLD = 500
 
 # Zone abbreviation → price table row name
@@ -342,7 +347,7 @@ def parse_mulu(ws):
         if not started_nav:
             info_lines.append(cleaned)
         else:
-            nav_items.append(cleaned)
+            nav_items.append(DISPLAY_NAME_MAP.get(cleaned, cleaned))
 
     sections = []
     if info_lines:
@@ -1649,8 +1654,9 @@ def main():
             continue
 
         ws = wb[sheet_name]
+        display_name = DISPLAY_NAME_MAP.get(sheet_name, sheet_name)
         print(f"  Parsing: {sheet_name} -> {key}.json ...")
-        data = parse_sheet(ws, sheet_name, key, wb=wb)
+        data = parse_sheet(ws, display_name, key, wb=wb)
 
         total_rows = sum(len(s.get("rows", [])) for s in data.get("sections", []))
         out_path = os.path.join(OUT_DIR, f"{key}.json")
