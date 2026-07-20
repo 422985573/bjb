@@ -191,6 +191,29 @@
     padding-bottom: 8px;
     border-bottom: 1px solid #dbeafe;
 }
+.wse-section-title-input {
+    display: block;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e40af;
+    margin: 0 0 12px;
+    padding: 4px 6px 8px;
+    border: none;
+    border-bottom: 1px dashed #93c5fd;
+    background: transparent;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.wse-section-title-input:focus {
+    outline: none;
+    background: #eff6ff;
+    border-bottom-color: #2563eb;
+}
+.wse-section-title-input::placeholder {
+    color: #cbd5e1;
+    font-weight: 400;
+}
 .wse-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -502,15 +525,25 @@
     });
   }
 
+  function renderSectionTitle(sec, si) {
+    var t = sec.title || '';
+    return '<input type="text" class="wse-section-title-input" value="' + escAttr(String(t)) + '" data-title-si="' + si + '" placeholder="标题（留空则不显示）" onchange="wseTitleChange(this)">';
+  }
+
+  window.wseTitleChange = function(inp) {
+    var si = parseInt(inp.dataset.titleSi);
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    sec.title = inp.value.trim();
+  };
+
   function renderSection(sec, si) {
     var rows = sec.rows || [];
     var h = '<div class="wse-section" data-si="' + si + '"';
 
     if (sec.type === 'richtext') {
       h += ' data-type="richtext">';
-      if (sec.title) {
-        h += '<div class="wse-section-title">' + esc(sec.title) + '</div>';
-      }
+      h += renderSectionTitle(sec, si);
       h += '<div class="wse-richtext-toolbar" id="wseRtToolbar' + si + '"></div>';
       h += '<div class="wse-richtext-editor" id="wseRtEditor' + si + '"></div>';
       h += '</div>';
@@ -525,9 +558,7 @@
     if (!rows.length && !headers.length) return '';
 
     h += ' data-cols="' + cols + '">';
-    if (sec.title) {
-      h += '<div class="wse-section-title">' + esc(sec.title) + '</div>';
-    }
+    h += renderSectionTitle(sec, si);
 
     if (sec.type === 'price_table') {
       h += '<div class="wse-adjust-row" data-si="' + si + '">';
@@ -1033,6 +1064,11 @@
   }
 
   function syncInputsToData() {
+    document.querySelectorAll('.wse-section-title-input[data-title-si]').forEach(function(inp) {
+      var si = parseInt(inp.dataset.titleSi);
+      var sec = sheetData.sections[si];
+      if (sec) sec.title = inp.value.trim();
+    });
     var inputs = document.querySelectorAll('.wse-section input[data-si]');
     inputs.forEach(function(inp) {
       var si = parseInt(inp.dataset.si);
@@ -1267,9 +1303,9 @@
     var saveBtn = document.getElementById('wseSaveBtn');
     var sections = sheetData.sections.map(function(sec) {
       if (sec.type === 'richtext') {
-        return {type: 'richtext', html: cleanRichtextHtml(sec.html || '')};
+        return {type: 'richtext', html: cleanRichtextHtml(sec.html || ''), title: sec.title || ''};
       }
-      return {rows: sec.rows || []};
+      return {rows: sec.rows || [], title: sec.title || ''};
     });
 
     saveBtn.disabled = true;
