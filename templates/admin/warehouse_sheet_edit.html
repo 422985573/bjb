@@ -214,6 +214,32 @@
     color: #cbd5e1;
     font-weight: 400;
 }
+.wse-section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0 0 12px;
+}
+.wse-section-head .wse-section-title-input {
+    flex: 1;
+    margin: 0;
+}
+.wse-section-del-btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #dc2626;
+    background: #fff;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.wse-section-del-btn:hover {
+    background: #fee2e2;
+    border-color: #dc2626;
+}
 .wse-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -444,6 +470,7 @@
           return;
         }
         sheetData = res.data;
+        (sheetData.sections || []).forEach(function(s, i) { s._oidx = i; });
         render();
       })
       .catch(function() {
@@ -482,6 +509,7 @@
   function render() {
     var sections = sheetData.sections || [];
     var html = '';
+    rtEditors = {};
     sections.forEach(function(sec, si) {
       html += renderSection(sec, si);
     });
@@ -527,7 +555,11 @@
 
   function renderSectionTitle(sec, si) {
     var t = sec.title || '';
-    return '<input type="text" class="wse-section-title-input" value="' + escAttr(String(t)) + '" data-title-si="' + si + '" placeholder="标题（留空则不显示）" onchange="wseTitleChange(this)">';
+    var h = '<div class="wse-section-head">';
+    h += '<input type="text" class="wse-section-title-input" value="' + escAttr(String(t)) + '" data-title-si="' + si + '" placeholder="标题（留空则不显示）" onchange="wseTitleChange(this)">';
+    h += '<button type="button" class="wse-section-del-btn" onclick="wseDelSection(' + si + ')" title="删除整个块">删除此块</button>';
+    h += '</div>';
+    return h;
   }
 
   window.wseTitleChange = function(inp) {
@@ -535,6 +567,16 @@
     var sec = sheetData.sections[si];
     if (!sec) return;
     sec.title = inp.value.trim();
+  };
+
+  window.wseDelSection = function(si) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var label = sec.title ? ('「' + sec.title + '」') : '（未命名）';
+    if (!confirm('确认删除整个块' + label + '？保存后不可恢复。')) return;
+    sheetData.sections.splice(si, 1);
+    render();
   };
 
   function renderSection(sec, si) {
@@ -1303,9 +1345,9 @@
     var saveBtn = document.getElementById('wseSaveBtn');
     var sections = sheetData.sections.map(function(sec) {
       if (sec.type === 'richtext') {
-        return {type: 'richtext', html: cleanRichtextHtml(sec.html || ''), title: sec.title || ''};
+        return {type: 'richtext', html: cleanRichtextHtml(sec.html || ''), title: sec.title || '', _oidx: sec._oidx};
       }
-      return {rows: sec.rows || [], title: sec.title || ''};
+      return {rows: sec.rows || [], title: sec.title || '', _oidx: sec._oidx};
     });
 
     saveBtn.disabled = true;
@@ -1323,6 +1365,9 @@
         if (res.success) {
           result.className = 'wse-result ok';
           result.textContent = '已保存';
+          // 磁盘 sections 已按本次提交顺序重建，重新对齐 _oidx，
+          // 使后续删除/保存的索引引用保持正确（无需刷新页面）。
+          (sheetData.sections || []).forEach(function(s, i) { s._oidx = i; });
         } else {
           result.className = 'wse-result error';
           result.textContent = res.message || '保存失败';

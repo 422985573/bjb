@@ -899,15 +899,23 @@ def warehouse_sheet_save(key):
     if not isinstance(sections, list):
         return jsonify({'success': False, 'message': '参数错误'}), 400
 
-    for i, sec_data in enumerate(sections):
-        if i >= len(data.get('sections', [])):
-            break
+    orig_sections = data.get('sections', [])
+    new_sections = []
+    for sec_data in sections:
+        oidx = sec_data.get('_oidx')
+        if isinstance(oidx, int) and 0 <= oidx < len(orig_sections):
+            base = dict(orig_sections[oidx])
+        else:
+            base = {}
         if sec_data.get('type') == 'richtext':
-            data['sections'][i]['html'] = sec_data.get('html', '')
+            base['type'] = 'richtext'
+            base['html'] = sec_data.get('html', '')
         if 'rows' in sec_data:
-            data['sections'][i]['rows'] = sec_data['rows']
+            base['rows'] = sec_data['rows']
         if 'title' in sec_data:
-            data['sections'][i]['title'] = sec_data['title']
+            base['title'] = sec_data['title']
+        new_sections.append(base)
+    data['sections'] = new_sections
 
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
