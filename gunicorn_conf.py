@@ -1,29 +1,37 @@
-# Gunicorn 配置；可通过环境变量覆盖路径相关项
-import os
+# 项目目录
+chdir = '/www/wwwroot/bjb'
 
-# 项目根目录（默认当前文件所在目录的父目录，或设置 GUNICORN_CHDIR）
-_base = os.environ.get('GUNICORN_CHDIR') or os.path.dirname(os.path.abspath(__file__))
+# 指定进程数
+workers = 4
 
-chdir = _base
+# 指定每个进程开启的线程数
+threads = 2
 
-workers = int(os.environ.get('GUNICORN_WORKERS', '4'))
-threads = int(os.environ.get('GUNICORN_THREADS', '2'))
-worker_class = os.environ.get('GUNICORN_WORKER_CLASS', 'gthread')
-if worker_class == 'sync':
-    threads = 1
+#启动用户
+user = 'www'
 
-user = os.environ.get('GUNICORN_USER', 'root')
-bind = os.environ.get('GUNICORN_BIND', '0.0.0.0:5001')
+# 启动模式
+worker_class = 'sync'
 
-pidfile = os.environ.get('GUNICORN_PIDFILE') or os.path.join(_base, 'gunicorn.pid')
-accesslog = os.environ.get('GUNICORN_ACCESSLOG') or os.path.join(_base, 'logs', 'gunicorn_access.log')
-errorlog = os.environ.get('GUNICORN_ERRORLOG') or os.path.join(_base, 'logs', 'gunicorn_error.log')
+# 绑定的ip与端口
+bind = '127.0.0.1:5001' 
 
-accesslog_dir = os.path.dirname(accesslog)
-errorlog_dir = os.path.dirname(errorlog)
-if accesslog_dir:
-    os.makedirs(accesslog_dir, exist_ok=True)
-if errorlog_dir and errorlog_dir != accesslog_dir:
-    os.makedirs(errorlog_dir, exist_ok=True)
+# 设置进程文件目录（用于停止服务和重启服务，请勿删除）
+pidfile = '/www/wwwroot/bjb/gunicorn.pid'
 
-loglevel = os.environ.get('GUNICORN_LOGLEVEL', 'info')
+# 设置访问日志和错误信息日志路径
+accesslog = '/www/wwwlogs/python/bjb/gunicorn_acess.log'
+errorlog = '/www/wwwlogs/python/bjb/gunicorn_error.log'
+
+# 日志级别，这个日志级别指的是错误日志的级别，而访问日志的级别无法设置
+# debug:调试级别，记录的信息最多；
+# info:普通级别；
+# warning:警告消息；
+# error:错误消息；
+# critical:严重错误消息；
+loglevel = 'info' 
+
+# 自定义设置项请写到该处
+# 最好以上面相同的格式 <注释 + 换行 + key = value> 进行书写， 
+# PS: gunicorn 的配置文件是python扩展形式，即".py"文件，需要注意遵从python语法，
+# 如：loglevel的等级是字符串作为配置的，需要用引号包裹起来
