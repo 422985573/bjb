@@ -178,10 +178,14 @@
                 {% include 'partials/dg_grid_article_block.html' %}
 
                 {% elif module.type == 'surcharge_cn' %}
-                {% include 'partials/surcharge_cn_block.html' %}
+                {% with sc_template = 'cn' %}{% include 'partials/surcharge_block.html' %}{% endwith %}
 
                 {% elif module.type == 'surcharge_intl' %}
-                {% include 'partials/surcharge_intl_block.html' %}
+                {% with sc_template = 'intl' %}{% include 'partials/surcharge_block.html' %}{% endwith %}
+
+                {% elif module.type == 'surcharge' %}
+                {% include 'partials/surcharge_block.html' %}
+
                 {% elif module.type == 'overseas_warehouse' %}
                 {% include 'partials/overseas_warehouse_block.html' %}
                 {% endif %}

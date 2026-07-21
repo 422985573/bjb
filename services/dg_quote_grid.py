@@ -1071,6 +1071,8 @@ def render_dg_table_editable_html(
         tr_cls = ' dg-grid-tr-tidan-header' if header_orange_row is not None and r == header_orange_row else ''
         if r in ro_set:
             tr_cls += ' dg-grid-tr--readonly'
+        if r in header_rows_set:
+            tr_cls += ' dg-grid-tr--group-header'
         parts.append(f'<tr class="dg-grid-tr{tr_cls}">')
         ro_attr = ' readonly tabindex="-1"' if r in ro_set else ''
         ro_cls = ' dg-grid-cell-input--ro' if r in ro_set else ''
@@ -1149,7 +1151,7 @@ def render_dg_table_editable_html(
                 else:
                     parts.append(f'<td{attr}>{inp_html}</td>')
         if include_row_action_column:
-            if r in ro_set:
+            if r in ro_set or r in header_rows_set:
                 parts.append(
                     '<td class="dg-grid-cell dg-grid-cell--row-action dg-grid-cell--row-action--static" '
                     'data-dg-side="actions" aria-hidden="true"></td>'

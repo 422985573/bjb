@@ -1,21 +1,4 @@
-{# surcharge_cn：国内附加明细（可内联编辑单元格；保存整表 tbody） #}
-{% set sc_content = module.content | from_json %}
-{% set sc_editable = sc_editable if sc_editable is defined else false %}
-<div class="module module-surcharge module-surcharge-cn">
-    <div class="surcharge-title-bar">国内附加明细</div>
-    <div class="surcharge-table-wrapper">
-        <table class="surcharge-table"{% if sc_editable %} data-surcharge-editable="1"{% endif %}>
-            <thead>
-                <tr>
-                    <th class="sc-col-idx">序号</th>
-                    <th class="sc-col-name">明细</th>
-                    <th class="sc-col-note">注明</th>
-                    <th class="sc-col-fee">收费</th>
-                    <th class="sc-col-channel">适用渠道</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if sc_content and sc_content.tbody_html %}{{ sc_content.tbody_html | safe_html }}{% else %}
+{# 国内附加明细默认行（仅 tbody 内的 tr） #}
                 <tr>
                     <td>1</td>
                     <td>国内托盘</td>
@@ -127,8 +110,3 @@
                         （2）需提醒客户，<span class="sc-red">如瞒报卸货能力，到时候账单补收</span>；<br><br>
                         （3）如需司机协助搬运，需提前告知，收费标准为AUD200/小时，不足一小时按一小时计费，超出一小时按每半小时计费一次；</td>
                 </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>

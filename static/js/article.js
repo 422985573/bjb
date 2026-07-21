@@ -185,11 +185,42 @@ function initArticlePage() {
     setupStickyTableHeaders();
     setupImageLightbox();
     setupBackToTop();
+    equalizeFbaRows();
+}
+
+// 国外附加明细序号10：把 rowspan=4 的备注撑出的高度，平均分给四个子行
+// 不依赖 class，靠 rowspan="4" 的锚点单元格定位该组（对旧存量内容同样生效）
+function equalizeFbaRows(scope) {
+    const root = scope || document;
+    root.querySelectorAll('.module-surcharge-intl table.surcharge-table').forEach(function(table) {
+        const anchor = table.querySelector('tbody td[rowspan="4"]');
+        if (!anchor) return;
+        const firstTr = anchor.closest('tr');
+        if (!firstTr) return;
+        const rows = [firstTr];
+        let tr = firstTr;
+        for (let i = 1; i < 4; i++) {
+            tr = tr.nextElementSibling;
+            if (!tr) break;
+            rows.push(tr);
+        }
+        if (rows.length < 2) return;
+        rows.forEach(function(r) { r.style.height = ''; });
+        let total = 0;
+        rows.forEach(function(r) { total += r.getBoundingClientRect().height; });
+        if (!total) return;
+        const each = Math.ceil(total / rows.length);
+        rows.forEach(function(r) { r.style.height = each + 'px'; });
+    });
 }
 
 // 渠道表格：自动合并相同目的港/邮编/到门时效/渠道单元格
 document.addEventListener('DOMContentLoaded', function() {
     initArticlePage();
+});
+// 字体/图片加载完成后布局可能变化，重新均分一次
+window.addEventListener('load', function() {
+    equalizeFbaRows();
 });
 
 function setupExportArticleTables() {
@@ -1142,6 +1173,7 @@ window.addEventListener('resize', function() {
     resizeTimer = setTimeout(function() {
         syncNavHeightVar();
         setupStickyTableHeaders();
+        equalizeFbaRows();
     }, 250);
 });
 

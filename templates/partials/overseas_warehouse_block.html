@@ -1,8 +1,9 @@
 {# overseas_warehouse：常见海外仓地址（可编辑单元格 + 增删行 + 字号/颜色；保存整表 tbody） #}
 {% set ow_content = module.content | from_json %}
 {% set ow_editable = ow_editable if ow_editable is defined else false %}
+{% set ow_title = ow_content.title if ow_content and ow_content.title else '常见海外仓地址' %}
 <div class="module module-surcharge module-overseas-warehouse">
-    <div class="surcharge-title-bar">常见海外仓地址</div>
+    <div class="surcharge-title-bar"{% if ow_editable %} data-ow-title="1" contenteditable="true" spellcheck="false"{% endif %}>{{ ow_title }}</div>
     <div class="surcharge-table-wrapper">
         <table class="surcharge-table ow-table"{% if ow_editable %} data-ow-editable="1"{% endif %}>
             <thead>

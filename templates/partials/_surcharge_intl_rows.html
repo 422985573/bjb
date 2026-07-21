@@ -1,22 +1,4 @@
-{# surcharge_intl：国外附加明细（可内联编辑单元格；保存整表 tbody） #}
-{# 6 列布局：序号 | 明细 | 注明 | 收费A | 收费B | 适用渠道；行1-9 收费单列(colspan=2)，行10 拆分为仓库+价格两列 #}
-{% set sc_content = module.content | from_json %}
-{% set sc_editable = sc_editable if sc_editable is defined else false %}
-<div class="module module-surcharge module-surcharge-intl">
-    <div class="surcharge-title-bar">国外附加明细</div>
-    <div class="surcharge-table-wrapper">
-        <table class="surcharge-table surcharge-table--6col"{% if sc_editable %} data-surcharge-editable="1"{% endif %}>
-            <thead>
-                <tr>
-                    <th class="sc-col-idx">序号</th>
-                    <th class="sc-col-name">明细</th>
-                    <th class="sc-col-note">注明</th>
-                    <th class="sc-col-fee" colspan="2">收费</th>
-                    <th class="sc-col-channel">适用渠道</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if sc_content and sc_content.tbody_html %}{{ sc_content.tbody_html | safe_html }}{% else %}
+{# 国外附加明细默认行（仅 tbody 内的 tr） #}
                 <tr>
                     <td rowspan="2">1</td>
                     <td rowspan="2">查验费</td>
@@ -80,7 +62,7 @@
                     <td>第一次收货未成功，需二次派送的退件重派收费标准</td>
                     <td colspan="2" class="sc-left">（1）小包退件重派收费标准，AUD15/票+AUD3/KG<br>（2）小包自提改派送收费标准，单询<br>（3）大货快递二次派送收费标准，AUD30/票+AUD1.5/KG<br>（4）大货卡派二次派送收费标准，单询<br>（5）派送改自提，不退费用（优质客户另算）<br><span class="sc-red">PS：以上重量取结算重，退件收到后30天未有指示，则我司自动按弃件处理</span></td>
                 </tr>
-                <tr>
+                <tr class="sc-fba-row">
                     <td rowspan="4">10</td>
                     <td rowspan="2">悉尼发出亚马逊转运</td>
                     <td rowspan="2">货在悉尼海外仓，需要派送至亚马逊FBA仓库</td>
@@ -88,22 +70,17 @@
                     <td class="sc-fba-price">0.53AUD/kg（最低收费50AUD）</td>
                     <td rowspan="4" class="sc-left sc-fba-note">计费重取材积重和实重相比最大值，材积重算法= L(m)*W(m)*H(m) X 250。<br>FBA预约送仓时间费用：20AUD/次（必须收取）；FBA送仓要求必须是标准托盘：25AUD/托（必须收取）。<br>备注：<br>1. 不足最低收费按照最低收费收取；<br>2. 我们只管送仓，如果货物超重超长，导致亚马逊拒接，需要支付一次派送费；<br>3. 按照亚马逊托盘送仓要求，每个托盘最多1.2立方米，超过1则需要再加一个托盘。</td>
                 </tr>
-                <tr>
+                <tr class="sc-fba-row">
                     <td class="sc-fba-wh">墨尔本所有仓</td>
                     <td class="sc-fba-price">0.9 AUD/kg（最低收费50AUD）</td>
                 </tr>
-                <tr>
+                <tr class="sc-fba-row">
                     <td rowspan="2">墨尔本发出亚马逊转运</td>
                     <td rowspan="2">货在墨尔本海外仓，需要派送至亚马逊FBA仓库</td>
                     <td class="sc-fba-wh">悉尼所有仓</td>
                     <td class="sc-fba-price">0.53AUD/kg（最低收费50AUD）</td>
                 </tr>
-                <tr>
+                <tr class="sc-fba-row">
                     <td class="sc-fba-wh">墨尔本所有仓</td>
                     <td class="sc-fba-price">0.53AUD/kg（最低收费50AUD）</td>
                 </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>

@@ -1300,6 +1300,18 @@ white-space: pre-line !important;
     padding: 10px 6px;
     border-radius: 6px 6px 0 0;
 }
+/* 后台可编辑标题栏 */
+.surcharge-title-bar[contenteditable="true"] {
+    cursor: text;
+    outline: none;
+}
+.surcharge-title-bar[contenteditable="true"]:hover {
+    background: #1a63b0;
+}
+.surcharge-title-bar[contenteditable="true"]:focus {
+    background: #185aa0;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6);
+}
 .module-surcharge .surcharge-table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -1381,7 +1393,9 @@ white-space: pre-line !important;
 .module-surcharge-intl .surcharge-table td.sc-fba-note {
     width: 22%;
     font-size: 12px;
+    vertical-align: top;
 }
+/* 序号10 的四个子行等高由 JS equalizeFbaRows() 计算设置（备注 rowspan=4 撑高后平均分给四行） */
 
 /* 附加明细模块：后台单元格内联编辑态 */
 .surcharge-editor td.sc-cell-editing {
@@ -1395,6 +1409,98 @@ white-space: pre-line !important;
     outline: 2px solid #1f6fc4;
     outline-offset: -2px;
     background: #fff;
+}
+/* 附加明细：后台行操作列（编辑态，保存剥离） */
+.surcharge-editor .surcharge-table th.sc-op-th {
+    width: 5.5em;
+    white-space: nowrap;
+}
+.surcharge-editor .surcharge-table td.sc-op-cell {
+    text-align: center;
+    background: #fafbfc;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.surcharge-editor .sc-op-cell .sc-row-add-btn,
+.surcharge-editor .sc-op-cell .sc-row-del-btn {
+    display: block;
+    width: 100%;
+    margin: 2px 0;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.surcharge-editor .sc-op-cell .sc-row-add-btn {
+    border: 1px solid #1f6fc4;
+    background: #1f6fc4;
+    color: #fff;
+}
+.surcharge-editor .sc-op-cell .sc-row-add-btn:hover { background: #185aa0; }
+.surcharge-editor .sc-op-cell .sc-row-del-btn {
+    border: 1px solid #e11d1d;
+    background: #fff;
+    color: #e11d1d;
+}
+.surcharge-editor .sc-op-cell .sc-row-del-btn:hover { background: #fdeaea; }
+
+/* 新插入行的「同上」可合并单元格 */
+.surcharge-editor td.sc-mergeable {
+    vertical-align: top;
+    background: #fbfdff;
+}
+.surcharge-editor .sc-merge-chk {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+    user-select: none;
+    margin-bottom: 3px;
+    white-space: nowrap;
+}
+.surcharge-editor .sc-merge-chk label {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.surcharge-editor .sc-merge-chk input {
+    cursor: pointer;
+    margin: 0;
+}
+.surcharge-editor .sc-cell-body {
+    min-height: 1.6em;
+    padding: 3px 5px;
+    border: 1px dashed #94b6dc;
+    border-radius: 3px;
+    background: #fff;
+    cursor: text;
+    outline: none;
+}
+.surcharge-editor .sc-cell-body:empty::before,
+.surcharge-editor .sc-cell-body:has(> br:only-child)::before {
+    content: '点此填写内容';
+    color: #9aa7b8;
+    font-size: 12px;
+}
+.surcharge-editor .sc-cell-body:focus {
+    border-color: #1f6fc4;
+    border-style: solid;
+    background: #fff;
+}
+.surcharge-editor .sc-cell-body:focus::before {
+    content: none;
+}
+/* 勾选「同上」后：隐藏内容编辑区，整格显示为将与上格合并 */
+.surcharge-editor td.sc-merge-active {
+    background: #eef6ff;
+}
+.surcharge-editor td.sc-merge-active .sc-cell-body {
+    display: none;
+}
+.surcharge-editor td.sc-merge-active .sc-merge-chk::after {
+    content: '（将与上格合并）';
+    color: #1f6fc4;
 }
 
 /* 常见海外仓地址模块（overseas_warehouse） */

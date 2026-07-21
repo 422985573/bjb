@@ -1,0 +1,27 @@
+{# 附加明细（统一模块 surcharge）：可编辑标题 + 可内联编辑单元格；国内/国外由 template 决定默认表 #}
+{% set sc_content = module.content | from_json %}
+{% set sc_editable = sc_editable if sc_editable is defined else false %}
+{% set sc_template = sc_template if sc_template is defined else (sc_content.template if sc_content and sc_content.template else 'cn') %}
+{% set sc_default_title = '国外附加明细' if sc_template == 'intl' else '国内附加明细' %}
+{% set sc_title = sc_content.title if sc_content and sc_content.title else sc_default_title %}
+<div class="module module-surcharge module-surcharge-{{ sc_template }}">
+    <div class="surcharge-title-bar"{% if sc_editable %} data-surcharge-title="1" contenteditable="true" spellcheck="false"{% endif %}>{{ sc_title }}</div>
+    <div class="surcharge-table-wrapper">
+        <table class="surcharge-table{% if sc_template == 'intl' %} surcharge-table--6col{% endif %}"{% if sc_editable %} data-surcharge-editable="1"{% endif %} data-sc-template="{{ sc_template }}">
+            <thead>
+                <tr>
+                    <th class="sc-col-idx">序号</th>
+                    <th class="sc-col-name">明细</th>
+                    <th class="sc-col-note">注明</th>
+                    {% if sc_template == 'intl' %}<th class="sc-col-fee" colspan="2">收费</th>{% else %}<th class="sc-col-fee">收费</th>{% endif %}
+                    <th class="sc-col-channel">适用渠道</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if sc_content and sc_content.tbody_html %}{{ sc_content.tbody_html | safe_html }}{% else %}
+                {% if sc_template == 'intl' %}{% include 'partials/_surcharge_intl_rows.html' %}{% else %}{% include 'partials/_surcharge_cn_rows.html' %}{% endif %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>

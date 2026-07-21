@@ -327,6 +327,25 @@
     align-items: center;
     flex: 1;
 }
+.module-editable-title {
+    display: inline-block;
+    min-width: 4em;
+    margin-left: 4px;
+    padding: 2px 8px;
+    border: 1px dashed transparent;
+    border-radius: 4px;
+    cursor: text;
+    outline: none;
+}
+.module-editable-title:hover {
+    border-color: #c7d7ea;
+    background: #f2f7fd;
+}
+.module-editable-title:focus {
+    border-color: var(--primary);
+    border-style: solid;
+    background: #fff;
+}
 
 .module-actions {
     display: flex;
@@ -1407,6 +1426,19 @@
     pointer-events: none;
     text-align: center;
 }
+/* 可编辑表头行（如 Freightconn CODE/每个空运主单/SYD/UOM）：保留表头背景与加粗，但可编辑 */
+.dg-editor .dg-grid-table--editable .dg-grid-tr--group-header .dg-grid-cell {
+    background: #dbeafe;
+}
+.dg-editor .dg-grid-tr--group-header .dg-grid-cell-input {
+    font-weight: 600;
+    color: #1e3a5f;
+    background: transparent;
+    text-align: center;
+}
+.dg-editor .dg-grid-tr--group-header .dg-grid-cell-input:focus {
+    background: #fff;
+}
 
 /* 费用子表：本组添加行按钮（与「删」按钮同列） */
 .dg-fee-add-row-btn {
@@ -2121,8 +2153,8 @@
             <button type="button" class="module-btn" onclick="addModule('text')">📝 添加文本</button>
             <button type="button" class="module-btn" onclick="addModule('image')">🖼️ 添加图片</button>
             <button type="button" class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
-            <button type="button" class="module-btn" onclick="addModule('surcharge_cn')">🧾 添加 国内附加明细</button>
-            <button type="button" class="module-btn" onclick="addModule('surcharge_intl')">🧾 添加 国外附加明细</button>
+            <button type="button" class="module-btn" onclick="addModule('surcharge_tpl_cn')">🧾 添加 国内附加明细</button>
+            <button type="button" class="module-btn" onclick="addModule('surcharge_tpl_intl')">🧾 添加 国外附加明细</button>
             <button type="button" class="module-btn" onclick="addModule('overseas_warehouse')">🏬 添加 常见海外仓地址</button>
         </div>
         
@@ -2136,7 +2168,7 @@
                         {% if module.type == 'text' %}📝{% endif %}
                         {% if module.type == 'image' %}🖼️{% endif %}
                         {% if module.type == 'channel' %}📊{% endif %}
-                        {% if module.type in ('surcharge_cn', 'surcharge_intl') %}🧾{% endif %}
+                        {% if module.type in ('surcharge_cn', 'surcharge_intl', 'surcharge') %}🧾{% endif %}
                         {% if module.type == 'overseas_warehouse' %}🏬{% endif %}
                         {% if module.type == 'dg_grid' %}
                             {% if (content.schema|default(0))|int == 2 %}📋{% else %}📊{% endif %}
@@ -2196,9 +2228,17 @@
                         {% if module.type == 'text' %}📝 文本模块{% endif %}
                         {% if module.type == 'image' %}🖼️ 图片模块{% endif %}
                         {% if module.type == 'channel' %}📊 渠道模块{% endif %}
-                        {% if module.type == 'surcharge_cn' %}🧾 国内附加明细{% endif %}
-                        {% if module.type == 'surcharge_intl' %}🧾 国外附加明细{% endif %}
-                        {% if module.type == 'overseas_warehouse' %}🏬 常见海外仓地址{% endif %}
+                        {% if module.type in ('surcharge', 'surcharge_cn', 'surcharge_intl') %}
+                            {% set sc_hdr = module.content | from_json %}
+                            {% if module.type == 'surcharge_cn' %}{% set sc_hdr_def = '国内附加明细' %}
+                            {% elif module.type == 'surcharge_intl' %}{% set sc_hdr_def = '国外附加明细' %}
+                            {% else %}{% set sc_hdr_def = ('国外附加明细' if (sc_hdr and sc_hdr.template == 'intl') else '国内附加明细') %}{% endif %}
+                            🧾 <span class="module-editable-title" data-title-for="{{ module.id }}" contenteditable="true" spellcheck="false">{{ sc_hdr.title if sc_hdr and sc_hdr.title else sc_hdr_def }}</span>
+                        {% endif %}
+                        {% if module.type == 'overseas_warehouse' %}
+                            {% set ow_hdr = module.content | from_json %}
+                            🏬 <span class="module-editable-title" data-title-for="{{ module.id }}" contenteditable="true" spellcheck="false">{{ ow_hdr.title if ow_hdr and ow_hdr.title else '常见海外仓地址' }}</span>
+                        {% endif %}
                         {% if module.type == 'dg_grid' %}
                             {% set dg_ic = module.content | from_json %}
                             {% if (dg_ic.schema|default(0))|int == 2 %}
@@ -2367,20 +2407,16 @@
                         {% else %}
                             {% include 'admin/dg/dg_excel_grid_editor.html' %}
                         {% endif %}
-                    {% elif module.type == 'surcharge_cn' %}
-                        <div class="surcharge-editor" data-module-type="surcharge_cn">
-                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">点击单元格改文字；<strong>选中文字后右上角会弹出样式条</strong>，可改字号/颜色（不选中则应用到整格）。表格结构（行列、合并）固定不可增删。保存后前台同步展示。</p>
+                    {% elif module.type in ('surcharge', 'surcharge_cn', 'surcharge_intl') %}
+                        {% set sc_ic = module.content | from_json %}
+                        {% if module.type == 'surcharge_cn' %}{% set sc_tpl = 'cn' %}
+                        {% elif module.type == 'surcharge_intl' %}{% set sc_tpl = 'intl' %}
+                        {% else %}{% set sc_tpl = sc_ic.template if sc_ic and sc_ic.template else 'cn' %}{% endif %}
+                        <div class="surcharge-editor" data-module-type="{{ module.type }}" data-sc-template="{{ sc_tpl }}">
+                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">点击标题栏可改标题（如「国内附加明细」/「国外附加明细」）；点击单元格改文字；<strong>选中文字后右上角会弹出样式条</strong>，可改字号/颜色（不选中则应用到整格）；每行末尾可「下方插行 / 删除」。保存后前台同步展示。</p>
                             <div class="ow-editor-area">
                                 {% include 'admin/partials/table_style_popover.html' %}
-                                {% with sc_editable = true %}{% include 'partials/surcharge_cn_block.html' %}{% endwith %}
-                            </div>
-                        </div>
-                    {% elif module.type == 'surcharge_intl' %}
-                        <div class="surcharge-editor" data-module-type="surcharge_intl">
-                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">点击单元格改文字；<strong>选中文字后右上角会弹出样式条</strong>，可改字号/颜色（不选中则应用到整格）。表格结构（行列、合并）固定不可增删。保存后前台同步展示。</p>
-                            <div class="ow-editor-area">
-                                {% include 'admin/partials/table_style_popover.html' %}
-                                {% with sc_editable = true %}{% include 'partials/surcharge_intl_block.html' %}{% endwith %}
+                                {% with sc_editable = true, sc_template = sc_tpl %}{% include 'partials/surcharge_block.html' %}{% endwith %}
                             </div>
                         </div>
                     {% elif module.type == 'overseas_warehouse' %}
@@ -2578,6 +2614,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initModuleListDrag();
     initSurchargeEditors();
     initOverseasWarehouseEditors();
+    initEditableHeaderTitles();
     updateActiveModule();
     initWeightInputListeners();
     bindChannelEditorDelegatedActions();
@@ -2613,6 +2650,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 180);
     }
 });
+
+// 字体/布局稳定后重新均分国外附加明细序号10 的行高
+window.addEventListener('load', function() { equalizeFbaRows(); });
 
 // 一键保存：文章信息 + 所有模块（优先调用统一后端接口，失败时自动降级为逐模块保存）
 async function saveAll() {
@@ -2813,18 +2853,13 @@ function getModuleContentFromItem(moduleItem) {
     } else if (moduleBody.querySelector('.dg-grid-editor')) {
         content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
     } else if (moduleBody.querySelector('.surcharge-editor')) {
-        // 附加明细模块（国内/国外）：保存整表 tbody 的 HTML
-        const scEditor = moduleBody.querySelector('.surcharge-editor');
-        const fixedType = scEditor.dataset.moduleType;
-        content = {
-            title: fixedType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细',
-            tbody_html: getSurchargeTbodyHtml(scEditor)
-        };
+        // 附加明细模块：保存可编辑标题 + 模板 + 整表 tbody
+        content = getSurchargeContent(moduleBody.querySelector('.surcharge-editor'));
     } else if (moduleBody.querySelector('.overseas-warehouse-editor')) {
-        // 常见海外仓地址：保存整表 tbody 的 HTML
+        // 常见海外仓地址：保存可编辑标题 + 整表 tbody
         const owEditor = moduleBody.querySelector('.overseas-warehouse-editor');
         content = {
-            title: '常见海外仓地址',
+            title: getOwTitle(owEditor),
             tbody_html: getOwTbodyHtml(owEditor)
         };
     } else {
@@ -2834,23 +2869,111 @@ function getModuleContentFromItem(moduleItem) {
     return { content };
 }
 
-// 附加明细模块：提取整表 tbody 的 HTML（单元格内联编辑后保存）
+// 勾选了「同上」的单元格：与正上方同列同宽的合并格合并（延伸其 rowspan，丢弃自己）
+function flattenSurchargeMergeUps(cells) {
+    const arr = cells.slice().sort(function(a, b) {
+        return (a.c0 - b.c0) || (a.r0 - b.r0);
+    });
+    const removed = new Set();
+    arr.forEach(function(x, i) {
+        if (!x.merge) return;
+        let above = null;
+        for (let j = 0; j < arr.length; j++) {
+            const y = arr[j];
+            if (removed.has(j) || y === x) continue;
+            if (y.c0 === x.c0 && y.cs === x.cs && (y.r0 + y.rs) === x.r0) { above = y; break; }
+        }
+        if (above) { above.rs += x.rs; removed.add(i); }
+        else { x.merge = false; } // 上方无对齐合并格，保持独立
+    });
+    return arr.filter(function(_, i) { return !removed.has(i); });
+}
+
+// 序列化前清洗单元格节点：拆掉「同上」勾选框结构、去掉编辑态属性
+function cleanSurchargeCellNode(node) {
+    const el = node.cloneNode(true);
+    if (el.classList.contains('sc-mergeable')) {
+        const body = el.querySelector('.sc-cell-body');
+        el.innerHTML = body ? body.innerHTML : '';
+        el.classList.remove('sc-mergeable');
+    }
+    el.removeAttribute('contenteditable');
+    el.querySelectorAll('[contenteditable]').forEach(function(e) { e.removeAttribute('contenteditable'); });
+    el.classList.remove('sc-cell-editing', 'ow-row-active', 'sc-merge-active');
+    if (!el.getAttribute('class')) el.removeAttribute('class');
+    return el;
+}
+
+// 附加明细模块：提取整表 tbody 的 HTML（应用「同上」合并、去掉操作列与编辑态）
 function getSurchargeTbodyHtml(scEditor) {
     if (!scEditor) return '';
-    const tbody = scEditor.querySelector('table.surcharge-table tbody');
-    if (!tbody) return '';
-    // 复制一份，去掉编辑态属性后再序列化，避免把 contenteditable 等写入库
-    const clone = tbody.cloneNode(true);
-    clone.querySelectorAll('[contenteditable]').forEach(function(el) {
-        el.removeAttribute('contenteditable');
+    const table = scEditor.querySelector('table.surcharge-table');
+    if (!table) return '';
+    const m = buildSurchargeMatrix(table);
+    // 读取每个可合并格的勾选状态
+    m.cells.forEach(function(x) {
+        x.merge = false;
+        if (x.node.classList && x.node.classList.contains('sc-mergeable')) {
+            const cb = x.node.querySelector('.sc-merge-cb');
+            if (cb && cb.checked) x.merge = true;
+        }
     });
-    clone.querySelectorAll('.sc-cell-editing').forEach(function(el) {
-        el.classList.remove('sc-cell-editing');
+    const survivors = flattenSurchargeMergeUps(m.cells);
+    // 按行序列化
+    let html = '';
+    for (let r = 0; r < m.nrows; r++) {
+        const rowCells = survivors.filter(function(x) { return x.r0 === r; })
+                                  .sort(function(a, b) { return a.c0 - b.c0; });
+        if (!rowCells.length) continue; // 整行被上方合并覆盖（无自有格）
+        html += '<tr>';
+        rowCells.forEach(function(x) {
+            const el = cleanSurchargeCellNode(x.node);
+            if (x.rs > 1) el.setAttribute('rowspan', x.rs); else el.removeAttribute('rowspan');
+            if (x.cs > 1) el.setAttribute('colspan', x.cs); else el.removeAttribute('colspan');
+            html += el.outerHTML;
+        });
+        html += '</tr>';
+    }
+    return html.trim();
+}
+
+// 附加明细模块：收集完整 content（可编辑标题 + 模板 + 整表 tbody）
+function getSurchargeContent(scEditor) {
+    if (!scEditor) return { title: '附加明细', template: 'cn', tbody_html: '' };
+    const tpl = scEditor.dataset.scTemplate || 'cn';
+    const titleEl = scEditor.querySelector('.surcharge-title-bar');
+    let title = titleEl ? (titleEl.textContent || '').trim() : '';
+    if (!title) title = (tpl === 'intl') ? '国外附加明细' : '国内附加明细';
+    return {
+        title: title,
+        template: tpl,
+        tbody_html: getSurchargeTbodyHtml(scEditor)
+    };
+}
+
+// 模块头部可编辑标题 ↔ 表格蓝色标题栏 双向同步（附加明细/常见海外仓地址）
+function initEditableHeaderTitles() {
+    document.querySelectorAll('.module-editable-title').forEach(function(headerEl) {
+        if (headerEl.dataset.titleReady === '1') return;
+        const moduleItem = headerEl.closest('.module-item');
+        if (!moduleItem) return;
+        const barEl = moduleItem.querySelector('.surcharge-title-bar');
+        // 头部编辑 → 同步到蓝色标题栏
+        headerEl.addEventListener('input', function() {
+            if (barEl) barEl.textContent = (headerEl.textContent || '').trim();
+        });
+        // 回车不换行，直接失焦
+        headerEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); headerEl.blur(); }
+        });
+        // 蓝色标题栏编辑 → 同步回头部
+        if (barEl) {
+            barEl.addEventListener('input', function() {
+                headerEl.textContent = (barEl.textContent || '').trim();
+            });
+        }
+        headerEl.dataset.titleReady = '1';
     });
-    clone.querySelectorAll('.ow-row-active').forEach(function(el) {
-        el.classList.remove('ow-row-active');
-    });
-    return clone.innerHTML.trim();
 }
 
 // 附加明细模块：单元格可编辑 + 选中文字弹样式条（字号/颜色）
@@ -2859,13 +2982,269 @@ function initSurchargeEditors() {
         if (scEditor.dataset.scReady === '1') return;
         const table = scEditor.querySelector('table.surcharge-table[data-surcharge-editable="1"]');
         if (!table) return;
-        table.querySelectorAll('tbody td').forEach(function(td) {
+        table.querySelectorAll('tbody td:not(.sc-op-cell):not(.sc-mergeable)').forEach(function(td) {
             td.setAttribute('contenteditable', 'true');
             td.classList.add('sc-cell-editing');
         });
         wireStylePopover(scEditor, table);
+        initSurchargeRowOps(scEditor, table);
         scEditor.dataset.scReady = '1';
     });
+    equalizeFbaRows();
+}
+
+// ===== 附加明细：rowspan 感知的增/删行 =====
+// 解析表格为逻辑网格（忽略末尾操作列 .sc-op-cell）；返回 origin 单元格模型与行列数
+function buildSurchargeMatrix(table) {
+    const tbody = table.querySelector('tbody');
+    const trs = Array.from(tbody.rows);
+    const nrows = trs.length;
+    // 列数：thead 中非操作列的 colspan 之和
+    let ncols = 0;
+    const headTr = table.querySelector('thead tr');
+    if (headTr) {
+        Array.from(headTr.cells).forEach(function(th) {
+            if (th.classList.contains('sc-op-th')) return;
+            ncols += th.colSpan || 1;
+        });
+    }
+    const occupied = [];       // occupied[r][c] = true
+    for (let r = 0; r < nrows; r++) occupied[r] = [];
+    const cells = [];          // {node, r0, c0, rs, cs}
+    trs.forEach(function(tr, r) {
+        let c = 0;
+        Array.from(tr.cells).forEach(function(td) {
+            if (td.classList.contains('sc-op-cell')) return; // 跳过操作格
+            while (occupied[r][c]) c++;
+            const rs = td.rowSpan || 1;
+            const cs = td.colSpan || 1;
+            for (let i = 0; i < rs; i++) {
+                for (let j = 0; j < cs; j++) {
+                    if (!occupied[r + i]) occupied[r + i] = [];
+                    occupied[r + i][c + j] = true;
+                }
+            }
+            cells.push({ node: td, r0: r, c0: c, rs: rs, cs: cs });
+            c += cs;
+        });
+    });
+    return { tbody: tbody, cells: cells, nrows: nrows, ncols: ncols };
+}
+
+// 按模型重排 tbody（活节点 appendChild，保留内容/样式/contenteditable）
+function rebuildSurchargeTbody(tbody, cells, nrows) {
+    const frag = document.createDocumentFragment();
+    for (let r = 0; r < nrows; r++) {
+        const tr = document.createElement('tr');
+        cells.filter(function(x) { return x.r0 === r; })
+             .sort(function(a, b) { return a.c0 - b.c0; })
+             .forEach(function(x) {
+                 if (x.rs > 1) x.node.rowSpan = x.rs; else x.node.removeAttribute('rowspan');
+                 if (x.cs > 1) x.node.colSpan = x.cs; else x.node.removeAttribute('colspan');
+                 tr.appendChild(x.node);
+             });
+        frag.appendChild(tr);
+    }
+    tbody.innerHTML = '';
+    tbody.appendChild(frag);
+}
+
+function makeSurchargeCellEditable(td) {
+    td.setAttribute('contenteditable', 'true');
+    td.classList.add('sc-cell-editing');
+}
+
+// 删除可视行 R（rowspan 感知）
+function deleteSurchargeRow(table, R) {
+    const m = buildSurchargeMatrix(table);
+    if (m.nrows <= 1) { alert('至少保留一行'); return; }
+    const kept = [];
+    m.cells.forEach(function(x) {
+        const coversR = (x.r0 <= R) && (R <= x.r0 + x.rs - 1);
+        if (x.r0 === R) {
+            // origin 在被删行：rs>1 时续存，起点落到下一存活行（新索引里即 R），rs-1
+            if (x.rs > 1) { x.r0 = R; x.rs -= 1; kept.push(x); }
+            // rs==1：随行删除，丢弃
+        } else if (coversR) {
+            x.rs -= 1;                 // 上方 span 覆盖到 R，减 1（r0<R 不变）
+            kept.push(x);
+        } else if (x.r0 > R) {
+            x.r0 -= 1;                 // 下方行上移
+            kept.push(x);
+        } else {
+            kept.push(x);              // 完全在 R 之上，不受影响
+        }
+    });
+    rebuildSurchargeTbody(m.tbody, kept, m.nrows - 1);
+}
+
+// 新插入行的空单元格：带「同上」勾选框（勾选=保存时与上格合并，不勾选=独立填内容）
+function buildSurchargeEmptyCell(isLast, colspan) {
+    const td = document.createElement('td');
+    if (colspan > 1) td.colSpan = colspan;
+    if (isLast) td.classList.add('sc-left');
+    td.classList.add('sc-mergeable');
+    const chk = document.createElement('span');
+    chk.className = 'sc-merge-chk';
+    chk.setAttribute('contenteditable', 'false');
+    chk.innerHTML = '<label><input type="checkbox" class="sc-merge-cb"> 同上</label>';
+    const body = document.createElement('div');
+    body.className = 'sc-cell-body sc-cell-editing';
+    body.setAttribute('contenteditable', 'true');
+    body.innerHTML = '<br>';
+    td.appendChild(chk);
+    td.appendChild(body);
+    return td;
+}
+
+// 在可视行 R 下方插入一行（新行 index = R+1；自动并入上方跨行合并区）
+function insertSurchargeRow(table, R) {
+    const m = buildSurchargeMatrix(table);
+    const tpl = table.dataset.scTemplate || 'cn';
+    const newIdx = R + 1;
+    // 记录新行各逻辑列是否被上方 span 覆盖
+    const covered = [];
+    for (let c = 0; c < m.ncols; c++) covered[c] = false;
+    m.cells.forEach(function(x) {
+        const straddle = (x.r0 <= R) && (x.r0 + x.rs - 1 >= newIdx); // 原本盖住 R+1 行
+        if (straddle) {
+            x.rs += 1;                 // 延伸覆盖新行
+            for (let j = 0; j < x.cs; j++) covered[x.c0 + j] = true;
+        } else if (x.r0 >= newIdx) {
+            x.r0 += 1;                 // 下方行下移
+        }
+    });
+    // 为未覆盖的逻辑列生成空单元格；仅末列（适用渠道）带「同上」勾选框，其余为普通可编辑格
+    const newCells = [];
+    let c = 0;
+    while (c < m.ncols) {
+        if (covered[c]) { c++; continue; }
+        // intl：fee 两列(3、4)都未覆盖时合成一个 colspan=2 收费格（普通可编辑）
+        if (tpl === 'intl' && c === 3 && !covered[3] && !covered[4]) {
+            const td = document.createElement('td');
+            td.colSpan = 2;
+            makeSurchargeCellEditable(td);
+            td.innerHTML = '<br>';
+            newCells.push({ node: td, r0: newIdx, c0: 3, rs: 1, cs: 2 });
+            c = 5;
+            continue;
+        }
+        let td;
+        if (c === m.ncols - 1) {
+            td = buildSurchargeEmptyCell(true, 1);   // 末列（适用渠道）：带「同上」
+        } else {
+            td = document.createElement('td');       // 其余列：普通可编辑
+            makeSurchargeCellEditable(td);
+            td.innerHTML = '<br>';
+        }
+        newCells.push({ node: td, r0: newIdx, c0: c, rs: 1, cs: 1 });
+        c++;
+    }
+    const all = m.cells.concat(newCells);
+    rebuildSurchargeTbody(m.tbody, all, m.nrows + 1);
+    // 聚焦新行首个空格的可编辑区
+    const firstNew = newCells.length ? newCells[0].node : null;
+    if (firstNew) {
+        const body = firstNew.querySelector('.sc-cell-body') || firstNew;
+        body.focus();
+    }
+}
+
+// 为每个 tbody 行补「＋下方插行 / 删除」操作格；thead 补「操作」列（幂等）
+function addSurchargeOpCells(table) {
+    const headTr = table.querySelector('thead tr');
+    if (headTr && !headTr.querySelector('.sc-op-th')) {
+        const th = document.createElement('th');
+        th.className = 'sc-op-th';
+        th.textContent = '操作';
+        headTr.appendChild(th);
+    }
+    const tbody = table.querySelector('tbody');
+    Array.from(tbody.rows).forEach(function(tr) {
+        let op = tr.querySelector('.sc-op-cell');
+        if (!op) {
+            op = document.createElement('td');
+            op.className = 'sc-op-cell';
+            op.setAttribute('contenteditable', 'false');
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'sc-row-add-btn';
+            addBtn.textContent = '＋下方插行';
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'sc-row-del-btn';
+            delBtn.textContent = '删除';
+            op.appendChild(addBtn);
+            op.appendChild(delBtn);
+            tr.appendChild(op);
+        }
+    });
+}
+
+// 初始化附加明细的行操作（操作格 + 委托点击）
+function initSurchargeRowOps(scEditor, table) {
+    if (!table || table.dataset.scRowOps === '1') return;
+    addSurchargeOpCells(table);
+    const tbody = table.querySelector('tbody');
+    tbody.addEventListener('click', function(e) {
+        const addBtn = e.target.closest('.sc-row-add-btn');
+        const delBtn = e.target.closest('.sc-row-del-btn');
+        if (!addBtn && !delBtn) return;
+        const tr = e.target.closest('tr');
+        if (!tr) return;
+        const R = Array.from(tbody.rows).indexOf(tr);
+        if (R < 0) return;
+        if (addBtn) {
+            insertSurchargeRow(table, R);
+        } else {
+            if (!confirm('确定删除该行？')) return;
+            deleteSurchargeRow(table, R);
+        }
+        addSurchargeOpCells(table);   // 重建后补操作格
+        equalizeFbaRows();
+    });
+    // 「同上」勾选：切换合并预览态
+    tbody.addEventListener('change', function(e) {
+        const cb = e.target.closest('.sc-merge-cb');
+        if (!cb) return;
+        const td = cb.closest('td');
+        if (!td) return;
+        td.classList.toggle('sc-merge-active', cb.checked);
+    });
+    table.dataset.scRowOps = '1';
+}
+
+
+// 国外附加明细序号10：rowspan=4 备注撑出的高度平均分给四个子行（靠 rowspan="4" 锚点定位，不依赖 class）
+function equalizeFbaRows() {
+    document.querySelectorAll('.module-surcharge-intl table.surcharge-table').forEach(function(table) {
+        const anchor = table.querySelector('tbody td[rowspan="4"]');
+        if (!anchor) return;
+        const firstTr = anchor.closest('tr');
+        if (!firstTr) return;
+        const rows = [firstTr];
+        let tr = firstTr;
+        for (let i = 1; i < 4; i++) {
+            tr = tr.nextElementSibling;
+            if (!tr) break;
+            rows.push(tr);
+        }
+        if (rows.length < 2) return;
+        rows.forEach(function(r) { r.style.height = ''; });
+        let total = 0;
+        rows.forEach(function(r) { total += r.getBoundingClientRect().height; });
+        if (!total) return;
+        const each = Math.ceil(total / rows.length);
+        rows.forEach(function(r) { r.style.height = each + 'px'; });
+    });
+}
+
+// 常见海外仓地址模块：读取可编辑标题
+function getOwTitle(owEditor) {
+    if (!owEditor) return '常见海外仓地址';
+    const titleEl = owEditor.querySelector('.surcharge-title-bar');
+    const t = titleEl ? (titleEl.textContent || '').trim() : '';
+    return t || '常见海外仓地址';
 }
 
 // 常见海外仓地址模块：提取整表 tbody 的 HTML（去掉编辑态属性）
@@ -3229,13 +3608,16 @@ async function addModule(type) {
     if (type === 'dg_grid_v2' || type === 'dg_excel_9battery' || type === 'dg_excel_pucabinet') {
         apiType = 'dg_grid';
     }
+    if (type === 'surcharge_tpl_cn' || type === 'surcharge_tpl_intl') {
+        apiType = 'surcharge';
+    }
 
     if (type === 'text') {
         content = { title: '', text: '', remark: '' };
-    } else if (type === 'surcharge_cn') {
-        content = { title: '国内附加明细' };
-    } else if (type === 'surcharge_intl') {
-        content = { title: '国外附加明细' };
+    } else if (type === 'surcharge_tpl_cn') {
+        content = { title: '国内附加明细', template: 'cn' };
+    } else if (type === 'surcharge_tpl_intl') {
+        content = { title: '国外附加明细', template: 'intl' };
     } else if (type === 'overseas_warehouse') {
         content = { title: '常见海外仓地址' };
     } else if (type === 'image') {
@@ -5111,14 +5493,11 @@ async function copyModule(moduleId) {
         }
     } else if (moduleType === 'dg_grid') {
         content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
-    } else if (moduleType === 'surcharge_cn' || moduleType === 'surcharge_intl') {
-        content = {
-            title: moduleType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细',
-            tbody_html: getSurchargeTbodyHtml(moduleBody.querySelector('.surcharge-editor'))
-        };
+    } else if (moduleType === 'surcharge' || moduleType === 'surcharge_cn' || moduleType === 'surcharge_intl') {
+        content = getSurchargeContent(moduleBody.querySelector('.surcharge-editor'));
     } else if (moduleType === 'overseas_warehouse') {
         content = {
-            title: '常见海外仓地址',
+            title: getOwTitle(moduleBody.querySelector('.overseas-warehouse-editor')),
             tbody_html: getOwTbodyHtml(moduleBody.querySelector('.overseas-warehouse-editor'))
         };
     }
