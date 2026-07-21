@@ -90,6 +90,25 @@ def init_db():
     ''')
         cursor.execute("DELETE FROM modules WHERE type = 'richtext'")
         cursor.execute('''
+        CREATE TABLE IF NOT EXISTS xiaobao_zones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            postcode TEXT NOT NULL,
+            zone TEXT NOT NULL,
+            suburb TEXT NOT NULL DEFAULT '',
+            state TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_xiaobao_zones_postcode ON xiaobao_zones(postcode)')
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS xiaobao_month_settings (
+            month INTEGER PRIMARY KEY,
+            unit_price REAL NOT NULL DEFAULT 0,
+            exchange_rate REAL NOT NULL DEFAULT 0,
+            fuel_rate REAL NOT NULL DEFAULT 0
+        )
+    ''')
+        cursor.execute('''
         CREATE TABLE IF NOT EXISTS channel_reject_postcodes (
             channel TEXT PRIMARY KEY,
             postcodes TEXT NOT NULL DEFAULT '',

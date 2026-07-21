@@ -124,6 +124,8 @@ def article_edit(article_id):
         mod_types = [m.get('type', '') for m in modules]
         if 'warehouse_sheets' in mod_types:
             return redirect(url_for('admin.warehouse_editor', article_id=article_id))
+        if 'xiaobao_sheets' in mod_types:
+            return redirect(url_for('admin.xiaobao_editor', article_id=article_id))
         # DG：PS/海关查验说明迁出表格并入备注；GET 时若规范化结果变化则写回库（含 Excel 栅格非 v2）
         from services.dg_quote_grid import (
             normalize_dg_v2_ps_rows_to_remark,
@@ -255,6 +257,54 @@ def warehouse_sheet_edit(key):
         sheet_name=sheet_meta['name'],
         is_large=sheet_meta.get('is_large', False),
     )
+
+
+@admin_bp.route('/article/<int:article_id>/xiaobao-editor', methods=['GET', 'POST'])
+@admin_required
+def xiaobao_editor(article_id):
+    """虚拟小包报价表编辑器：直接进入报价表编辑（含文章设置 + 分区表维护入口）"""
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        if request.method == 'POST':
+            title = request.form.get('title')
+            category_id = request.form.get('category_id')
+            is_published = 1 if request.form.get('is_published', '1') == '1' else 0
+            cursor.execute(
+                'UPDATE articles SET title = ?, category_id = ?, is_published = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                (title, category_id, is_published, article_id)
+            )
+            conn.commit()
+        cursor.execute('SELECT * FROM articles WHERE id = ?', (article_id,))
+        article = cursor.fetchone()
+        if not article:
+            abort(404)
+        article = dict(article)
+        categories = models.get_all_categories()
+        index_path = os.path.join(config._BASE_DIR, 'data', 'xiaobao', '_index.json')
+        sheets_index = []
+        if os.path.isfile(index_path):
+            with open(index_path, 'r', encoding='utf-8') as f:
+                sheets_index = json.load(f)
+        if not sheets_index:
+            abort(404)
+        sheet_meta = sheets_index[0]
+        return render_template(
+            'admin/warehouse_sheet_edit.html',
+            sheet_key=sheet_meta['key'],
+            sheet_name=sheet_meta['name'],
+            is_large=sheet_meta.get('is_large', False),
+            api_sheet_base='/api/xiaobao-sheet/',
+            article=article,
+            categories=categories,
+            back_url=url_for('admin.articles'),
+        )
+
+
+@admin_bp.route('/xiaobao-zones')
+@admin_required
+def xiaobao_zones_page():
+    """虚拟小包分区表维护页"""
+    return render_template('admin/xiaobao_zones.html')
 
 
 @admin_bp.route('/channel-postcodes')

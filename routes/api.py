@@ -923,3 +923,370 @@ def warehouse_sheet_save(key):
     _load_all_postcode_maps.cache_clear()
     _logger.info('warehouse sheet save key=%s', key)
     return jsonify({'success': True})
+
+
+# ---------------------------------------------------------------------------
+# 虚拟小包报价表 — sheet 数据（价格表 JSON）+ 分区表（DB 查询关系表）
+# ---------------------------------------------------------------------------
+
+_XIAOBAO_DATA_DIR = os.path.join(config._BASE_DIR, 'data', 'xiaobao')
+
+
+def _xb_index_path():
+    return os.path.join(_XIAOBAO_DATA_DIR, '_index.json')
+
+
+def _xb_sheet_path(key):
+    safe = re.sub(r'[^a-zA-Z0-9_]', '', key)
+    return os.path.join(_XIAOBAO_DATA_DIR, f'{safe}.json')
+
+
+@api_bp.route('/xiaobao-sheets')
+def xiaobao_sheets_index():
+    path = _xb_index_path()
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': '数据未初始化'}), 404
+    with open(path, 'r', encoding='utf-8') as f:
+        index = json.load(f)
+    return jsonify({'success': True, 'data': index})
+
+
+@api_bp.route('/xiaobao-sheet/<key>')
+def xiaobao_sheet_detail(key):
+    path = _xb_sheet_path(key)
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return jsonify({'success': True, 'data': data})
+
+
+@api_bp.route('/xiaobao-sheet/<key>/save', methods=['POST'])
+@admin_required
+def xiaobao_sheet_save(key):
+    """保存价格表编辑数据"""
+    path = _xb_sheet_path(key)
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    body = request.json or {}
+    sections = body.get('sections')
+    if not isinstance(sections, list):
+        return jsonify({'success': False, 'message': '参数错误'}), 400
+
+    orig_sections = data.get('sections', [])
+    new_sections = []
+    for sec_data in sections:
+        oidx = sec_data.get('_oidx')
+        if isinstance(oidx, int) and 0 <= oidx < len(orig_sections):
+            base = dict(orig_sections[oidx])
+        else:
+            base = {}
+        if sec_data.get('type') == 'richtext':
+            base['type'] = 'richtext'
+            base['html'] = sec_data.get('html', '')
+        if 'rows' in sec_data:
+            base['rows'] = sec_data['rows']
+        if 'title' in sec_data:
+            base['title'] = sec_data['title']
+        new_sections.append(base)
+    data['sections'] = new_sections
+
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    _logger.info('xiaobao sheet save key=%s', key)
+    return jsonify({'success': True})
+
+
+@api_bp.route('/xiaobao-adjust-price', methods=['POST'])
+@admin_required
+def xiaobao_adjust_price():
+    body = request.json or {}
+    sheet_key = body.get('sheet_key', '')
+    pct_raw = body.get('percentage')
+
+    if not sheet_key or pct_raw is None:
+        return jsonify({'success': False, 'message': '缺少 sheet_key 或 percentage'}), 400
+
+    try:
+        pct = float(pct_raw)
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'percentage 必须是数字'}), 400
+
+    if abs(pct) > 100:
+        return jsonify({'success': False, 'message': '调幅不能超过 ±100%'}), 400
+
+    path = _xb_sheet_path(sheet_key)
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': f'sheet "{sheet_key}" 不存在'}), 404
+
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    factor = 1 + pct / 100.0
+    adjusted = 0
+
+    for sec in data.get('sections', []):
+        if sec.get('type') == 'zone_table':
+            continue
+        for row in sec.get('rows', []):
+            for ci, cell in enumerate(row):
+                if cell == '' or cell is None:
+                    continue
+                try:
+                    num = float(cell)
+                except (ValueError, TypeError):
+                    continue
+                new_val = round(num * factor, 2)
+                if new_val == int(new_val):
+                    new_val = int(new_val)
+                row[ci] = new_val
+                adjusted += 1
+
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
+
+    _logger.info('xiaobao adjust price sheet=%s pct=%s adjusted=%s', sheet_key, pct, adjusted)
+    return jsonify({'success': True, 'adjusted_count': adjusted})
+
+
+def _normalize_postcode(raw):
+    """归一化为 4 位数字邮编，非法返回空串"""
+    digits = ''.join(c for c in str(raw or '') if c.isdigit())
+    if not digits or len(digits) > 4:
+        return ''
+    return digits.zfill(4)
+
+
+@api_bp.route('/xiaobao-zone-lookup')
+def xiaobao_zone_lookup():
+    """多邮编 → 分区查询（读数据库）"""
+    raw = request.args.get('codes') or request.args.get('code') or ''
+    tokens = re.split(r'[\s,，、;；]+', raw.strip())
+    codes = []
+    seen = set()
+    for t in tokens:
+        pc = _normalize_postcode(t)
+        if pc and pc not in seen:
+            seen.add(pc)
+            codes.append(pc)
+        if len(codes) >= 50:
+            break
+
+    if not codes:
+        return jsonify({'success': False, 'message': '请输入邮编'}), 400
+
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        placeholders = ','.join('?' * len(codes))
+        cursor.execute(
+            f'SELECT postcode, zone, suburb, state FROM xiaobao_zones WHERE postcode IN ({placeholders})',
+            codes,
+        )
+        by_code = {}
+        for r in cursor.fetchall():
+            by_code.setdefault(r['postcode'], {
+                'zone': r['zone'], 'suburb': r['suburb'], 'state': r['state']
+            })
+
+    data = []
+    for pc in codes:
+        hit = by_code.get(pc)
+        if hit:
+            data.append({'code': pc, 'found': True, 'zone': hit['zone'],
+                         'suburb': hit['suburb'], 'state': hit['state']})
+        else:
+            data.append({'code': pc, 'found': False})
+
+    return jsonify({'success': True, 'data': data})
+
+
+@api_bp.route('/xiaobao-zones')
+@admin_required
+def xiaobao_zones_list():
+    """分区表分页查询（后台维护用）"""
+    search = (request.args.get('search') or '').strip()
+    page = max(1, request.args.get('page', 1, type=int))
+    per_page = min(200, max(10, request.args.get('per_page', 50, type=int)))
+    offset = (page - 1) * per_page
+
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        where = ''
+        params = []
+        if search:
+            where = 'WHERE postcode LIKE ? OR zone LIKE ? OR suburb LIKE ? OR state LIKE ?'
+            like = f'%{search}%'
+            params = [like, like, like, like]
+        cursor.execute(f'SELECT COUNT(*) FROM xiaobao_zones {where}', params)
+        total = cursor.fetchone()[0]
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        cursor.execute(
+            f'SELECT id, postcode, zone, suburb, state FROM xiaobao_zones {where} '
+            'ORDER BY postcode, id LIMIT ? OFFSET ?',
+            params + [per_page, offset],
+        )
+        rows = [dict(r) for r in cursor.fetchall()]
+
+    return jsonify({'success': True, 'data': rows, 'total': total,
+                    'page': page, 'total_pages': total_pages, 'per_page': per_page})
+
+
+@api_bp.route('/xiaobao-zones/add', methods=['POST'])
+@admin_required
+def xiaobao_zones_add():
+    body = request.json or {}
+    postcode = _normalize_postcode(body.get('postcode'))
+    zone = (body.get('zone') or '').strip()
+    if not postcode or not zone:
+        return jsonify({'success': False, 'message': '邮编（4位）和分区必填'}), 400
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO xiaobao_zones (postcode, zone, suburb, state) VALUES (?, ?, ?, ?)',
+            (postcode, zone, (body.get('suburb') or '').strip(), (body.get('state') or '').strip()),
+        )
+        conn.commit()
+        return jsonify({'success': True, 'id': cursor.lastrowid})
+
+
+@api_bp.route('/xiaobao-zones/<int:zid>/update', methods=['POST'])
+@admin_required
+def xiaobao_zones_update(zid):
+    body = request.json or {}
+    fields = []
+    params = []
+    if 'postcode' in body:
+        pc = _normalize_postcode(body.get('postcode'))
+        if not pc:
+            return jsonify({'success': False, 'message': '邮编必须是4位数字'}), 400
+        fields.append('postcode = ?')
+        params.append(pc)
+    if 'zone' in body:
+        zone = (body.get('zone') or '').strip()
+        if not zone:
+            return jsonify({'success': False, 'message': '分区不能为空'}), 400
+        fields.append('zone = ?')
+        params.append(zone)
+    if 'suburb' in body:
+        fields.append('suburb = ?')
+        params.append((body.get('suburb') or '').strip())
+    if 'state' in body:
+        fields.append('state = ?')
+        params.append((body.get('state') or '').strip())
+    if not fields:
+        return jsonify({'success': False, 'message': '无更新字段'}), 400
+    params.append(zid)
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f'UPDATE xiaobao_zones SET {", ".join(fields)} WHERE id = ?', params)
+        conn.commit()
+        return jsonify({'success': True})
+
+
+@api_bp.route('/xiaobao-zones/<int:zid>/delete', methods=['POST'])
+@admin_required
+def xiaobao_zones_delete(zid):
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM xiaobao_zones WHERE id = ?', (zid,))
+        conn.commit()
+        return jsonify({'success': True})
+
+
+@api_bp.route('/xiaobao-zones/bulk-import', methods=['POST'])
+@admin_required
+def xiaobao_zones_bulk_import():
+    """文本批量导入：每行 postcode, zone[, suburb[, state]]（逗号或制表符分隔）"""
+    body = request.json or {}
+    text = body.get('text') or ''
+    mode = body.get('mode') or 'append'
+    if mode not in ('append', 'replace'):
+        mode = 'append'
+
+    rows = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = re.split(r'[\t,，]+', line)
+        parts = [p.strip() for p in parts]
+        pc = _normalize_postcode(parts[0]) if parts else ''
+        zone = parts[1].strip() if len(parts) > 1 else ''
+        if not pc or not zone:
+            continue
+        suburb = parts[2] if len(parts) > 2 else ''
+        state = parts[3] if len(parts) > 3 else ''
+        rows.append((pc, zone, suburb, state))
+
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        if mode == 'replace':
+            cursor.execute('DELETE FROM xiaobao_zones')
+        cursor.executemany(
+            'INSERT INTO xiaobao_zones (postcode, zone, suburb, state) VALUES (?, ?, ?, ?)',
+            rows,
+        )
+        conn.commit()
+
+    _logger.info('xiaobao zones bulk import mode=%s inserted=%s', mode, len(rows))
+    return jsonify({'success': True, 'inserted': len(rows)})
+
+
+@api_bp.route('/xiaobao-settings')
+def xiaobao_settings_get():
+    """月度参数（单价/汇率/燃油费率），前台公开读取"""
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT month, unit_price, exchange_rate, fuel_rate FROM xiaobao_month_settings ORDER BY month')
+        data = {}
+        for r in cursor.fetchall():
+            data[str(r['month'])] = {
+                'unit_price': r['unit_price'],
+                'exchange_rate': r['exchange_rate'],
+                'fuel_rate': r['fuel_rate'],
+            }
+    return jsonify({'success': True, 'data': data})
+
+
+@api_bp.route('/xiaobao-settings/save', methods=['POST'])
+@admin_required
+def xiaobao_settings_save():
+    """批量保存 12 个月参数"""
+    body = request.json or {}
+    settings = body.get('settings')
+    if not isinstance(settings, list):
+        return jsonify({'success': False, 'message': '参数错误'}), 400
+
+    def _num(v):
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0.0
+
+    saved = 0
+    with db.get_db() as conn:
+        cursor = conn.cursor()
+        for item in settings:
+            try:
+                month = int(item.get('month'))
+            except (ValueError, TypeError):
+                continue
+            if month < 1 or month > 12:
+                continue
+            cursor.execute(
+                'INSERT INTO xiaobao_month_settings (month, unit_price, exchange_rate, fuel_rate) '
+                'VALUES (?, ?, ?, ?) '
+                'ON CONFLICT(month) DO UPDATE SET unit_price=excluded.unit_price, '
+                'exchange_rate=excluded.exchange_rate, fuel_rate=excluded.fuel_rate',
+                (month, _num(item.get('unit_price')), _num(item.get('exchange_rate')), _num(item.get('fuel_rate'))),
+            )
+            saved += 1
+        conn.commit()
+
+    _logger.info('xiaobao settings save count=%s', saved)
+    return jsonify({'success': True, 'saved': saved})

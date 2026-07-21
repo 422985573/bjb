@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}分区表维护 - 虚拟小包报价表{% endblock %}
+
+{% block extra_css %}
+<style>
+.xz-wrap { max-width: 1000px; margin: 0 auto; padding: 20px; }
+.xz-card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 18px; }
+.xz-card h2 { font-size: 18px; color: #0f172a; margin: 0 0 4px; }
+.xz-card h3 { font-size: 14px; color: #0f172a; margin: 0 0 12px; }
+.xz-sub { font-size: 12px; color: #64748b; margin: 0 0 14px; }
+.xz-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.xz-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
+.xz-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.xz-btn { padding: 8px 18px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: #2563eb; color: #fff; }
+.xz-btn:hover { background: #1d4ed8; }
+.xz-btn--ghost { background: #f1f5f9; color: #334155; }
+.xz-btn--ghost:hover { background: #e2e8f0; }
+.xz-btn--danger { background: #fee2e2; color: #dc2626; }
+.xz-btn--danger:hover { background: #fecaca; }
+.xz-btn--sm { padding: 4px 10px; font-size: 12px; }
+.xz-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+.xz-table th, .xz-table td { border: 1px solid #e2e8f0; padding: 7px 10px; text-align: left; }
+.xz-table th { background: #f8fafc; color: #475569; font-weight: 600; }
+.xz-table input { width: 100%; box-sizing: border-box; padding: 4px 6px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; background: transparent; }
+.xz-table input:focus { outline: none; border-color: #93c5fd; background: #fff; }
+.xz-pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 14px; }
+.xz-msg { font-size: 12px; font-weight: 600; margin-left: 8px; }
+.xz-msg.ok { color: #16a34a; }
+.xz-msg.err { color: #dc2626; }
+textarea.xz-input { width: 100%; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: monospace; }
+.xz-back { display: inline-block; margin-bottom: 14px; color: #2563eb; text-decoration: none; font-size: 13px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="xz-wrap">
+    <a class="xz-back" href="{{ url_for('admin.articles') }}">← 返回文章列表</a>
+
+    <div class="xz-card">
+        <h2>分区表维护（邮编 → 分区）</h2>
+        <p class="xz-sub">前台按邮编查询分区、并在报价表中高亮对应报价行；此表即查询关系数据源。</p>
+        <div class="xz-row">
+            <input class="xz-input" id="xzSearch" placeholder="搜索邮编 / 分区 / 城市 / 州" style="flex:1;min-width:220px;">
+            <button class="xz-btn" id="xzSearchBtn">搜索</button>
+            <span class="xz-msg" id="xzListMsg"></span>
+        </div>
+    </div>
+
+    <div class="xz-card">
+        <h3>新增一条</h3>
+        <div class="xz-row">
+            <input class="xz-input" id="xzNewPostcode" placeholder="邮编(4位)" style="width:110px;">
+            <input class="xz-input" id="xzNewZone" placeholder="分区" style="width:110px;">
+            <input class="xz-input" id="xzNewSuburb" placeholder="城市/Suburb" style="flex:1;min-width:160px;">
+            <input class="xz-input" id="xzNewState" placeholder="州" style="width:90px;">
+            <button class="xz-btn" id="xzAddBtn">新增</button>
+            <span class="xz-msg" id="xzAddMsg"></span>
+        </div>
+    </div>
+
+    <div class="xz-card">
+        <h3>数据列表</h3>
+        <table class="xz-table">
+            <thead>
+                <tr><th style="width:90px;">邮编</th><th style="width:90px;">分区</th><th>城市</th><th style="width:70px;">州</th><th style="width:130px;">操作</th></tr>
+            </thead>
+            <tbody id="xzBody"><tr><td colspan="5" style="text-align:center;color:#94a3b8;">加载中...</td></tr></tbody>
+        </table>
+        <div class="xz-pager">
+            <button class="xz-btn xz-btn--ghost" id="xzPrev">上一页</button>
+            <span id="xzPageInfo">-</span>
+            <button class="xz-btn xz-btn--ghost" id="xzNext">下一页</button>
+        </div>
+    </div>
+
+    <div class="xz-card">
+        <h3>批量导入</h3>
+        <p class="xz-sub">每行一条，格式：<code>邮编, 分区, 城市(可选), 州(可选)</code>，用逗号或制表符分隔。</p>
+        <textarea class="xz-input" id="xzBulkText" placeholder="2000, SYD, Sydney, NSW&#10;3000, MEL, Melbourne, VIC"></textarea>
+        <div class="xz-row" style="margin-top:10px;">
+            <label style="font-size:13px;color:#475569;"><input type="radio" name="xzMode" value="append" checked> 追加</label>
+            <label style="font-size:13px;color:#475569;"><input type="radio" name="xzMode" value="replace"> 覆盖（先清空全部）</label>
+            <button class="xz-btn" id="xzBulkBtn">导入</button>
+            <span class="xz-msg" id="xzBulkMsg"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var page = 1, totalPages = 1, search = '';
+
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { var d = document.createElement('div'); d.textContent = (v == null ? '' : String(v)); return d.innerHTML; }
+  function msg(el, text, ok) { el.textContent = text; el.className = 'xz-msg ' + (ok ? 'ok' : 'err'); setTimeout(function () { if (el.textContent === text) el.textContent = ''; }, 2500); }
+
+  function load() {
+    var url = '/api/xiaobao-zones?page=' + page + '&per_page=50';
+    if (search) url += '&search=' + encodeURIComponent(search);
+    fetch(url).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.success) { $('xzBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#dc2626;">加载失败</td></tr>'; return; }
+      totalPages = res.total_pages; page = res.page;
+      $('xzPageInfo').textContent = page + ' / ' + totalPages + '（共 ' + res.total + ' 条）';
+      var rows = res.data || [];
+      if (!rows.length) { $('xzBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">无数据</td></tr>'; return; }
+      var h = '';
+      rows.forEach(function (r) {
+        h += '<tr data-id="' + r.id + '">';
+        h += '<td><input data-f="postcode" value="' + esc(r.postcode) + '" maxlength="4"></td>';
+        h += '<td><input data-f="zone" value="' + esc(r.zone) + '"></td>';
+        h += '<td><input data-f="suburb" value="' + esc(r.suburb) + '"></td>';
+        h += '<td><input data-f="state" value="' + esc(r.state) + '"></td>';
+        h += '<td><button class="xz-btn xz-btn--sm" data-act="save">保存</button> <button class="xz-btn xz-btn--sm xz-btn--danger" data-act="del">删除</button></td>';
+        h += '</tr>';
+      });
+      $('xzBody').innerHTML = h;
+    }).catch(function () { $('xzBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#dc2626;">网络错误</td></tr>'; });
+  }
+
+  function postJSON(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(function (r) { return r.json(); });
+  }
+
+  $('xzSearchBtn').addEventListener('click', function () { search = $('xzSearch').value.trim(); page = 1; load(); });
+  $('xzSearch').addEventListener('keydown', function (e) { if (e.key === 'Enter') { search = $('xzSearch').value.trim(); page = 1; load(); } });
+  $('xzPrev').addEventListener('click', function () { if (page > 1) { page--; load(); } });
+  $('xzNext').addEventListener('click', function () { if (page < totalPages) { page++; load(); } });
+
+  $('xzAddBtn').addEventListener('click', function () {
+    postJSON('/api/xiaobao-zones/add', {
+      postcode: $('xzNewPostcode').value, zone: $('xzNewZone').value,
+      suburb: $('xzNewSuburb').value, state: $('xzNewState').value
+    }).then(function (res) {
+      if (res.success) { msg($('xzAddMsg'), '已新增', true); $('xzNewPostcode').value = ''; $('xzNewZone').value = ''; $('xzNewSuburb').value = ''; $('xzNewState').value = ''; load(); }
+      else msg($('xzAddMsg'), res.message || '失败', false);
+    });
+  });
+
+  $('xzBody').addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    var id = tr.getAttribute('data-id');
+    var act = btn.getAttribute('data-act');
+    if (act === 'del') {
+      if (!confirm('确认删除该邮编分区？')) return;
+      postJSON('/api/xiaobao-zones/' + id + '/delete', {}).then(function (res) { if (res.success) load(); });
+    } else if (act === 'save') {
+      var body = {};
+      tr.querySelectorAll('input[data-f]').forEach(function (inp) { body[inp.getAttribute('data-f')] = inp.value; });
+      postJSON('/api/xiaobao-zones/' + id + '/update', body).then(function (res) {
+        if (res.success) { btn.textContent = '已保存'; setTimeout(function () { btn.textContent = '保存'; }, 1500); }
+        else alert(res.message || '保存失败');
+      });
+    }
+  });
+
+  $('xzBulkBtn').addEventListener('click', function () {
+    var mode = document.querySelector('input[name="xzMode"]:checked').value;
+    if (mode === 'replace' && !confirm('覆盖模式会清空现有全部分区数据，确认继续？')) return;
+    postJSON('/api/xiaobao-zones/bulk-import', { text: $('xzBulkText').value, mode: mode }).then(function (res) {
+      if (res.success) { msg($('xzBulkMsg'), '已导入 ' + res.inserted + ' 条', true); page = 1; load(); }
+      else msg($('xzBulkMsg'), res.message || '导入失败', false);
+    });
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

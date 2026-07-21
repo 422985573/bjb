@@ -133,6 +133,12 @@ def article_detail(article_code):
                 article=article,
                 modules=modules,
             )
+        if 'xiaobao_sheets' in mod_types:
+            return render_template(
+                'article_xiaobao.html',
+                article=article,
+                modules=modules,
+            )
         # 仅含 dg_grid（柜类报价表）模块的文章使用独立页模板（无渠道目录、无邮编搜索条）
         article_dg_page = bool(modules) and all(t == 'dg_grid' for t in mod_types)
         if article_dg_page:
