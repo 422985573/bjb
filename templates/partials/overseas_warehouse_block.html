@@ -1,0 +1,50 @@
+{# overseas_warehouse：常见海外仓地址（可编辑单元格 + 增删行 + 字号/颜色；保存整表 tbody） #}
+{% set ow_content = module.content | from_json %}
+{% set ow_editable = ow_editable if ow_editable is defined else false %}
+<div class="module module-surcharge module-overseas-warehouse">
+    <div class="surcharge-title-bar">常见海外仓地址</div>
+    <div class="surcharge-table-wrapper">
+        <table class="surcharge-table ow-table"{% if ow_editable %} data-ow-editable="1"{% endif %}>
+            <thead>
+                <tr>
+                    <th class="ow-col-idx">序号</th>
+                    <th class="ow-col-wh">海外仓</th>
+                    <th class="ow-col-area">地区</th>
+                    <th class="ow-col-code">代码</th>
+                    <th class="ow-col-post">邮编</th>
+                    <th class="ow-col-addr">地址详情</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if ow_content and ow_content.tbody_html %}{{ ow_content.tbody_html | safe_html }}{% else %}
+                <tr><td>1</td><td>FBA</td><td>悉尼</td><td>BWU1</td><td>2170</td><td class="sc-left">23 Centenary Ave,Moorebank, NSW 2170,AU</td></tr>
+                <tr><td>2</td><td>FBA</td><td>悉尼</td><td>BWU2</td><td>2178</td><td class="sc-left">13 Emporium Avenue 2178 - Kemps Creek, NSW AU</td></tr>
+                <tr><td>3</td><td>FBA</td><td>悉尼</td><td>XBW3</td><td>2178</td><td class="sc-left">19 Giba Drive KEMPS CREEK 2178 NSW AU</td></tr>
+                <tr><td>4</td><td>FBA</td><td>悉尼</td><td>XAU1</td><td>2178</td><td class="sc-left">5 Darrabarra Ave, Kemps CreekNSW 2178, Australia</td></tr>
+                <tr><td>5</td><td>FBA</td><td>布里斯班</td><td>BNE1</td><td>4178</td><td class="sc-left">42-52 EXPORT STREETY LYTTON,QUEENLAND 4178 AU</td></tr>
+                <tr><td>6</td><td>FBA</td><td>珀斯</td><td>PER2</td><td>6105</td><td class="sc-left">60 Paltridge Road Perth Airport WA 6105 AU</td></tr>
+                <tr><td>7</td><td>FBA</td><td>墨尔本</td><td>MEL1</td><td>3175</td><td class="sc-left">29 National Drive,Dandenong South, VIC 3175,AU</td></tr>
+                <tr><td>8</td><td>FBA</td><td>墨尔本</td><td>MEL5</td><td>3023</td><td class="sc-left">103 Palm Springs Road RAVENHALL,VIC 3023 AU</td></tr>
+                <tr><td>9</td><td>FBA</td><td>墨尔本</td><td>XAU1</td><td>3043</td><td class="sc-left">Warehouse B, 25-29 Jets Court, Tullamarine, VIC 3043AU</td></tr>
+                <tr><td>10</td><td>FBA</td><td>墨尔本</td><td>AVV2</td><td>3977</td><td class="sc-left">95 WHITFIELD BOUVARD Cranbourne West, VIC 3977 AU</td></tr>
+                <tr><td>11</td><td>4PX</td><td>悉尼</td><td>4PX-SYD</td><td>2143</td><td class="sc-left">G2/391 Park Road, Regents Park,NSW 2143 AU</td></tr>
+                <tr><td>11</td><td>4PX</td><td>悉尼</td><td>4PX-SYD2</td><td>2190</td><td class="sc-left">457 Waterloo Rd Greenacre , Greenacre , NSW 2190 , AU</td></tr>
+                <tr><td>12</td><td>万邑通</td><td>悉尼</td><td>WINIT-SYD</td><td>2142</td><td class="sc-left">C/O Warehouse 2,54 Ferndell St South Granville 2142 AU</td></tr>
+                <tr><td>13</td><td>万邑通</td><td>墨尔本</td><td>WINIT-MEL</td><td>3029</td><td class="sc-left">1-5 Felstead Drive, Trunganina, Victoria, 3029 AU</td></tr>
+                <tr><td>14</td><td>出口易</td><td>悉尼</td><td>CK1-SYD</td><td>2211</td><td class="sc-left">warehouse 6 45-53 davies road , padstow , nsw 2211 AU</td></tr>
+                <tr><td>15</td><td>橙联</td><td>墨尔本</td><td>CL-MEL</td><td>3026</td><td class="sc-left">162A Australis Dr DERRIMUT VIC 3026 AU</td></tr>
+                <tr><td>16</td><td>橙联</td><td>悉尼</td><td>CL-SYD</td><td>2143</td><td class="sc-left">Block A1, 391 Park Rd , Regents Park , NSW 2143 AU</td></tr>
+                <tr><td>17</td><td>谷仓</td><td>悉尼</td><td>GC-SYD</td><td>2163</td><td class="sc-left">C/O 2B/246 Miller Road Villawood NSW 2163 AU</td></tr>
+                <tr><td>18</td><td>谷仓</td><td>墨尔本</td><td>GC-MEL-1</td><td>3175</td><td class="sc-left">C/O 63-69 Pound Road West,DandenongSouth,VIC 3175 AU</td></tr>
+                <tr><td>19</td><td>谷仓</td><td>墨尔本</td><td>GC-MEL-2</td><td>3175</td><td class="sc-left">C/O 42-62 Pound Road West,Dandenong South VIC 3175 AU</td></tr>
+                <tr><td>20</td><td>Sendex</td><td>墨尔本</td><td>SENDEX</td><td>3012</td><td class="sc-left">Building J, 413 Francis St Brooklyn VIC 3012 AU</td></tr>
+                <tr><td>20</td><td>Sendex</td><td>悉尼</td><td>SENDEX</td><td>2116</td><td class="sc-left">8/40 Brodie St Rydalmere NSW 2116 AU</td></tr>
+                <tr><td>21</td><td>FBA</td><td>悉尼</td><td>BWU6</td><td>2175</td><td class="sc-left">5 Johnston Crescent HORSLEY PARK , NSW 2175 AU</td></tr>
+                <tr><td>22</td><td>FBA</td><td>珀斯</td><td>PER4</td><td>6164</td><td class="sc-left">Site 516 2 Centurion Pl JANDAKOT 6164 WA AU</td></tr>
+                <tr><td>23</td><td>FBA</td><td>布里斯班</td><td>XAU6</td><td>4110</td><td class="sc-left">82A Noosa , Heathwood , QLD , 4110 AU</td></tr>
+                <tr><td>24</td><td>FBA</td><td>墨尔本</td><td>XAU2</td><td>3175</td><td class="sc-left">Unit 2 80-96 South Park Drive DANDENONG SOUTH 3175 AU</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>

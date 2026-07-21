@@ -1686,8 +1686,8 @@
     border-radius: 8px;
     padding: 15px;
     box-shadow: var(--shadow);
-    flex: 1;
-    min-height: 0;
+    flex: 1 0 auto;
+    min-height: 220px;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -2123,11 +2123,7 @@
             <button type="button" class="module-btn" onclick="addModule('channel')">📊 添加渠道模块</button>
             <button type="button" class="module-btn" onclick="addModule('surcharge_cn')">🧾 添加 国内附加明细</button>
             <button type="button" class="module-btn" onclick="addModule('surcharge_intl')">🧾 添加 国外附加明细</button>
-            <p class="sidebar-hint-channel" style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">含「费用项目」与表格增删行</p>
-            <button type="button" class="module-btn" onclick="addModule('dg_grid_v2')">📋 添加 精准整柜报价表</button>
-            <button type="button" class="module-btn" onclick="addModule('dg_excel_9battery')">📊 添加 9类电池柜报价表</button>
-            <button type="button" class="module-btn" onclick="addModule('dg_excel_pucabinet')">📊 添加 普柜报价表</button>
-            <p class="sidebar-hint-dg" style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">普柜与 9类电池柜：同一套 Excel 分段编辑器、工具栏与对外文章页排版；仅导入模板数据不同（与 DG报价表 分块版式无关）。</p>
+            <button type="button" class="module-btn" onclick="addModule('overseas_warehouse')">🏬 添加 常见海外仓地址</button>
         </div>
         
         <div class="module-list-sidebar">
@@ -2141,6 +2137,7 @@
                         {% if module.type == 'image' %}🖼️{% endif %}
                         {% if module.type == 'channel' %}📊{% endif %}
                         {% if module.type in ('surcharge_cn', 'surcharge_intl') %}🧾{% endif %}
+                        {% if module.type == 'overseas_warehouse' %}🏬{% endif %}
                         {% if module.type == 'dg_grid' %}
                             {% if (content.schema|default(0))|int == 2 %}📋{% else %}📊{% endif %}
                         {% endif %}
@@ -2201,6 +2198,7 @@
                         {% if module.type == 'channel' %}📊 渠道模块{% endif %}
                         {% if module.type == 'surcharge_cn' %}🧾 国内附加明细{% endif %}
                         {% if module.type == 'surcharge_intl' %}🧾 国外附加明细{% endif %}
+                        {% if module.type == 'overseas_warehouse' %}🏬 常见海外仓地址{% endif %}
                         {% if module.type == 'dg_grid' %}
                             {% set dg_ic = module.content | from_json %}
                             {% if (dg_ic.schema|default(0))|int == 2 %}
@@ -2370,14 +2368,31 @@
                             {% include 'admin/dg/dg_excel_grid_editor.html' %}
                         {% endif %}
                     {% elif module.type == 'surcharge_cn' %}
-                        <div class="surcharge-fixed-editor" data-module-type="surcharge_cn">
-                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">该模块为固定内容表格（国内附加明细），文章页自动展示完整表格，无需编辑。</p>
-                            {% include 'partials/surcharge_cn_block.html' %}
+                        <div class="surcharge-editor" data-module-type="surcharge_cn">
+                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">点击单元格改文字；<strong>选中文字后右上角会弹出样式条</strong>，可改字号/颜色（不选中则应用到整格）。表格结构（行列、合并）固定不可增删。保存后前台同步展示。</p>
+                            <div class="ow-editor-area">
+                                {% include 'admin/partials/table_style_popover.html' %}
+                                {% with sc_editable = true %}{% include 'partials/surcharge_cn_block.html' %}{% endwith %}
+                            </div>
                         </div>
                     {% elif module.type == 'surcharge_intl' %}
-                        <div class="surcharge-fixed-editor" data-module-type="surcharge_intl">
-                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">该模块为固定内容表格（国外附加明细），文章页自动展示完整表格，无需编辑。</p>
-                            {% include 'partials/surcharge_intl_block.html' %}
+                        <div class="surcharge-editor" data-module-type="surcharge_intl">
+                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">点击单元格改文字；<strong>选中文字后右上角会弹出样式条</strong>，可改字号/颜色（不选中则应用到整格）。表格结构（行列、合并）固定不可增删。保存后前台同步展示。</p>
+                            <div class="ow-editor-area">
+                                {% include 'admin/partials/table_style_popover.html' %}
+                                {% with sc_editable = true %}{% include 'partials/surcharge_intl_block.html' %}{% endwith %}
+                            </div>
+                        </div>
+                    {% elif module.type == 'overseas_warehouse' %}
+                        <div class="overseas-warehouse-editor" data-module-type="overseas_warehouse">
+                            <p style="margin:0 0 10px;font-size:13px;color:#64748b;">点击单元格改文字；<strong>选中文字后右上角会弹出样式条</strong>，可改字号/颜色（不选中则应用到整格）；每行末尾的「删除」删除该行，底部「添加行」新增一行。保存后前台同步展示。</p>
+                            <div class="ow-editor-area">
+                                {% include 'admin/partials/table_style_popover.html' %}
+                                {% with ow_editable = true %}{% include 'partials/overseas_warehouse_block.html' %}{% endwith %}
+                                <div class="ow-add-row-bar">
+                                    <button type="button" class="ow-tool-btn ow-add-row">＋ 添加行</button>
+                                </div>
+                            </div>
                         </div>
                     {% endif %}
                 </div>
@@ -2561,6 +2576,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initRichTextEditors();
     initUploadAreas();
     initModuleListDrag();
+    initSurchargeEditors();
+    initOverseasWarehouseEditors();
     updateActiveModule();
     initWeightInputListeners();
     bindChannelEditorDelegatedActions();
@@ -2795,15 +2812,326 @@ function getModuleContentFromItem(moduleItem) {
         }
     } else if (moduleBody.querySelector('.dg-grid-editor')) {
         content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
-    } else if (moduleBody.querySelector('.surcharge-fixed-editor')) {
-        // 固定内容模块（国内/国外附加明细）：内容不可编辑，保存时保持固定标题
-        const fixedType = moduleBody.querySelector('.surcharge-fixed-editor').dataset.moduleType;
-        content = { title: fixedType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细' };
+    } else if (moduleBody.querySelector('.surcharge-editor')) {
+        // 附加明细模块（国内/国外）：保存整表 tbody 的 HTML
+        const scEditor = moduleBody.querySelector('.surcharge-editor');
+        const fixedType = scEditor.dataset.moduleType;
+        content = {
+            title: fixedType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细',
+            tbody_html: getSurchargeTbodyHtml(scEditor)
+        };
+    } else if (moduleBody.querySelector('.overseas-warehouse-editor')) {
+        // 常见海外仓地址：保存整表 tbody 的 HTML
+        const owEditor = moduleBody.querySelector('.overseas-warehouse-editor');
+        content = {
+            title: '常见海外仓地址',
+            tbody_html: getOwTbodyHtml(owEditor)
+        };
     } else {
         content = { title: '' };
     }
     
     return { content };
+}
+
+// 附加明细模块：提取整表 tbody 的 HTML（单元格内联编辑后保存）
+function getSurchargeTbodyHtml(scEditor) {
+    if (!scEditor) return '';
+    const tbody = scEditor.querySelector('table.surcharge-table tbody');
+    if (!tbody) return '';
+    // 复制一份，去掉编辑态属性后再序列化，避免把 contenteditable 等写入库
+    const clone = tbody.cloneNode(true);
+    clone.querySelectorAll('[contenteditable]').forEach(function(el) {
+        el.removeAttribute('contenteditable');
+    });
+    clone.querySelectorAll('.sc-cell-editing').forEach(function(el) {
+        el.classList.remove('sc-cell-editing');
+    });
+    clone.querySelectorAll('.ow-row-active').forEach(function(el) {
+        el.classList.remove('ow-row-active');
+    });
+    return clone.innerHTML.trim();
+}
+
+// 附加明细模块：单元格可编辑 + 选中文字弹样式条（字号/颜色）
+function initSurchargeEditors() {
+    document.querySelectorAll('.surcharge-editor').forEach(function(scEditor) {
+        if (scEditor.dataset.scReady === '1') return;
+        const table = scEditor.querySelector('table.surcharge-table[data-surcharge-editable="1"]');
+        if (!table) return;
+        table.querySelectorAll('tbody td').forEach(function(td) {
+            td.setAttribute('contenteditable', 'true');
+            td.classList.add('sc-cell-editing');
+        });
+        wireStylePopover(scEditor, table);
+        scEditor.dataset.scReady = '1';
+    });
+}
+
+// 常见海外仓地址模块：提取整表 tbody 的 HTML（去掉编辑态属性）
+function getOwTbodyHtml(owEditor) {
+    if (!owEditor) return '';
+    const tbody = owEditor.querySelector('table.ow-table tbody');
+    if (!tbody) return '';
+    const clone = tbody.cloneNode(true);
+    clone.querySelectorAll('[contenteditable]').forEach(function(el) {
+        el.removeAttribute('contenteditable');
+    });
+    // 去掉编辑态追加的「删除」操作列
+    clone.querySelectorAll('.ow-del-cell').forEach(function(el) { el.remove(); });
+    clone.querySelectorAll('.ow-cell-editing, .ow-row-active').forEach(function(el) {
+        el.classList.remove('ow-cell-editing');
+        el.classList.remove('ow-row-active');
+    });
+    return clone.innerHTML.trim();
+}
+
+// 共享：给可编辑表格接上「选中文字右上角弹样式条（字号/颜色）」交互
+// editorEl 需包含 .ow-style-popover，且 table 的单元格已 contenteditable
+function wireStylePopover(editorEl, table) {
+    if (!editorEl || !table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    const popover = editorEl.querySelector('.ow-style-popover');
+
+    function hideStylePopover() { if (popover) popover.hidden = true; }
+    function showStylePopover() { if (popover) popover.hidden = false; }
+    // 把样式条浮动到选区右上方（类似 Word 迷你工具栏）
+    function positionPopoverToRange(range) {
+        if (!popover || !range) return;
+        popover.hidden = false; // 需先可见才能量出尺寸
+        const rects = range.getClientRects();
+        const anchor = rects.length ? rects[rects.length - 1] : range.getBoundingClientRect();
+        if (!anchor || (!anchor.width && !anchor.height)) return;
+        const pw = popover.offsetWidth;
+        const ph = popover.offsetHeight;
+        const gap = 8;
+        const vw = document.documentElement.clientWidth;
+        const vh = document.documentElement.clientHeight;
+        // 选区末端（鼠标处）右上方
+        let left = anchor.right + gap;
+        let top = anchor.top - ph - gap;
+        // 上方放不下则放到下方
+        if (top < gap) top = anchor.bottom + gap;
+        // 右侧超出则贴着选区末端左移
+        if (left + pw > vw - gap) left = Math.max(gap, anchor.right - pw);
+        if (left < gap) left = gap;
+        if (top + ph > vh - gap) top = Math.max(gap, vh - ph - gap);
+        popover.style.left = Math.round(left) + 'px';
+        popover.style.top = Math.round(top) + 'px';
+    }
+
+    // 记录最近聚焦单元格与选区
+    tbody.addEventListener('focusin', function(e) {
+        const td = e.target.closest('td');
+        if (!td || td.classList.contains('ow-del-cell')) return;
+        editorEl._owLastCell = td;
+        tbody.querySelectorAll('tr.ow-row-active').forEach(function(tr) { tr.classList.remove('ow-row-active'); });
+        const tr = td.closest('tr');
+        if (tr) tr.classList.add('ow-row-active');
+    });
+    document.addEventListener('selectionchange', function() {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+        if (tbody.contains(range.commonAncestorContainer)) {
+            editorEl._owSavedRange = range.cloneRange();
+            const node = range.commonAncestorContainer;
+            const el = node.nodeType === 1 ? node : node.parentElement;
+            const td = el ? el.closest('td') : null;
+            if (td) editorEl._owLastCell = td;
+            if (!range.collapsed) { positionPopoverToRange(range); } else { hideStylePopover(); }
+        }
+    });
+    document.addEventListener('mousedown', function(e) {
+        if (!popover || popover.hidden) return;
+        if (editorEl.contains(e.target)) return;
+        hideStylePopover();
+    });
+    if (popover) {
+        popover.addEventListener('mousedown', function(e) {
+            const tag = (e.target.tagName || '').toLowerCase();
+            if (tag !== 'select' && tag !== 'option' && e.target.type !== 'color') {
+                e.preventDefault();
+            }
+        });
+    }
+
+    function restoreSelection(range) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    function applyStyleToSelectionOrCell(styleObj) {
+        const range = editorEl._owSavedRange;
+        if (range && !range.collapsed && tbody.contains(range.commonAncestorContainer)) {
+            const span = document.createElement('span');
+            Object.keys(styleObj).forEach(function(k) { span.style[k] = styleObj[k]; });
+            try {
+                range.surroundContents(span);
+            } catch (err) {
+                const frag = range.extractContents();
+                span.appendChild(frag);
+                range.insertNode(span);
+            }
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            restoreSelection(newRange);
+            editorEl._owSavedRange = newRange.cloneRange();
+            positionPopoverToRange(newRange);
+        } else if (editorEl._owLastCell) {
+            Object.keys(styleObj).forEach(function(k) { editorEl._owLastCell.style[k] = styleObj[k]; });
+        } else {
+            alert('请先点击一个单元格，或选中要修改的文字');
+        }
+    }
+
+    function stripStyleInCell(td) {
+        if (!td) return;
+        td.querySelectorAll('span[style]').forEach(function(sp) {
+            sp.style.removeProperty('font-size');
+            sp.style.removeProperty('color');
+            sp.style.removeProperty('font-weight');
+            if (!sp.getAttribute('style')) {
+                while (sp.firstChild) sp.parentNode.insertBefore(sp.firstChild, sp);
+                sp.remove();
+            }
+        });
+        td.style.removeProperty('font-size');
+        td.style.removeProperty('color');
+        td.style.removeProperty('font-weight');
+    }
+    function clearStyleOnSelectionOrCell() {
+        const range = editorEl._owSavedRange;
+        if (range && !range.collapsed && tbody.contains(range.commonAncestorContainer)) {
+            const el = range.commonAncestorContainer.nodeType === 1
+                ? range.commonAncestorContainer
+                : range.commonAncestorContainer.parentElement;
+            stripStyleInCell(el ? el.closest('td') : null);
+        } else if (editorEl._owLastCell) {
+            stripStyleInCell(editorEl._owLastCell);
+        }
+    }
+
+    const fontSelect = editorEl.querySelector('.ow-fontsize-select');
+    if (fontSelect) {
+        fontSelect.addEventListener('change', function() {
+            if (!fontSelect.value) return;
+            applyStyleToSelectionOrCell({ fontSize: fontSelect.value });
+            fontSelect.value = '';
+        });
+    }
+    const colorInput = editorEl.querySelector('.ow-color-input');
+    if (colorInput) {
+        colorInput.addEventListener('change', function() {
+            applyStyleToSelectionOrCell({ color: colorInput.value });
+        });
+    }
+    editorEl.querySelectorAll('.ow-color-swatch').forEach(function(sw) {
+        sw.addEventListener('click', function() {
+            const c = sw.dataset.color;
+            if (colorInput) colorInput.value = c;
+            applyStyleToSelectionOrCell({ color: c });
+        });
+    });
+    const boldBtn = editorEl.querySelector('.ow-bold-btn');
+    if (boldBtn) {
+        boldBtn.addEventListener('click', function() {
+            applyStyleToSelectionOrCell({ fontWeight: '700' });
+        });
+    }
+    const clearBtn = editorEl.querySelector('.ow-clear-style');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearStyleOnSelectionOrCell);
+    }
+}
+
+// 常见海外仓地址模块：可编辑单元格 + 工具栏（增删行、字号、颜色）
+function initOverseasWarehouseEditors() {
+    document.querySelectorAll('.overseas-warehouse-editor').forEach(initOneOverseasWarehouseEditor);
+}
+
+function initOneOverseasWarehouseEditor(owEditor) {
+    if (!owEditor || owEditor.dataset.owReady === '1') return;
+    const table = owEditor.querySelector('table.ow-table[data-ow-editable="1"]');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+
+    function makeCellsEditable(scope) {
+        scope.querySelectorAll('td:not(.ow-del-cell)').forEach(function(td) {
+            td.setAttribute('contenteditable', 'true');
+            td.classList.add('ow-cell-editing');
+        });
+    }
+    makeCellsEditable(tbody);
+
+    // 为每行末尾追加一个「删除」操作格（仅编辑态，保存时剥离）
+    function buildDelCell() {
+        const td = document.createElement('td');
+        td.className = 'ow-del-cell';
+        td.setAttribute('contenteditable', 'false');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ow-row-del-btn';
+        btn.textContent = '删除';
+        td.appendChild(btn);
+        return td;
+    }
+    // 表头补一个操作列
+    const headRow = table.querySelector('thead tr');
+    if (headRow && !headRow.querySelector('.ow-op-th')) {
+        const th = document.createElement('th');
+        th.className = 'ow-op-th';
+        th.textContent = '操作';
+        headRow.appendChild(th);
+    }
+    // 已有行补删除格
+    tbody.querySelectorAll('tr').forEach(function(tr) {
+        if (!tr.querySelector('.ow-del-cell')) tr.appendChild(buildDelCell());
+    });
+    // 委托：点击行内删除按钮删该行
+    tbody.addEventListener('click', function(e) {
+        const btn = e.target.closest('.ow-row-del-btn');
+        if (!btn) return;
+        const tr = btn.closest('tr');
+        if (!tr) return;
+        if (tbody.querySelectorAll('tr').length <= 1) {
+            alert('至少保留一行');
+            return;
+        }
+        if (!confirm('确定删除该行？')) return;
+        tr.remove();
+        owEditor._owLastCell = null;
+        owEditor._owSavedRange = null;
+    });
+
+    // 选中文字右上角弹样式条（字号/颜色）
+    wireStylePopover(owEditor, table);
+
+    const addBtn = owEditor.querySelector('.ow-add-row');
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            // 数据列数（排除末尾「操作」列）
+            const dataCols = table.querySelectorAll('thead th:not(.ow-op-th)').length || 6;
+            const tr = document.createElement('tr');
+            for (let i = 0; i < dataCols; i++) {
+                const td = document.createElement('td');
+                if (i === dataCols - 1) td.className = 'sc-left';
+                td.setAttribute('contenteditable', 'true');
+                td.classList.add('ow-cell-editing');
+                td.innerHTML = '<br>';
+                tr.appendChild(td);
+            }
+            tr.appendChild(buildDelCell());
+            tbody.appendChild(tr);
+            const firstTd = tr.querySelector('td');
+            if (firstTd) firstTd.focus();
+            tr.scrollIntoView({ block: 'nearest' });
+        });
+    }
+
+    owEditor.dataset.owReady = '1';
 }
 
 async function saveModuleOrder() {
@@ -2908,6 +3236,8 @@ async function addModule(type) {
         content = { title: '国内附加明细' };
     } else if (type === 'surcharge_intl') {
         content = { title: '国外附加明细' };
+    } else if (type === 'overseas_warehouse') {
+        content = { title: '常见海外仓地址' };
     } else if (type === 'image') {
         content = { title: '', url: '', alt: '', caption: '', remark: '' };
     } else if (type === 'dg_grid_v2') {
@@ -4737,8 +5067,10 @@ async function copyModule(moduleId) {
         moduleType = 'channel';
     } else if (moduleBody.querySelector('.dg-grid-editor')) {
         moduleType = 'dg_grid';
-    } else if (moduleBody.querySelector('.surcharge-fixed-editor')) {
-        moduleType = moduleBody.querySelector('.surcharge-fixed-editor').dataset.moduleType;
+    } else if (moduleBody.querySelector('.surcharge-editor')) {
+        moduleType = moduleBody.querySelector('.surcharge-editor').dataset.moduleType;
+    } else if (moduleBody.querySelector('.overseas-warehouse-editor')) {
+        moduleType = 'overseas_warehouse';
     } else {
         alert('无法识别模块类型');
         return;
@@ -4780,9 +5112,17 @@ async function copyModule(moduleId) {
     } else if (moduleType === 'dg_grid') {
         content = getDgGridEditorData(moduleBody.querySelector('.dg-grid-editor'));
     } else if (moduleType === 'surcharge_cn' || moduleType === 'surcharge_intl') {
-        content = { title: moduleType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细' };
+        content = {
+            title: moduleType === 'surcharge_intl' ? '国外附加明细' : '国内附加明细',
+            tbody_html: getSurchargeTbodyHtml(moduleBody.querySelector('.surcharge-editor'))
+        };
+    } else if (moduleType === 'overseas_warehouse') {
+        content = {
+            title: '常见海外仓地址',
+            tbody_html: getOwTbodyHtml(moduleBody.querySelector('.overseas-warehouse-editor'))
+        };
     }
-    
+
     // 创建新模块
     try {
         const response = await fetch('/api/module/add', {

@@ -182,6 +182,8 @@
 
                 {% elif module.type == 'surcharge_intl' %}
                 {% include 'partials/surcharge_intl_block.html' %}
+                {% elif module.type == 'overseas_warehouse' %}
+                {% include 'partials/overseas_warehouse_block.html' %}
                 {% endif %}
             {% endfor %}
         </div>

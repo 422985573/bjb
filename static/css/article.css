@@ -1368,3 +1368,179 @@ white-space: pre-line !important;
         font-size: 12px;
     }
 }
+
+/* 国外附加明细序号10：收费拆分为「仓库」+「价格」两列 */
+.module-surcharge-intl .surcharge-table td.sc-fba-wh {
+    white-space: nowrap;
+    width: 8em;
+}
+.module-surcharge-intl .surcharge-table td.sc-fba-price {
+    text-align: center;
+    white-space: nowrap;
+}
+.module-surcharge-intl .surcharge-table td.sc-fba-note {
+    width: 22%;
+    font-size: 12px;
+}
+
+/* 附加明细模块：后台单元格内联编辑态 */
+.surcharge-editor td.sc-cell-editing {
+    cursor: text;
+    transition: background 0.15s;
+}
+.surcharge-editor td.sc-cell-editing:hover {
+    background: #eef6ff;
+}
+.surcharge-editor td.sc-cell-editing:focus {
+    outline: 2px solid #1f6fc4;
+    outline-offset: -2px;
+    background: #fff;
+}
+
+/* 常见海外仓地址模块（overseas_warehouse） */
+.module-overseas-warehouse .ow-table th.ow-col-idx { width: 3.5em; }
+.module-overseas-warehouse .ow-table th.ow-col-wh { width: 6em; }
+.module-overseas-warehouse .ow-table th.ow-col-area { width: 5em; }
+.module-overseas-warehouse .ow-table th.ow-col-code { width: 8em; }
+.module-overseas-warehouse .ow-table th.ow-col-post { width: 5em; }
+.module-overseas-warehouse .ow-table td { text-align: center; }
+.module-overseas-warehouse .ow-table td.sc-left { text-align: left; }
+
+/* 后台工具栏（仅编辑页 .overseas-warehouse-editor 内） */
+.overseas-warehouse-editor .ow-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: #f6faff;
+    border: 1px solid #d6e4f5;
+    border-radius: 6px;
+}
+.ow-editor-area .ow-tool-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #1e3a5f;
+}
+.ow-editor-area .ow-fontsize-select {
+    padding: 3px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.ow-editor-area .ow-color-input {
+    width: 34px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.ow-editor-area .ow-color-presets {
+    display: inline-flex;
+    gap: 4px;
+}
+.ow-editor-area .ow-color-swatch {
+    width: 20px;
+    height: 20px;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+.ow-editor-area .ow-color-swatch:hover {
+    outline: 2px solid #1f6fc4;
+    outline-offset: 1px;
+}
+.overseas-warehouse-editor .ow-tool-sep {
+    width: 1px;
+    height: 20px;
+    background: #cbd5e1;
+}
+.ow-editor-area .ow-tool-btn {
+    padding: 5px 12px;
+    border: 1px solid #1f6fc4;
+    background: #1f6fc4;
+    color: #fff;
+    border-radius: 5px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.ow-editor-area .ow-tool-btn:hover { background: #185aa0; }
+.ow-editor-area .ow-tool-btn.ow-clear-style {
+    background: #fff;
+    color: #1f6fc4;
+}
+.overseas-warehouse-editor .ow-tool-btn.ow-del-row {
+    background: #fff;
+    color: #e11d1d;
+    border-color: #e11d1d;
+}
+.overseas-warehouse-editor .ow-tool-btn.ow-del-row:hover { background: #fdeaea; }
+
+/* 底部「添加行」按钮条 */
+.overseas-warehouse-editor .ow-add-row-bar {
+    margin-top: 10px;
+    text-align: center;
+}
+
+/* 每行末尾的「删除」操作列（仅后台编辑态） */
+.overseas-warehouse-editor .ow-table th.ow-op-th {
+    width: 4.5em;
+    white-space: nowrap;
+}
+.overseas-warehouse-editor .ow-table td.ow-del-cell {
+    text-align: center;
+    background: #fafbfc;
+}
+.overseas-warehouse-editor .ow-row-del-btn {
+    padding: 3px 10px;
+    border: 1px solid #e11d1d;
+    background: #fff;
+    color: #e11d1d;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.overseas-warehouse-editor .ow-row-del-btn:hover { background: #fdeaea; }
+
+/* 选中文字时浮动在选区附近（右上方）的样式条，类似 Word 迷你工具栏 */
+.ow-editor-area {
+    position: relative;
+}
+.ow-editor-area .ow-style-popover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 3000;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.22);
+    white-space: nowrap;
+}
+.ow-editor-area .ow-style-popover[hidden] {
+    display: none;
+}
+
+/* 后台可编辑单元格与选中行 */
+.overseas-warehouse-editor td.ow-cell-editing {
+    cursor: text;
+    transition: background 0.15s;
+}
+.overseas-warehouse-editor td.ow-cell-editing:hover { background: #eef6ff; }
+.overseas-warehouse-editor td.ow-cell-editing:focus {
+    outline: 2px solid #1f6fc4;
+    outline-offset: -2px;
+    background: #fff;
+}
+.overseas-warehouse-editor tr.ow-row-active > td { background: #eaf3ff; }

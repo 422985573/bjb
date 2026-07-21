@@ -1,0 +1,27 @@
+{# 选中文字时右上角弹出的字号/颜色样式条，供 overseas_warehouse / surcharge 模块复用 #}
+<div class="ow-style-popover" hidden>
+    <label class="ow-tool-label">字号
+        <select class="ow-fontsize-select">
+            <option value="">默认</option>
+            <option value="12px">12</option>
+            <option value="13px">13</option>
+            <option value="14px">14</option>
+            <option value="16px">16</option>
+            <option value="18px">18</option>
+            <option value="20px">20</option>
+            <option value="24px">24</option>
+        </select>
+    </label>
+    <label class="ow-tool-label">颜色
+        <input type="color" class="ow-color-input" value="#e11d1d">
+    </label>
+    <span class="ow-color-presets">
+        <button type="button" class="ow-color-swatch" data-color="#1e3a5f" style="background:#1e3a5f" title="深蓝"></button>
+        <button type="button" class="ow-color-swatch" data-color="#e11d1d" style="background:#e11d1d" title="红"></button>
+        <button type="button" class="ow-color-swatch" data-color="#1f6fc4" style="background:#1f6fc4" title="蓝"></button>
+        <button type="button" class="ow-color-swatch" data-color="#127a3d" style="background:#127a3d" title="绿"></button>
+        <button type="button" class="ow-color-swatch" data-color="#000000" style="background:#000000" title="黑"></button>
+    </span>
+    <button type="button" class="ow-tool-btn ow-bold-btn" title="加粗选中文字"><b>B</b> 加粗</button>
+    <button type="button" class="ow-tool-btn ow-clear-style" title="清除选中文字的字号/颜色/加粗">清除样式</button>
+</div>
