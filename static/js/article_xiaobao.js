@@ -7,6 +7,11 @@
   var API_ZONE_LOOKUP = '/api/xiaobao-zone-lookup';
   var API_SETTINGS = '/api/xiaobao-settings';
 
+  // 需要暂时隐藏的仓库（按标题关键词匹配）；日后恢复展示：清空此数组即可
+  var HIDDEN_WAREHOUSE_KEYWORDS = ['墨尔本'];
+
+  var MAX_CODES = 50;
+
   var sheetsIndex = [];
   var currentKey = '';
   var currentData = null;
@@ -284,6 +289,57 @@
     return settingsData[String(selectedMonth)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0 };
   }
 
+  function visiblePriceTables() {
+    if (!currentData) return [];
+    return (currentData.sections || []).filter(function (s) { return s.type === 'price_table'; })
+      .filter(function (s) {
+        var t = String(s.title || '');
+        return !HIDDEN_WAREHOUSE_KEYWORDS.some(function (kw) { return t.indexOf(kw) >= 0; });
+      });
+  }
+
+  // 计算某价格表下命中邮编的报价明细（供结果表与导出复用）
+  function computeQuotes(sec) {
+    var s = curSettings();
+    var headers = sec.headers || [];
+    var rows = sec.rows || [];
+    var zcol = zoneColOf(headers);
+    var weight = searchState ? searchState.weight : 0;
+    if (!searchState || !weight || weight <= 0) return { rows: [], sum: 0 };
+
+    var unitPrice = Number(s.unit_price) || 0;
+    var exRate = Number(s.exchange_rate) || 0;
+    var fuelMult = 1 + (Number(s.fuel_rate) || 0) / 100;
+    var fuelMultR = Math.round(fuelMult * 10000) / 10000;
+
+    var out = [];
+    var sum = 0;
+    searchState.codes.forEach(function (code) {
+      var info = searchState.zoneByCode[code];
+      if (!info || !info.found) return;
+      var mt = makeZoneMatcher(info.zone);
+      var row = null;
+      for (var i = 0; i < rows.length; i++) {
+        var cc = String(cellValue(rows[i][zcol]) == null ? '' : cellValue(rows[i][zcol])).trim();
+        if (mt(cc)) { row = rows[i]; break; }
+      }
+      if (!row) return;
+      var deliver = pickDeliver(headers, row, weight);
+      if (!deliver) return;
+      var head = unitPrice * weight;
+      var tail = deliver.aud * fuelMult * exRate;
+      var total = head + tail;
+      sum += total;
+      out.push({
+        code: code, zone: info.zone, label: deliver.label,
+        headF: unitPrice + '×' + weight,
+        tailF: fmt(deliver.aud) + '×' + fuelMultR + '×' + exRate,
+        total: total
+      });
+    });
+    return { rows: out, sum: sum };
+  }
+
   function settingsBlockHtml() {
     var s = curSettings();
     var h = '<div class="xb-settings">';
@@ -299,11 +355,11 @@
     if (!currentData) return;
     var sections = currentData.sections || [];
     var richtextTop = sections.filter(function (s) { return s.type === 'richtext'; });
-    var priceTables = sections.filter(function (s) { return s.type === 'price_table'; });
+    var priceTables = visiblePriceTables();
 
     var html = '<h2 class="wh-sheet-title">' + esc(currentData.name) + '</h2>';
     richtextTop.forEach(function (sec) {
-      html += '<div class="wh-section">';
+      html += '<div class="wh-section xb-note-box">';
       if (sec.title) html += '<div class="wh-section-title">' + esc(sec.title) + '</div>';
       html += '<div class="wh-richtext">' + cleanRichtextHtml(brToParagraphs(sec.html || '')) + '</div></div>';
     });
@@ -334,10 +390,6 @@
   // 计算某仓库报价结果表
   function resultTableHtml(sec) {
     var whName = navLabel(sec, 0);
-    var s = curSettings();
-    var headers = sec.headers || [];
-    var rows = sec.rows || [];
-    var zcol = zoneColOf(headers);
     var weight = searchState ? searchState.weight : 0;
 
     var h = '<div class="xb-result">';
@@ -348,38 +400,8 @@
       return h;
     }
 
-    var unitPrice = Number(s.unit_price) || 0;
-    var exRate = Number(s.exchange_rate) || 0;
-    var fuelMult = 1 + (Number(s.fuel_rate) || 0) / 100;
-    var fuelMultR = Math.round(fuelMult * 10000) / 10000;
-
-    var out = [];
-    var sum = 0;
-    searchState.codes.forEach(function (code) {
-      var info = searchState.zoneByCode[code];
-      if (!info || !info.found) return;
-      var mt = makeZoneMatcher(info.zone);
-      var row = null;
-      for (var i = 0; i < rows.length; i++) {
-        var cc = String(cellValue(rows[i][zcol]) == null ? '' : cellValue(rows[i][zcol])).trim();
-        if (mt(cc)) { row = rows[i]; break; }
-      }
-      if (!row) return;
-      var deliver = pickDeliver(headers, row, weight);
-      if (!deliver) return;
-      var head = unitPrice * weight;
-      var tail = deliver.aud * fuelMult * exRate;
-      var total = head + tail;
-      sum += total;
-      out.push({
-        code: code,
-        label: deliver.label,
-        headF: unitPrice + '×' + weight,
-        tailF: fmt(deliver.aud) + '×' + fuelMultR + '×' + exRate,
-        total: total
-      });
-    });
-
+    var q = computeQuotes(sec);
+    var out = q.rows;
     if (!out.length) {
       h += '<div class="xb-result-empty">未找到可计算的报价（邮编未命中分区或该重量无对应价格）</div></div>';
       return h;
@@ -389,7 +411,7 @@
     out.forEach(function (r) {
       h += '<tr><td>' + esc(r.code) + '</td><td>' + esc(r.label) + '</td><td>' + esc(r.headF) + '</td><td>' + esc(r.tailF) + '</td><td class="xb-total">' + fmt(r.total) + '</td></tr>';
     });
-    h += '<tr class="xb-sum-row"><td colspan="4">合计</td><td>' + fmt(sum) + '</td></tr>';
+    h += '<tr class="xb-sum-row"><td colspan="4">合计</td><td>' + fmt(q.sum) + '</td></tr>';
     h += '</tbody></table>';
     h += '<div class="xb-result-note">备注：选择服务则代表已完整阅读渠道说明和费用详解。</div>';
     h += '</div>';
@@ -446,7 +468,35 @@
       var pc = ('0000' + digits).slice(-4);
       if (!seen[pc]) { seen[pc] = 1; codes.push(pc); }
     });
-    return codes.slice(0, 50);
+    return codes.slice(0, MAX_CODES);
+  }
+
+  // 统计已输入邮编数（去重、仅4位内数字）
+  function countCodes(raw) {
+    var tokens = String(raw || '').split(/[\s,，、;；]+/);
+    var seen = {};
+    tokens.forEach(function (t) {
+      var digits = t.replace(/[^0-9]/g, '');
+      if (!digits || digits.length > 4) return;
+      seen[('0000' + digits).slice(-4)] = 1;
+    });
+    return Object.keys(seen).length;
+  }
+
+  function updateTip(raw) {
+    var tip = $('#xbPcTip');
+    if (!tip) return;
+    var n = countCodes(raw);
+    if (n === 0) {
+      tip.textContent = '最多可批量查询 ' + MAX_CODES + ' 个邮编';
+      tip.className = 'xb-hero-tip';
+    } else if (n > MAX_CODES) {
+      tip.textContent = '已输入 ' + n + ' 个，超出上限，仅查询前 ' + MAX_CODES + ' 个邮编';
+      tip.className = 'xb-hero-tip warn';
+    } else {
+      tip.textContent = '已输入 ' + n + ' / ' + MAX_CODES + ' 个邮编';
+      tip.className = 'xb-hero-tip';
+    }
   }
 
   function runLookup(rawCodes, weight, summaryEl) {
@@ -491,17 +541,14 @@
   }
 
   function bindPostcodeBoxes() {
-    bindOneBox('#xbPcInput', '#xbWeight', '#xbPcQuery', '#xbPcClear', '#xbPcSummary');
-    bindOneBox('#xbPcInputMobile', '#xbWeightMobile', '#xbPcQueryMobile', '#xbPcClearMobile', '#xbPcSummaryMobile');
-  }
-
-  function bindOneBox(inputSel, weightSel, querySel, clearSel, summarySel) {
-    var input = $(inputSel);
-    var weightEl = $(weightSel);
-    var queryBtn = $(querySel);
-    var clearBtn = $(clearSel);
-    var summaryEl = $(summarySel);
+    var input = $('#xbPcInput');
+    var weightEl = $('#xbWeight');
+    var queryBtn = $('#xbPcQuery');
+    var clearBtn = $('#xbClear');
+    var exportBtn = $('#xbExport');
+    var summaryEl = $('#xbPcSummary');
     if (!input) return;
+
     function doQuery() { runLookup(input.value, weightEl ? weightEl.value : 0, summaryEl); }
     if (queryBtn) queryBtn.addEventListener('click', doQuery);
     if (clearBtn) clearBtn.addEventListener('click', function () {
@@ -509,15 +556,57 @@
       if (weightEl) weightEl.value = '';
       if (summaryEl) summaryEl.innerHTML = '';
       searchState = null;
+      updateTip('');
       renderContent();
       input.focus();
     });
+    if (exportBtn) exportBtn.addEventListener('click', exportResults);
+    input.addEventListener('input', function () { updateTip(input.value); });
     input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doQuery(); }
+      if (e.key === 'Enter') { e.preventDefault(); doQuery(); }
     });
     if (weightEl) weightEl.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); doQuery(); }
     });
+  }
+
+  // 导出当前报价结果为 CSV
+  function exportResults() {
+    if (!searchState || !searchState.weight) { alert('请先输入邮编和重量并查询报价'); return; }
+    var tables = visiblePriceTables();
+    var lines = [];
+    var any = false;
+    tables.forEach(function (sec) {
+      var q = computeQuotes(sec);
+      if (!q.rows.length) return;
+      any = true;
+      lines.push([navLabel(sec, 0)]);
+      lines.push(['邮编', '分区', '公斤段', '头程计算公式', '尾程计算公式', '总价(元)']);
+      q.rows.forEach(function (r) {
+        lines.push([r.code, r.zone, r.label, r.headF, r.tailF, fmt(r.total)]);
+      });
+      lines.push(['合计', '', '', '', '', fmt(q.sum)]);
+      lines.push([]);
+    });
+    if (!any) { alert('当前没有可导出的报价结果'); return; }
+
+    var csv = lines.map(function (row) {
+      return row.map(function (c) {
+        var s = (c == null ? '' : String(c));
+        if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+        return s;
+      }).join(',');
+    }).join('\r\n');
+
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '虚拟小包报价.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
   // ---- mobile TOC panel ----
