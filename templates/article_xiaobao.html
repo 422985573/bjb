@@ -11,71 +11,98 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ static_with_version('css/article_warehouse.css') }}">
 <style>
-.xb-pc-box { margin-bottom: 14px; }
-.xb-pc-box textarea {
-    width: 100%;
-    box-sizing: border-box;
-    min-height: 110px;
-    resize: vertical;
-    padding: 10px 12px;
-    border: 1px solid #d5dbe3;
-    border-radius: 8px;
-    font-size: 13px;
-    line-height: 1.5;
-    font-family: inherit;
-    transition: border-color .15s, box-shadow .15s;
+/* ===== 顶部搜索横幅 ===== */
+.xb-hero {
+    background: linear-gradient(135deg, #3f6ef6 0%, #2f5fe6 100%);
+    border-radius: 14px;
+    padding: 26px 22px 22px;
+    margin: 12px 0 20px;
 }
-.xb-pc-box textarea::placeholder { color: #b3bccb; }
-.xb-pc-box textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
-.xb-pc-actions { display: flex; gap: 8px; margin-top: 10px; }
-.xb-pc-btn {
-    flex: 1;
-    padding: 9px 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    background: #2563eb;
-    color: #fff;
-    transition: background .15s;
+.xb-hero-inner { max-width: 980px; margin: 0 auto; }
+.xb-hero-search {
+    display: flex; align-items: center; gap: 6px;
+    background: #fff; border-radius: 999px;
+    padding: 7px 8px 7px 12px;
+    box-shadow: 0 10px 28px rgba(15, 39, 110, 0.22);
 }
-.xb-pc-btn:hover { background: #1d4ed8; }
-.xb-pc-btn--ghost { background: #f1f5f9; color: #334155; }
-.xb-pc-btn--ghost:hover { background: #e2e8f0; }
-.xb-pc-summary { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.xb-hero-icon { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; object-position: center; background: #fff; flex: none; }
+.xb-hero-pc {
+    flex: 1; min-width: 0; border: none; outline: none;
+    font-size: 15px; padding: 9px 8px; background: transparent; color: #0f172a;
+}
+.xb-hero-pc::placeholder { color: #9aa6b8; }
+.xb-hero-weight {
+    width: 130px; border: none; border-left: 1px solid #eef1f5; outline: none;
+    font-size: 14px; padding: 9px 12px; background: transparent; color: #0f172a;
+}
+.xb-hero-weight::placeholder { color: #9aa6b8; }
+.xb-hero-qbtn {
+    flex: none; border: none; border-radius: 999px; background: #2563eb; color: #fff;
+    font-weight: 700; font-size: 14px; padding: 10px 26px; cursor: pointer; transition: background .15s;
+}
+.xb-hero-qbtn:hover { background: #1d4ed8; }
+.xb-hero-actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    margin-top: 14px; justify-content: center;
+}
+.xb-hero-tip { margin-top: 8px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.85); }
+.xb-hero-tip.warn { color: #fff2b8; font-weight: 600; }
+.xb-link {
+    display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 8px;
+    background: rgba(255,255,255,0.14); color: #fff; font-size: 13px; font-weight: 600;
+    text-decoration: none; border: 1px solid rgba(255,255,255,0.32); transition: background .15s;
+}
+.xb-link:hover { background: rgba(255,255,255,0.26); }
+.xb-hero-btn {
+    padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 700;
+}
+.xb-hero-btn--ghost { background: rgba(255,255,255,0.14); color: #fff; border: 1px solid rgba(255,255,255,0.32); }
+.xb-hero-btn--ghost:hover { background: rgba(255,255,255,0.26); }
+.xb-hero-btn--export { background: #fff; color: #2563eb; }
+.xb-hero-btn--export:hover { background: #eef4ff; }
+.xb-hero-summary { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
+.xb-hero-summary:empty { display: none; }
+
+@media (max-width: 640px) {
+    .xb-hero-search { flex-wrap: wrap; border-radius: 16px; padding: 10px; }
+    .xb-hero-pc { flex: 1 1 100%; order: 1; }
+    .xb-hero-weight { flex: 1 1 auto; width: auto; border-left: none; order: 2; }
+    .xb-hero-qbtn { order: 3; }
+}
+
+/* ===== 命中结果 chips ===== */
 .xb-pc-item {
     display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 10px; font-size: 13px;
-    background: #f0fdf4; border: 1px solid #c6f0d3;
+    padding: 8px 12px; border-radius: 999px; font-size: 13px;
+    background: #fff; border: 1px solid #dbe4ff;
 }
-.xb-pc-item.miss { background: #fef2f2; border-color: #fbd2d2; }
-.xb-pc-code {
-    font-weight: 700; color: #0f172a; min-width: 42px;
-    font-variant-numeric: tabular-nums; letter-spacing: .3px;
-}
+.xb-pc-item.miss { background: #fff; border-color: #fbd2d2; }
+.xb-pc-code { font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; letter-spacing: .3px; }
 .xb-pc-zone {
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 48px; padding: 3px 9px; border-radius: 999px;
+    min-width: 46px; padding: 3px 9px; border-radius: 999px;
     background: #16a34a; color: #fff; font-weight: 700; font-size: 12px; letter-spacing: .5px;
 }
 .xb-pc-item.miss .xb-pc-zone { background: #dc2626; }
-.xb-pc-loc { flex: 1; color: #64748b; font-size: 12px; line-height: 1.35; }
-.xb-pc-hint { margin-top: 10px; font-size: 11px; color: #94a3b8; line-height: 1.5; }
-.xb-weight-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.xb-weight-row label { font-size: 13px; color: #475569; font-weight: 600; white-space: nowrap; }
-.xb-weight-row input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #d5dbe3; border-radius: 8px; font-size: 13px; transition: border-color .15s, box-shadow .15s; }
-.xb-weight-row input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.xb-pc-loc { color: #64748b; font-size: 12px; line-height: 1.3; }
 
-/* 月度参数展示 */
+/* ===== 顶部说明分块框 ===== */
+.xb-note-box {
+    border: 1px solid #e5e7eb; border-left: 4px solid #2563eb; border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 12px; background: #fbfcfe;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+}
+.xb-note-box .wh-richtext p { margin: 4px 0; }
+.xb-note-box .wh-richtext p:first-child { margin-top: 0; }
+.xb-note-box .wh-richtext p:last-child { margin-bottom: 0; }
+
+/* ===== 月度参数展示 ===== */
 .xb-settings { margin: 4px 0 20px; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
-.xb-settings-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.xb-settings-row label { font-size: 13px; color: #475569; font-weight: 600; }
-.xb-settings-row select { padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
 .xb-settings-vals { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: #0f172a; }
 .xb-settings-vals b { color: #2563eb; }
 
-/* 报价结果表 */
+/* ===== 报价结果表 ===== */
 .xb-result { margin: 8px 0 26px; }
 .xb-result-title { text-align: center; font-size: 15px; font-weight: 700; color: #0f172a; margin: 14px 0 8px; }
 .xb-result table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -98,22 +125,28 @@
         <span>{{ article['title'] }}</span>
     </div>
 
+    <!-- 顶部搜索横幅 -->
+    <div class="xb-hero">
+        <div class="xb-hero-inner">
+            <div class="xb-hero-search">
+                <img class="xb-hero-icon" src="{{ static_with_version('css/xb.jpg') }}" alt="搜索">
+                <input type="text" class="xb-hero-pc" id="xbPcInput" placeholder="输入邮编查询报价，多个用空格或逗号分隔（最多50个）">
+                <input type="number" class="xb-hero-weight" id="xbWeight" min="0" step="0.01" placeholder="重量(kg)">
+                <button type="button" class="xb-hero-qbtn" id="xbPcQuery">查询报价</button>
+            </div>
+            <div class="xb-hero-tip" id="xbPcTip">最多可批量查询 50 个邮编</div>
+            <div class="xb-hero-actions">
+                <a class="xb-link" id="xbLinkSite" href="#" target="_blank" rel="noopener">公司官网</a>
+                <a class="xb-link" href="https://auspost.com.au" target="_blank" rel="noopener">澳邮POST网站</a>
+                <button type="button" class="xb-hero-btn xb-hero-btn--ghost" id="xbClear">清空</button>
+                <button type="button" class="xb-hero-btn xb-hero-btn--export" id="xbExport">导出</button>
+            </div>
+            <div class="xb-hero-summary" id="xbPcSummary"></div>
+        </div>
+    </div>
+
     <div class="wh-layout">
         <nav class="wh-sidebar" id="whSidebar">
-            <div class="wh-sidebar-title">邮编查询</div>
-            <div class="xb-pc-box">
-                <textarea id="xbPcInput" placeholder="输入邮编，可一次多个（用空格、逗号或换行分隔）&#10;例如：2000 3000 4000"></textarea>
-                <div class="xb-weight-row">
-                    <label>重量(kg)</label>
-                    <input type="number" id="xbWeight" min="0" step="0.01" placeholder="如 1.5">
-                </div>
-                <div class="xb-pc-actions">
-                    <button class="xb-pc-btn" id="xbPcQuery">查询报价</button>
-                    <button class="xb-pc-btn xb-pc-btn--ghost" id="xbPcClear">清空</button>
-                </div>
-                <div class="xb-pc-summary" id="xbPcSummary"></div>
-                <div class="xb-pc-hint">查询后仅展示命中分区的报价行，并在表格下方给出计算结果</div>
-            </div>
             <div class="wh-sidebar-title">报价目录</div>
             <ul class="wh-nav-list" id="whNavList">
                 <li class="wh-nav-item wh-nav-loading">加载中...</li>
@@ -127,26 +160,13 @@
         </main>
     </div>
 
-    <button class="wh-toc-fab" id="whTocFab" aria-label="邮编查询" title="邮编查询">邮编查询</button>
+    <button class="wh-toc-fab" id="whTocFab" aria-label="报价目录" title="报价目录">报价目录</button>
     <div class="wh-toc-overlay" id="whTocOverlay"></div>
     <div class="wh-toc-panel" id="whTocPanel">
         <div class="wh-toc-panel-header">
-            <span>邮编查询</span>
+            <span>报价目录</span>
             <button class="wh-toc-close" id="whTocClose">&times;</button>
         </div>
-        <div class="xb-pc-box">
-            <textarea id="xbPcInputMobile" placeholder="输入邮编，可一次多个（用空格、逗号或换行分隔）"></textarea>
-            <div class="xb-weight-row">
-                <label>重量(kg)</label>
-                <input type="number" id="xbWeightMobile" min="0" step="0.01" placeholder="如 1.5">
-            </div>
-            <div class="xb-pc-actions">
-                <button class="xb-pc-btn" id="xbPcQueryMobile">查询报价</button>
-                <button class="xb-pc-btn xb-pc-btn--ghost" id="xbPcClearMobile">清空</button>
-            </div>
-            <div class="xb-pc-summary" id="xbPcSummaryMobile"></div>
-        </div>
-        <div class="wh-sidebar-title" style="margin-top:14px;">报价目录</div>
         <ul class="wh-toc-list" id="whTocList"></ul>
     </div>
 </div>
