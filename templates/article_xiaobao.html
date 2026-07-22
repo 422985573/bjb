@@ -20,25 +20,37 @@
 }
 .xb-hero-inner { max-width: 980px; margin: 0 auto; }
 .xb-hero-search {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 10px;
     background: #fff; border-radius: 999px;
-    padding: 7px 8px 7px 12px;
+    padding: 8px 8px 8px 12px;
     box-shadow: 0 10px 28px rgba(15, 39, 110, 0.22);
 }
 .xb-hero-icon { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; object-position: center; background: #fff; flex: none; }
+.xb-field {
+    display: flex; align-items: center; gap: 8px;
+    background: #f4f6fb; border: 1px solid #e2e8f0; border-radius: 999px;
+    padding: 4px 14px; transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.xb-field--pc { flex: 1; min-width: 0; }
+.xb-field--weight { flex: none; width: 190px; }
+.xb-field:focus-within { background: #fff; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.xb-field-label {
+    flex: none; font-size: 13px; font-weight: 700; color: #2563eb;
+    padding-right: 8px; border-right: 1px solid #d9e0ec;
+}
 .xb-hero-pc {
     flex: 1; min-width: 0; border: none; outline: none;
-    font-size: 15px; padding: 9px 8px; background: transparent; color: #0f172a;
+    font-size: 15px; padding: 7px 2px; background: transparent; color: #0f172a;
 }
 .xb-hero-pc::placeholder { color: #9aa6b8; }
 .xb-hero-weight {
-    width: 130px; border: none; border-left: 1px solid #eef1f5; outline: none;
-    font-size: 14px; padding: 9px 12px; background: transparent; color: #0f172a;
+    width: 100%; border: none; outline: none;
+    font-size: 15px; padding: 7px 2px; background: transparent; color: #0f172a;
 }
 .xb-hero-weight::placeholder { color: #9aa6b8; }
 .xb-hero-qbtn {
     flex: none; border: none; border-radius: 999px; background: #2563eb; color: #fff;
-    font-weight: 700; font-size: 14px; padding: 10px 26px; cursor: pointer; transition: background .15s;
+    font-weight: 700; font-size: 14px; padding: 12px 26px; cursor: pointer; transition: background .15s;
 }
 .xb-hero-qbtn:hover { background: #1d4ed8; }
 .xb-hero-actions {
@@ -65,10 +77,40 @@
 .xb-hero-summary:empty { display: none; }
 
 @media (max-width: 640px) {
-    .xb-hero-search { flex-wrap: wrap; border-radius: 16px; padding: 10px; }
-    .xb-hero-pc { flex: 1 1 100%; order: 1; }
-    .xb-hero-weight { flex: 1 1 auto; width: auto; border-left: none; order: 2; }
-    .xb-hero-qbtn { order: 3; }
+    .xb-hero-search { flex-wrap: wrap; border-radius: 16px; padding: 10px; gap: 8px; }
+    .xb-field--pc { flex: 1 1 100%; order: 1; }
+    .xb-field--weight { flex: 1 1 100%; width: auto; order: 2; }
+    .xb-hero-qbtn { flex: 1 1 100%; order: 3; }
+}
+
+/* ===== 侧栏邮编查询框 ===== */
+.xb-pc-box { margin-bottom: 16px; }
+.xb-pc-box textarea {
+    width: 100%; box-sizing: border-box; min-height: 96px; resize: vertical;
+    padding: 10px 12px; border: 1px solid #d5dbe3; border-radius: 8px;
+    font-size: 13px; line-height: 1.5; font-family: inherit; transition: border-color .15s, box-shadow .15s;
+}
+.xb-pc-box textarea::placeholder { color: #b3bccb; }
+.xb-pc-box textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.xb-weight-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.xb-weight-row label { font-size: 13px; color: #475569; font-weight: 600; white-space: nowrap; }
+.xb-weight-row input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #d5dbe3; border-radius: 8px; font-size: 13px; transition: border-color .15s, box-shadow .15s; }
+.xb-weight-row input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.xb-pc-actions { display: flex; gap: 8px; margin-top: 10px; }
+.xb-pc-btn { flex: 1; padding: 9px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: #2563eb; color: #fff; transition: background .15s; }
+.xb-pc-btn:hover { background: #1d4ed8; }
+.xb-pc-btn--ghost { background: #f1f5f9; color: #334155; }
+.xb-pc-btn--ghost:hover { background: #e2e8f0; }
+.xb-pc-summary { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.xb-pc-summary:empty { display: none; }
+.xb-pc-hint { margin-top: 10px; font-size: 11px; color: #94a3b8; line-height: 1.5; }
+
+/* 命中的计费重量档单元格：橙色高亮 */
+.wh-table td.xb-cell-active {
+    background: #fb923c !important;
+    color: #fff !important;
+    font-weight: 800;
+    box-shadow: inset 0 0 0 2px #ea580c;
 }
 
 /* ===== 命中结果 chips ===== */
@@ -130,23 +172,42 @@
         <div class="xb-hero-inner">
             <div class="xb-hero-search">
                 <img class="xb-hero-icon" src="{{ static_with_version('css/xb.jpg') }}" alt="搜索">
-                <input type="text" class="xb-hero-pc" id="xbPcInput" placeholder="输入邮编查询报价，多个用空格或逗号分隔（最多50个）">
-                <input type="number" class="xb-hero-weight" id="xbWeight" min="0" step="0.01" placeholder="重量(kg)">
+                <div class="xb-field xb-field--pc">
+                    <span class="xb-field-label">邮编</span>
+                    <input type="text" class="xb-hero-pc" id="xbPcInput" placeholder="输入单个邮编查询报价">
+                </div>
+                <div class="xb-field xb-field--weight">
+                    <span class="xb-field-label">计费重量</span>
+                    <input type="number" class="xb-hero-weight" id="xbWeight" min="0" step="0.01" placeholder="kg">
+                </div>
                 <button type="button" class="xb-hero-qbtn" id="xbPcQuery">查询报价</button>
             </div>
-            <div class="xb-hero-tip" id="xbPcTip">最多可批量查询 50 个邮编</div>
+            <div class="xb-hero-tip" id="xbPcTip">顶部支持单个邮编查询；批量查询请使用左侧「邮编查询」</div>
             <div class="xb-hero-actions">
-                <a class="xb-link" id="xbLinkSite" href="#" target="_blank" rel="noopener">公司官网</a>
+                <a class="xb-link" id="xbLinkSite" href="https://www.aubvip.com/" target="_blank" rel="noopener">公司官网</a>
                 <a class="xb-link" href="https://auspost.com.au" target="_blank" rel="noopener">澳邮POST网站</a>
                 <button type="button" class="xb-hero-btn xb-hero-btn--ghost" id="xbClear">清空</button>
                 <button type="button" class="xb-hero-btn xb-hero-btn--export" id="xbExport">导出</button>
             </div>
-            <div class="xb-hero-summary" id="xbPcSummary"></div>
         </div>
     </div>
 
     <div class="wh-layout">
         <nav class="wh-sidebar" id="whSidebar">
+            <div class="wh-sidebar-title">批量邮编查询</div>
+            <div class="xb-pc-box">
+                <textarea id="xbPcInputSide" placeholder="输入邮编，可一次多个（用空格、逗号或换行分隔，最多50个）"></textarea>
+                <div class="xb-weight-row">
+                    <label>计费重量(kg)</label>
+                    <input type="number" id="xbWeightSide" min="0" step="0.01" placeholder="如 1.5">
+                </div>
+                <div class="xb-pc-actions">
+                    <button class="xb-pc-btn" id="xbPcQuerySide">查询报价</button>
+                    <button class="xb-pc-btn xb-pc-btn--ghost" id="xbPcClearSide">清空</button>
+                </div>
+                <div class="xb-pc-summary" id="xbPcSummarySide"></div>
+                <div class="xb-pc-hint">按实重和材积取大收费实，材积系数4000；体积*250</div>
+            </div>
             <div class="wh-sidebar-title">报价目录</div>
             <ul class="wh-nav-list" id="whNavList">
                 <li class="wh-nav-item wh-nav-loading">加载中...</li>
