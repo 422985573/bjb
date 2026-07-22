@@ -183,8 +183,8 @@
     return h;
   }
 
-  // 命中分区行：扁平表，仅展示匹配行并全部高亮
-  function renderFilteredTable(sec, zones) {
+  // 命中分区行：扁平表，仅展示匹配行并高亮；命中的计费重量档单元格橙色高亮
+  function renderFilteredTable(sec, zones, weight) {
     var rows = sec.rows || [];
     var headers = sec.headers || [];
     var zcol = zoneColOf(headers);
@@ -200,13 +200,34 @@
       h += '<tr><td colspan="' + headers.length + '" class="wh-cell-note">无匹配分区的报价行</td></tr>';
     } else {
       matched.forEach(function (row) {
+        var activeCol = (weight && weight > 0) ? weightBracketColIndex(headers, row, weight) : -1;
         h += '<tr class="wh-row-highlight">';
-        for (var ci = 0; ci < headers.length; ci++) { h += '<td>' + esc(cellValue(row[ci])) + '</td>'; }
+        for (var ci = 0; ci < headers.length; ci++) {
+          var cls = (ci === activeCol) ? ' class="xb-cell-active"' : '';
+          h += '<td' + cls + '>' + esc(cellValue(row[ci])) + '</td>';
+        }
         h += '</tr>';
       });
     }
     h += '</tbody></table></div>';
     return h;
+  }
+
+  // 在展示表头里找到命中计费重量的那个重量档列索引（无匹配返回 -1）
+  function weightBracketColIndex(headers, row, weight) {
+    var brackets = [];
+    for (var ci = 0; ci < headers.length; ci++) {
+      var b = parseWeightHeader(String(headers[ci] || '').trim());
+      if (b != null) brackets.push({ ci: ci, bound: b });
+    }
+    brackets.sort(function (a, b) { return a.bound - b.bound; });
+    for (var i = 0; i < brackets.length; i++) {
+      if (brackets[i].bound >= weight) {
+        var v = cellValue(row[brackets[i].ci]);
+        if (v !== '' && v !== null && v !== undefined) return brackets[i].ci;
+      }
+    }
+    return -1;
   }
 
   function zoneColOf(headers) {
@@ -397,7 +418,7 @@
       html += '<div class="wh-section" id="xbSec' + pi + '">';
       if (sec.title) html += '<div class="wh-section-title">' + esc(sec.title) + '</div>';
       if (searchState) {
-        html += renderFilteredTable(dispSec, zones);
+        html += renderFilteredTable(dispSec, zones, searchState ? searchState.weight : 0);
       } else {
         html += renderTableSection(dispSec);
       }
@@ -482,7 +503,8 @@
   }
 
   // ---- 查询 ----
-  function parseCodes(raw) {
+  function parseCodes(raw, maxCodes) {
+    var cap = maxCodes || MAX_CODES;
     var tokens = String(raw || '').split(/[\s,，、;；]+/);
     var seen = {}, codes = [];
     tokens.forEach(function (t) {
@@ -491,39 +513,11 @@
       var pc = ('0000' + digits).slice(-4);
       if (!seen[pc]) { seen[pc] = 1; codes.push(pc); }
     });
-    return codes.slice(0, MAX_CODES);
+    return codes.slice(0, cap);
   }
 
-  // 统计已输入邮编数（去重、仅4位内数字）
-  function countCodes(raw) {
-    var tokens = String(raw || '').split(/[\s,，、;；]+/);
-    var seen = {};
-    tokens.forEach(function (t) {
-      var digits = t.replace(/[^0-9]/g, '');
-      if (!digits || digits.length > 4) return;
-      seen[('0000' + digits).slice(-4)] = 1;
-    });
-    return Object.keys(seen).length;
-  }
-
-  function updateTip(raw) {
-    var tip = $('#xbPcTip');
-    if (!tip) return;
-    var n = countCodes(raw);
-    if (n === 0) {
-      tip.textContent = '最多可批量查询 ' + MAX_CODES + ' 个邮编';
-      tip.className = 'xb-hero-tip';
-    } else if (n > MAX_CODES) {
-      tip.textContent = '已输入 ' + n + ' 个，超出上限，仅查询前 ' + MAX_CODES + ' 个邮编';
-      tip.className = 'xb-hero-tip warn';
-    } else {
-      tip.textContent = '已输入 ' + n + ' / ' + MAX_CODES + ' 个邮编';
-      tip.className = 'xb-hero-tip';
-    }
-  }
-
-  function runLookup(rawCodes, weight, summaryEl) {
-    var codes = parseCodes(rawCodes);
+  function runLookup(rawCodes, weight, summaryEl, maxCodes) {
+    var codes = parseCodes(rawCodes, maxCodes);
     if (!codes.length) {
       searchState = null;
       if (summaryEl) summaryEl.innerHTML = '';
@@ -564,29 +558,44 @@
   }
 
   function bindPostcodeBoxes() {
-    var input = $('#xbPcInput');
-    var weightEl = $('#xbWeight');
-    var queryBtn = $('#xbPcQuery');
-    var clearBtn = $('#xbClear');
+    // 顶部：单个邮编（结果展示在侧栏，与批量一致）
+    bindOneBox({
+      input: '#xbPcInput', weight: '#xbWeight', query: '#xbPcQuery',
+      clear: '#xbClear', summary: '#xbPcSummarySide', max: 1
+    });
+    // 侧栏：多个邮编（最多 MAX_CODES）
+    bindOneBox({
+      input: '#xbPcInputSide', weight: '#xbWeightSide', query: '#xbPcQuerySide',
+      clear: '#xbPcClearSide', summary: '#xbPcSummarySide', max: MAX_CODES
+    });
     var exportBtn = $('#xbExport');
-    var summaryEl = $('#xbPcSummary');
+    if (exportBtn) exportBtn.addEventListener('click', exportResults);
+  }
+
+  function bindOneBox(cfg) {
+    var input = $(cfg.input);
+    var weightEl = $(cfg.weight);
+    var queryBtn = $(cfg.query);
+    var clearBtn = $(cfg.clear);
+    var summaryEl = $(cfg.summary);
     if (!input) return;
 
-    function doQuery() { runLookup(input.value, weightEl ? weightEl.value : 0, summaryEl); }
+    function doQuery() { runLookup(input.value, weightEl ? weightEl.value : 0, summaryEl, cfg.max); }
     if (queryBtn) queryBtn.addEventListener('click', doQuery);
     if (clearBtn) clearBtn.addEventListener('click', function () {
       input.value = '';
       if (weightEl) weightEl.value = '';
       if (summaryEl) summaryEl.innerHTML = '';
+      // 清空另一处结果展示，保持一致
+      $$('.xb-hero-summary, .xb-pc-summary').forEach(function (el) { el.innerHTML = ''; });
       searchState = null;
-      updateTip('');
       renderContent();
       input.focus();
     });
-    if (exportBtn) exportBtn.addEventListener('click', exportResults);
-    input.addEventListener('input', function () { updateTip(input.value); });
+    // textarea 用 Enter 换行，Ctrl/Cmd+Enter 查询；单行输入框 Enter 直接查询
+    var isTextarea = input.tagName === 'TEXTAREA';
     input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); doQuery(); }
+      if (e.key === 'Enter' && (!isTextarea || e.ctrlKey || e.metaKey)) { e.preventDefault(); doQuery(); }
     });
     if (weightEl) weightEl.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); doQuery(); }
