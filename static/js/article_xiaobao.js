@@ -125,6 +125,28 @@
     }
     return map;
   }
+
+  // 展示时隐藏的列（表头名，忽略大小写）；数据保留用于计算/后台编辑
+  var HIDDEN_COL_HEADERS = ['base', 'kilo'];
+
+  // 返回去掉隐藏列后的 section 副本（仅用于展示）
+  function stripHiddenCols(sec) {
+    var headers = sec.headers || [];
+    var keep = [];
+    for (var i = 0; i < headers.length; i++) {
+      var hs = String(headers[i] == null ? '' : headers[i]).trim().toLowerCase();
+      if (HIDDEN_COL_HEADERS.indexOf(hs) < 0) keep.push(i);
+    }
+    if (keep.length === headers.length) return sec;
+    var copy = {};
+    for (var k in sec) { if (Object.prototype.hasOwnProperty.call(sec, k)) copy[k] = sec[k]; }
+    copy.headers = keep.map(function (i) { return headers[i]; });
+    copy.rows = (sec.rows || []).map(function (row) {
+      return keep.map(function (i) { return i < row.length ? row[i] : ''; });
+    });
+    return copy;
+  }
+
   function renderTableSection(sec) {
     var rows = sec.rows || [];
     var headers = sec.headers || [];
@@ -371,12 +393,13 @@
     }).filter(Boolean) : [];
 
     priceTables.forEach(function (sec, pi) {
+      var dispSec = stripHiddenCols(sec);
       html += '<div class="wh-section" id="xbSec' + pi + '">';
       if (sec.title) html += '<div class="wh-section-title">' + esc(sec.title) + '</div>';
       if (searchState) {
-        html += renderFilteredTable(sec, zones);
+        html += renderFilteredTable(dispSec, zones);
       } else {
-        html += renderTableSection(sec);
+        html += renderTableSection(dispSec);
       }
       html += '</div>';
       if (searchState) html += resultTableHtml(sec);
