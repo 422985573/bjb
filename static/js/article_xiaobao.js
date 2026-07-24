@@ -34,6 +34,12 @@
     return (Math.round(n * 100) / 100).toString();
   }
 
+  // 单价类数值（除以数千后较小），保留 4 位小数
+  function fmt4(n) {
+    if (n === null || n === undefined || isNaN(n)) return '';
+    return (Math.round(n * 10000) / 10000).toString();
+  }
+
   function cleanRichtextHtml(html) {
     if (!html) return '';
     var prev;
@@ -329,7 +335,7 @@
   }
 
   function curSettings() {
-    return settingsData[String(selectedMonth)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0 };
+    return settingsData[String(selectedMonth)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
   }
 
   function visiblePriceTables() {
@@ -342,7 +348,8 @@
   }
 
   // 计算某价格表下命中邮编的报价明细（供结果表与导出复用）
-  function computeQuotes(sec) {
+  // mode: 'air'(默认,空运) 用 unit_price；'sea'(海运) 用 sea_unit_price
+  function computeQuotes(sec, mode) {
     var s = curSettings();
     var headers = sec.headers || [];
     var rows = sec.rows || [];
@@ -350,7 +357,7 @@
     var weight = searchState ? searchState.weight : 0;
     if (!searchState || !weight || weight <= 0) return { rows: [], sum: 0 };
 
-    var unitPrice = Number(s.unit_price) || 0;
+    var unitPrice = (mode === 'sea') ? (Number(s.sea_unit_price) || 0) : (Number(s.unit_price) || 0);
     var exRate = Number(s.exchange_rate) || 0;
     var fuelMult = 1 + (Number(s.fuel_rate) || 0) / 100;
     var fuelMultR = Math.round(fuelMult * 10000) / 10000;
@@ -377,7 +384,9 @@
         code: code, zone: info.zone, label: deliver.label,
         headF: unitPrice + '×' + weight,
         tailF: fmt(deliver.aud) + '×' + fuelMultR + '×' + exRate,
-        total: total
+        total: total,
+        div4000: total / 4000,
+        div6000: total / 6000
       });
     });
     return { rows: out, sum: sum };
@@ -385,12 +394,24 @@
 
   function settingsBlockHtml() {
     var s = curSettings();
-    var h = '<div class="xb-settings">';
+    var h = '<div class="xb-settings xb-settings-2col">';
+    // 空运小包
+    h += '<div class="xb-settings-col">';
+    h += '<div class="xb-settings-col-title">空运小包</div>';
     h += '<div class="xb-settings-vals">';
     h += '<div>' + selectedMonth + '月份头程运输费用单价：<b>' + esc(s.unit_price) + '</b> 元/kg</div>';
     h += '<div>' + selectedMonth + '月份澳洲邮政燃油费率：<b>' + esc(s.fuel_rate) + '</b> %</div>';
     h += '<div>' + selectedMonth + '月份澳币换算人民币汇率：<b>' + esc(s.exchange_rate) + '</b></div>';
     h += '</div></div>';
+    // 海运小包（汇率、燃油费率共用，仅头程单价不同）
+    h += '<div class="xb-settings-col">';
+    h += '<div class="xb-settings-col-title">海运小包</div>';
+    h += '<div class="xb-settings-vals">';
+    h += '<div>' + selectedMonth + '月份头程运输费用单价：<b>' + esc(s.sea_unit_price || 0) + '</b> 元/kg</div>';
+    h += '<div>' + selectedMonth + '月份澳洲邮政燃油费率：<b>' + esc(s.fuel_rate) + '</b> %</div>';
+    h += '<div>' + selectedMonth + '月份澳币换算人民币汇率：<b>' + esc(s.exchange_rate) + '</b></div>';
+    h += '</div></div>';
+    h += '</div>';
     return h;
   }
 
@@ -423,7 +444,10 @@
         html += renderTableSection(dispSec);
       }
       html += '</div>';
-      if (searchState) html += resultTableHtml(sec);
+      if (searchState) {
+        html += resultTableHtml(sec, 'air');
+        html += resultTableHtml(sec, 'sea');
+      }
     });
 
     $('#whContent').innerHTML = html;
@@ -432,30 +456,32 @@
   }
 
   // 计算某仓库报价结果表
-  function resultTableHtml(sec) {
+  // mode: 'air'(默认,空运) / 'sea'(海运)
+  function resultTableHtml(sec, mode) {
     var whName = navLabel(sec, 0);
     var weight = searchState ? searchState.weight : 0;
+    var modeLabel = (mode === 'sea') ? '海运' : '空运';
 
     var h = '<div class="xb-result">';
-    h += '<div class="xb-result-title">最终全程运费总价（' + esc(whName) + '）</div>';
+    h += '<div class="xb-result-title">' + modeLabel + '最终全程运费总价（' + esc(whName) + '）</div>';
 
     if (!weight || weight <= 0) {
       h += '<div class="xb-result-empty">请输入重量(kg)后计算价格</div></div>';
       return h;
     }
 
-    var q = computeQuotes(sec);
+    var q = computeQuotes(sec, mode);
     var out = q.rows;
     if (!out.length) {
       h += '<div class="xb-result-empty">未找到可计算的报价（邮编未命中分区或该重量无对应价格）</div></div>';
       return h;
     }
 
-    h += '<table><thead><tr><th>邮编</th><th>公斤段</th><th>头程计算公式</th><th>尾程计算公式</th><th>总价(元)</th></tr></thead><tbody>';
+    h += '<table><thead><tr><th>邮编</th><th>公斤段</th><th>头程计算公式</th><th>尾程计算公式</th><th>除4000单价</th><th>除6000单价</th><th>总价(元)</th></tr></thead><tbody>';
     out.forEach(function (r) {
-      h += '<tr><td>' + esc(r.code) + '</td><td>' + esc(r.label) + '</td><td>' + esc(r.headF) + '</td><td>' + esc(r.tailF) + '</td><td class="xb-total">' + fmt(r.total) + '</td></tr>';
+      h += '<tr><td>' + esc(r.code) + '</td><td>' + esc(r.label) + '</td><td>' + esc(r.headF) + '</td><td>' + esc(r.tailF) + '</td><td>' + fmt4(r.div4000) + '</td><td>' + fmt4(r.div6000) + '</td><td class="xb-total">' + fmt(r.total) + '</td></tr>';
     });
-    h += '<tr class="xb-sum-row"><td colspan="4">合计</td><td>' + fmt(q.sum) + '</td></tr>';
+    h += '<tr class="xb-sum-row"><td colspan="6">合计</td><td>' + fmt(q.sum) + '</td></tr>';
     h += '</tbody></table>';
     h += '<div class="xb-result-note">备注：选择服务则代表已完整阅读渠道说明和费用详解。</div>';
     h += '</div>';
@@ -609,16 +635,18 @@
     var lines = [];
     var any = false;
     tables.forEach(function (sec) {
-      var q = computeQuotes(sec);
-      if (!q.rows.length) return;
-      any = true;
-      lines.push([navLabel(sec, 0)]);
-      lines.push(['邮编', '分区', '公斤段', '头程计算公式', '尾程计算公式', '总价(元)']);
-      q.rows.forEach(function (r) {
-        lines.push([r.code, r.zone, r.label, r.headF, r.tailF, fmt(r.total)]);
+      [['air', '空运'], ['sea', '海运']].forEach(function (m) {
+        var q = computeQuotes(sec, m[0]);
+        if (!q.rows.length) return;
+        any = true;
+        lines.push([navLabel(sec, 0) + '（' + m[1] + '）']);
+        lines.push(['邮编', '分区', '公斤段', '头程计算公式', '尾程计算公式', '除4000单价', '除6000单价', '总价(元)']);
+        q.rows.forEach(function (r) {
+          lines.push([r.code, r.zone, r.label, r.headF, r.tailF, fmt4(r.div4000), fmt4(r.div6000), fmt(r.total)]);
+        });
+        lines.push(['合计', '', '', '', '', '', '', fmt(q.sum)]);
+        lines.push([]);
       });
-      lines.push(['合计', '', '', '', '', fmt(q.sum)]);
-      lines.push([]);
     });
     if (!any) { alert('当前没有可导出的报价结果'); return; }
 

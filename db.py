@@ -105,9 +105,14 @@ def init_db():
             month INTEGER PRIMARY KEY,
             unit_price REAL NOT NULL DEFAULT 0,
             exchange_rate REAL NOT NULL DEFAULT 0,
-            fuel_rate REAL NOT NULL DEFAULT 0
+            fuel_rate REAL NOT NULL DEFAULT 0,
+            sea_unit_price REAL NOT NULL DEFAULT 0
         )
     ''')
+        cursor.execute("PRAGMA table_info(xiaobao_month_settings)")
+        xb_cols = [col[1] for col in cursor.fetchall()]
+        if 'sea_unit_price' not in xb_cols:
+            cursor.execute('ALTER TABLE xiaobao_month_settings ADD COLUMN sea_unit_price REAL NOT NULL DEFAULT 0')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS channel_reject_postcodes (
             channel TEXT PRIMARY KEY,

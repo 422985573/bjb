@@ -146,6 +146,15 @@
 .xb-settings { margin: 4px 0 20px; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
 .xb-settings-vals { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: #0f172a; }
 .xb-settings-vals b { color: #2563eb; }
+.xb-settings-2col { display: flex; gap: 16px; }
+.xb-settings-col { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.xb-settings-col + .xb-settings-col { border-left: 1px solid #e2e8f0; }
+.xb-settings-col-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+.xb-settings-2col .xb-settings-vals { align-items: center; }
+@media (max-width: 640px) {
+  .xb-settings-2col { flex-direction: column; }
+  .xb-settings-col + .xb-settings-col { border-left: none; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 4px; }
+}
 
 /* ===== 报价结果表 ===== */
 .xb-result { margin: 8px 0 26px; }
