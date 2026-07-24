@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import os
+import re
 
 from flask import Blueprint, render_template, request, redirect, url_for, abort
 
@@ -259,6 +260,35 @@ def warehouse_sheet_edit(key):
     )
 
 
+def _xiaobao_sync_sheet_name(title):
+    """将文章标题同步为虚拟小包报价表 sheet 的 name。
+
+    前台文章页大标题（H1）由 JS 取自 sheet JSON 的 name 字段，因此仅更新
+    articles.title 不会改动页面大标题。这里把标题写回 _index.json 与对应
+    sheet 文件的 name，保持后台标题与前台大标题一致。
+    """
+    base = os.path.join(config._BASE_DIR, 'data', 'xiaobao')
+    index_path = os.path.join(base, '_index.json')
+    if not os.path.isfile(index_path):
+        return
+    with open(index_path, 'r', encoding='utf-8') as f:
+        index = json.load(f)
+    if not index:
+        return
+    index[0]['name'] = title
+    with open(index_path, 'w', encoding='utf-8') as f:
+        json.dump(index, f, ensure_ascii=False, indent=2)
+
+    safe_key = re.sub(r'[^a-zA-Z0-9_]', '', index[0].get('key', ''))
+    sheet_path = os.path.join(base, f'{safe_key}.json')
+    if safe_key and os.path.isfile(sheet_path):
+        with open(sheet_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        data['name'] = title
+        with open(sheet_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+
 @admin_bp.route('/article/<int:article_id>/xiaobao-editor', methods=['GET', 'POST'])
 @admin_required
 def xiaobao_editor(article_id):
@@ -274,6 +304,9 @@ def xiaobao_editor(article_id):
                 (title, category_id, is_published, article_id)
             )
             conn.commit()
+            # 标题同步到报价表 JSON 的 name（前台大标题 H1 取自 sheet.name），保持一致
+            if title:
+                _xiaobao_sync_sheet_name(title)
         cursor.execute('SELECT * FROM articles WHERE id = ?', (article_id,))
         article = cursor.fetchone()
         if not article:

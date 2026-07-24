@@ -1242,13 +1242,14 @@ def xiaobao_settings_get():
     """月度参数（单价/汇率/燃油费率），前台公开读取"""
     with db.get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT month, unit_price, exchange_rate, fuel_rate FROM xiaobao_month_settings ORDER BY month')
+        cursor.execute('SELECT month, unit_price, exchange_rate, fuel_rate, sea_unit_price FROM xiaobao_month_settings ORDER BY month')
         data = {}
         for r in cursor.fetchall():
             data[str(r['month'])] = {
                 'unit_price': r['unit_price'],
                 'exchange_rate': r['exchange_rate'],
                 'fuel_rate': r['fuel_rate'],
+                'sea_unit_price': r['sea_unit_price'],
             }
     return jsonify({'success': True, 'data': data})
 
@@ -1279,11 +1280,13 @@ def xiaobao_settings_save():
             if month < 1 or month > 12:
                 continue
             cursor.execute(
-                'INSERT INTO xiaobao_month_settings (month, unit_price, exchange_rate, fuel_rate) '
-                'VALUES (?, ?, ?, ?) '
+                'INSERT INTO xiaobao_month_settings (month, unit_price, exchange_rate, fuel_rate, sea_unit_price) '
+                'VALUES (?, ?, ?, ?, ?) '
                 'ON CONFLICT(month) DO UPDATE SET unit_price=excluded.unit_price, '
-                'exchange_rate=excluded.exchange_rate, fuel_rate=excluded.fuel_rate',
-                (month, _num(item.get('unit_price')), _num(item.get('exchange_rate')), _num(item.get('fuel_rate'))),
+                'exchange_rate=excluded.exchange_rate, fuel_rate=excluded.fuel_rate, '
+                'sea_unit_price=excluded.sea_unit_price',
+                (month, _num(item.get('unit_price')), _num(item.get('exchange_rate')),
+                 _num(item.get('fuel_rate')), _num(item.get('sea_unit_price'))),
             )
             saved += 1
         conn.commit()

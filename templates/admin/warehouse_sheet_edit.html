@@ -301,6 +301,23 @@
 }
 .wse-add-row-btn:hover { border-color: #2563eb; color: #2563eb; }
 
+.wse-add-section-btn {
+    display: block;
+    width: 100%;
+    margin: 14px 0;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+    transition: background 0.15s;
+}
+.wse-add-section-btn:hover { background: #1d4ed8; }
+
 /* Pagination */
 .wse-pager {
     display: flex;
@@ -494,7 +511,7 @@
     </div>
     {% if article %}
     <div class="wse-article-bar">
-        <form method="POST" class="wse-article-form">
+        <form method="POST" class="wse-article-form" id="wseInfoForm">
             <div class="wse-af-group">
                 <label>标题</label>
                 <input type="text" name="title" value="{{ article['title'] }}">
@@ -514,7 +531,6 @@
                     <option value="0" {% if not article.get('is_published') %}selected{% endif %}>未发布</option>
                 </select>
             </div>
-            <button type="submit" class="wse-af-save">保存信息</button>
         </form>
         <div class="wse-article-actions">
             <a href="{{ url_for('front.article_detail', article_code=article['article_code']) }}" target="_blank" class="wse-af-btn">预览文章</a>
@@ -526,8 +542,11 @@
                 <div class="wse-sp-group"><label>月份</label>
                     <select id="wseMonth"></select>
                 </div>
-                <div class="wse-sp-group"><label>头程运输费用单价(元/kg)</label>
+                <div class="wse-sp-group"><label>空运头程运输费用单价(元/kg)</label>
                     <input id="wseUnit" type="number" step="0.01">
+                </div>
+                <div class="wse-sp-group"><label>海运头程运输费用单价(元/kg)</label>
+                    <input id="wseSeaUnit" type="number" step="0.01">
                 </div>
                 <div class="wse-sp-group"><label>澳币换算人民币汇率</label>
                     <input id="wseRate" type="number" step="0.0001">
@@ -535,14 +554,13 @@
                 <div class="wse-sp-group"><label>澳洲邮政燃油费率(%)</label>
                     <input id="wseFuel" type="number" step="0.01">
                 </div>
-                <button type="button" class="wse-af-save" id="wseSettingsSave">保存参数</button>
                 <span class="wse-sp-msg" id="wseSettingsMsg"></span>
             </div>
         </div>
     </div>
     {% endif %}
     <div class="wse-toolbar">
-        <button type="button" class="wse-save-btn" id="wseSaveBtn" onclick="wseDoSave()">保存</button>
+        <button type="button" class="wse-save-btn" id="wseSaveBtn" onclick="wseDoSave()">保存全部</button>
         <span class="wse-result" id="wseResult"></span>
     </div>
     <div id="wseContent">
@@ -611,9 +629,17 @@
     var sections = sheetData.sections || [];
     var html = '';
     rtEditors = {};
+    // 最后一个富文本块的下标，用于在其后放置「增加文章内容」按钮
+    var lastRtIdx = -1;
+    sections.forEach(function(sec, si) { if (sec.type === 'richtext') lastRtIdx = si; });
+    var addBtnHtml = '<button type="button" class="wse-add-section-btn" id="wseAddSectionBtn" onclick="wseAddRichtext()">+ 增加文章内容</button>';
+    var addBtnPlaced = false;
     sections.forEach(function(sec, si) {
       html += renderSection(sec, si);
+      if (si === lastRtIdx) { html += addBtnHtml; addBtnPlaced = true; }
     });
+    // 没有任何富文本块时，按钮放到最前面
+    if (!addBtnPlaced) html = addBtnHtml + html;
     document.getElementById('wseContent').innerHTML = html;
     bindEvents();
     initRichTextEditors();
@@ -678,6 +704,16 @@
     if (!confirm('确认删除整个块' + label + '？保存后不可恢复。')) return;
     sheetData.sections.splice(si, 1);
     render();
+  };
+
+  window.wseAddRichtext = function() {
+    syncInputsToData();
+    if (!sheetData.sections) sheetData.sections = [];
+    sheetData.sections.push({ type: 'richtext', title: '', html: '' });
+    render();
+    // 滚动到新增的块
+    var secs = document.querySelectorAll('.wse-section[data-type="richtext"]');
+    if (secs.length) secs[secs.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
   function renderSection(sec, si) {
@@ -1462,17 +1498,25 @@
     })
       .then(function(r) { return r.json(); })
       .then(function(res) {
-        saveBtn.disabled = false;
-        if (res.success) {
-          result.className = 'wse-result ok';
-          result.textContent = '已保存';
-          // 磁盘 sections 已按本次提交顺序重建，重新对齐 _oidx，
-          // 使后续删除/保存的索引引用保持正确（无需刷新页面）。
-          (sheetData.sections || []).forEach(function(s, i) { s._oidx = i; });
-        } else {
+        if (!res.success) {
+          saveBtn.disabled = false;
           result.className = 'wse-result error';
-          result.textContent = res.message || '保存失败';
+          result.textContent = res.message || '内容保存失败';
+          return;
         }
+        // 磁盘 sections 已按本次提交顺序重建，重新对齐 _oidx，
+        // 使后续删除/保存的索引引用保持正确（无需刷新页面）。
+        (sheetData.sections || []).forEach(function(s, i) { s._oidx = i; });
+        // 内容保存成功后，继续保存月度参数与文章信息（若存在）。
+        var jobs = [];
+        if (typeof window.wseSaveSettings === 'function') { jobs.push(window.wseSaveSettings()); }
+        if (typeof window.wseSaveInfo === 'function') { jobs.push(window.wseSaveInfo()); }
+        Promise.all(jobs).then(function(rets) {
+          saveBtn.disabled = false;
+          var ok = rets.every(function(v) { return v !== false; });
+          result.className = 'wse-result ' + (ok ? 'ok' : 'error');
+          result.textContent = ok ? '已全部保存' : '部分内容保存失败，请检查提示';
+        });
       })
       .catch(function() {
         saveBtn.disabled = false;
@@ -1512,8 +1556,9 @@
   }
 
   function fill(month) {
-    var s = data[String(month)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0 };
+    var s = data[String(month)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
     el('wseUnit').value = s.unit_price;
+    el('wseSeaUnit').value = s.sea_unit_price || 0;
     el('wseRate').value = s.exchange_rate;
     el('wseFuel').value = s.fuel_rate;
   }
@@ -1527,18 +1572,39 @@
 
   monthSel.addEventListener('change', function () { fill(parseInt(monthSel.value)); });
 
-  el('wseSettingsSave').addEventListener('click', function () {
+  // 供“保存全部”统一调用：保存当前月度参数，返回 Promise。
+  window.wseSaveSettings = function () {
     var month = parseInt(monthSel.value);
-    var item = { month: month, unit_price: el('wseUnit').value, exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value };
-    fetch('/api/xiaobao-settings/save', {
+    var item = { month: month, unit_price: el('wseUnit').value, sea_unit_price: el('wseSeaUnit').value, exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value };
+    return fetch('/api/xiaobao-settings/save', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: [item] })
     }).then(function (r) { return r.json(); }).then(function (res) {
       if (res.success) {
-        data[String(month)] = { unit_price: Number(item.unit_price), exchange_rate: Number(item.exchange_rate), fuel_rate: Number(item.fuel_rate) };
+        data[String(month)] = { unit_price: Number(item.unit_price), sea_unit_price: Number(item.sea_unit_price), exchange_rate: Number(item.exchange_rate), fuel_rate: Number(item.fuel_rate) };
         msg(month + '月参数已保存', true);
-      } else { msg(res.message || '保存失败', false); }
-    }).catch(function () { msg('网络错误', false); });
-  });
+        return true;
+      }
+      msg(res.message || '参数保存失败', false);
+      return false;
+    }).catch(function () { msg('参数保存网络错误', false); return false; });
+  };
+
+  // 供“保存全部”统一调用：AJAX 提交文章信息（标题/分类/状态），返回 Promise。
+  var infoForm = document.getElementById('wseInfoForm');
+  if (infoForm) {
+    // 拦截原生提交，避免整页刷新；统一走底部“保存全部”。
+    infoForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      window.wseDoSave();
+    });
+    window.wseSaveInfo = function () {
+      return fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new FormData(infoForm)
+      }).then(function (r) { return r.ok; }).catch(function () { return false; });
+    };
+  }
 })();
 </script>
 {% endif %}
