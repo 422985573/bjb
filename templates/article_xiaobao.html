@@ -151,6 +151,7 @@
 .xb-settings-col + .xb-settings-col { border-left: 1px solid #e2e8f0; }
 .xb-settings-col-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
 .xb-settings-2col .xb-settings-vals { align-items: center; }
+.xb-settings-common { align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
 @media (max-width: 640px) {
   .xb-settings-2col { flex-direction: column; }
   .xb-settings-col + .xb-settings-col { border-left: none; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 4px; }
@@ -190,7 +191,7 @@
                 </div>
                 <div class="xb-field xb-field--weight">
                     <span class="xb-field-label">计费重量</span>
-                    <input type="number" class="xb-hero-weight" id="xbWeight" min="0" step="0.01" placeholder="kg">
+                    <input type="text" inputmode="decimal" class="xb-hero-weight" id="xbWeight" placeholder="kg">
                 </div>
                 <button type="button" class="xb-hero-qbtn" id="xbPcQuery">查询报价</button>
             </div>
@@ -211,7 +212,7 @@
                 <textarea id="xbPcInputSide" placeholder="输入邮编，可一次多个（用空格、逗号或换行分隔，最多50个）"></textarea>
                 <div class="xb-weight-row">
                     <label>计费重量(kg)</label>
-                    <input type="number" id="xbWeightSide" min="0" step="0.01" placeholder="如 1.5">
+                    <input type="text" inputmode="decimal" id="xbWeightSide" placeholder="如 1.5">
                 </div>
                 <div class="xb-pc-actions">
                     <button class="xb-pc-btn" id="xbPcQuerySide">查询报价</button>
