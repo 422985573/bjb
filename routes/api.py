@@ -1001,6 +1001,10 @@ def xiaobao_sheet_save(key):
     if 'result_note_sea' in body:
         data['result_note_sea'] = (body.get('result_note_sea') or '').strip()
 
+    # 月度参数面板下方的富文本备注（支持加粗/改色），与 section 的 html 同样处理
+    if 'panel_note_html' in body:
+        data['panel_note_html'] = body.get('panel_note_html') or ''
+
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
