@@ -177,6 +177,7 @@
 
 /* Section */
 .wse-section {
+    position: relative;
     margin-bottom: 24px;
     background: #fff;
     border-radius: 10px;
@@ -239,6 +240,36 @@
 .wse-section-del-btn:hover {
     background: #fee2e2;
     border-color: #dc2626;
+}
+.wse-section-move {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+}
+.wse-move-btn {
+    width: 34px;
+    height: 26px;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.wse-move-btn:hover:not(:disabled) {
+    background: #e2e8f0;
+    border-color: #2563eb;
+    color: #2563eb;
+}
+.wse-move-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 .wse-table-wrap {
     overflow-x: auto;
@@ -424,6 +455,7 @@
     gap: 8px;
     flex-wrap: wrap;
     margin-top: 6px;
+    padding-right: 90px;
 }
 .wse-add-note-row-btn {
     border-color: #fde68a !important;
@@ -556,6 +588,18 @@
                 </div>
                 <span class="wse-sp-msg" id="wseSettingsMsg"></span>
             </div>
+            <div class="wse-sp-row" style="margin-top:12px;">
+                <div class="wse-sp-group" style="flex:1;">
+                    <label>空运备注（显示在空运报价结果表底部，留空则用默认文案）</label>
+                    <input id="wseResultNoteAir" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
+                </div>
+            </div>
+            <div class="wse-sp-row" style="margin-top:8px;">
+                <div class="wse-sp-group" style="flex:1;">
+                    <label>海运备注（显示在海运报价结果表底部，留空则用默认文案）</label>
+                    <input id="wseResultNoteSea" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
+                </div>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -590,6 +634,10 @@
         }
         sheetData = res.data;
         (sheetData.sections || []).forEach(function(s, i) { s._oidx = i; });
+        var noteAir = document.getElementById('wseResultNoteAir');
+        if (noteAir) noteAir.value = sheetData.result_note_air || '';
+        var noteSea = document.getElementById('wseResultNoteSea');
+        if (noteSea) noteSea.value = sheetData.result_note_sea || '';
         render();
       })
       .catch(function() {
@@ -689,6 +737,32 @@
     return h;
   }
 
+  // 生成吸附在块右下角的上移/下移按钮
+  function renderSectionMove(si) {
+    var total = (sheetData.sections || []).length;
+    var h = '<div class="wse-section-move">';
+    h += '<button type="button" class="wse-move-btn" onclick="wseMoveSection(' + si + ',-1)"' + (si === 0 ? ' disabled' : '') + ' title="上移">▲</button>';
+    h += '<button type="button" class="wse-move-btn" onclick="wseMoveSection(' + si + ',1)"' + (si === total - 1 ? ' disabled' : '') + ' title="下移">▼</button>';
+    h += '</div>';
+    return h;
+  }
+
+  window.wseMoveSection = function(si, dir) {
+    var sections = sheetData.sections || [];
+    var target = si + dir;
+    if (target < 0 || target >= sections.length) return;
+    // 先把当前所有输入框与富文本内容同步回数据，避免重排后丢失未保存的编辑
+    syncInputsToData();
+    Object.keys(rtEditors).forEach(function(k) {
+      var ed = rtEditors[k];
+      if (ed && sections[k]) sections[k].html = cleanRichtextHtml(ed.getHtml());
+    });
+    var tmp = sections[si];
+    sections[si] = sections[target];
+    sections[target] = tmp;
+    render();
+  };
+
   window.wseTitleChange = function(inp) {
     var si = parseInt(inp.dataset.titleSi);
     var sec = sheetData.sections[si];
@@ -725,6 +799,7 @@
       h += renderSectionTitle(sec, si);
       h += '<div class="wse-richtext-toolbar" id="wseRtToolbar' + si + '"></div>';
       h += '<div class="wse-richtext-editor" id="wseRtEditor' + si + '"></div>';
+      h += renderSectionMove(si);
       h += '</div>';
       return h;
     }
@@ -773,6 +848,7 @@
 
     h += renderTable(sec, si, cols, usePaging);
 
+    h += renderSectionMove(si);
     h += '</div>';
     return h;
   }
@@ -1491,10 +1567,16 @@
     result.className = 'wse-result';
     result.textContent = '保存中...';
 
+    var payload = {sections: sections};
+    var noteAir = document.getElementById('wseResultNoteAir');
+    if (noteAir) payload.result_note_air = noteAir.value;
+    var noteSea = document.getElementById('wseResultNoteSea');
+    if (noteSea) payload.result_note_sea = noteSea.value;
+
     fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY) + '/save', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({sections: sections})
+      body: JSON.stringify(payload)
     })
       .then(function(r) { return r.json(); })
       .then(function(res) {

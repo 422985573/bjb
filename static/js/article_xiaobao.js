@@ -385,8 +385,9 @@
         headF: unitPrice + '×' + weight,
         tailF: fmt(deliver.aud) + '×' + fuelMultR + '×' + exRate,
         total: total,
-        div4000: total / 4000,
-        div6000: total / 6000
+        // 除4000单价 = 总价 / 填写重量；除6000单价 = 总价 / (填写重量 × 4000/6000)
+        div4000: weight > 0 ? total / weight : 0,
+        div6000: weight > 0 ? total / (weight * 4000 / 6000) : 0
       });
     });
     return { rows: out, sum: sum };
@@ -394,23 +395,25 @@
 
   function settingsBlockHtml() {
     var s = curSettings();
-    var h = '<div class="xb-settings xb-settings-2col">';
-    // 空运小包
+    var h = '<div class="xb-settings">';
+    // 头程单价：空运/海运各不同，两列显示
+    h += '<div class="xb-settings-2col">';
     h += '<div class="xb-settings-col">';
     h += '<div class="xb-settings-col-title">空运小包</div>';
     h += '<div class="xb-settings-vals">';
     h += '<div>' + selectedMonth + '月份头程运输费用单价：<b>' + esc(s.unit_price) + '</b> 元/kg</div>';
-    h += '<div>' + selectedMonth + '月份澳洲邮政燃油费率：<b>' + esc(s.fuel_rate) + '</b> %</div>';
-    h += '<div>' + selectedMonth + '月份澳币换算人民币汇率：<b>' + esc(s.exchange_rate) + '</b></div>';
     h += '</div></div>';
-    // 海运小包（汇率、燃油费率共用，仅头程单价不同）
     h += '<div class="xb-settings-col">';
     h += '<div class="xb-settings-col-title">海运小包</div>';
     h += '<div class="xb-settings-vals">';
     h += '<div>' + selectedMonth + '月份头程运输费用单价：<b>' + esc(s.sea_unit_price || 0) + '</b> 元/kg</div>';
+    h += '</div></div>';
+    h += '</div>';
+    // 燃油费率、汇率：空运/海运共用，合并为一行显示
+    h += '<div class="xb-settings-vals xb-settings-common">';
     h += '<div>' + selectedMonth + '月份澳洲邮政燃油费率：<b>' + esc(s.fuel_rate) + '</b> %</div>';
     h += '<div>' + selectedMonth + '月份澳币换算人民币汇率：<b>' + esc(s.exchange_rate) + '</b></div>';
-    h += '</div></div>';
+    h += '</div>';
     h += '</div>';
     return h;
   }
@@ -479,11 +482,13 @@
 
     h += '<table><thead><tr><th>邮编</th><th>公斤段</th><th>头程计算公式</th><th>尾程计算公式</th><th>除4000单价</th><th>除6000单价</th><th>总价(元)</th></tr></thead><tbody>';
     out.forEach(function (r) {
-      h += '<tr><td>' + esc(r.code) + '</td><td>' + esc(r.label) + '</td><td>' + esc(r.headF) + '</td><td>' + esc(r.tailF) + '</td><td>' + fmt4(r.div4000) + '</td><td>' + fmt4(r.div6000) + '</td><td class="xb-total">' + fmt(r.total) + '</td></tr>';
+      h += '<tr><td>' + esc(r.code) + '</td><td>' + esc(r.label) + '</td><td>' + esc(r.headF) + '</td><td>' + esc(r.tailF) + '</td><td>' + fmt(r.div4000) + '</td><td>' + fmt(r.div6000) + '</td><td class="xb-total">' + fmt(r.total) + '</td></tr>';
     });
     h += '<tr class="xb-sum-row"><td colspan="6">合计</td><td>' + fmt(q.sum) + '</td></tr>';
     h += '</tbody></table>';
-    h += '<div class="xb-result-note">备注：选择服务则代表已完整阅读渠道说明和费用详解。</div>';
+    var noteKey = (mode === 'sea') ? 'result_note_sea' : 'result_note_air';
+    var note = (currentData && currentData[noteKey]) ? String(currentData[noteKey]) : '选择服务则代表已完整阅读渠道说明和费用详解。';
+    if (note) h += '<div class="xb-result-note">备注：' + esc(note) + '</div>';
     h += '</div>';
     return h;
   }
@@ -623,9 +628,18 @@
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && (!isTextarea || e.ctrlKey || e.metaKey)) { e.preventDefault(); doQuery(); }
     });
-    if (weightEl) weightEl.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); doQuery(); }
-    });
+    if (weightEl) {
+      weightEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); doQuery(); }
+      });
+      // type=text 后自行过滤：仅保留数字与单个小数点，允许中间态（如 "5." "0."）
+      weightEl.addEventListener('input', function () {
+        var v = weightEl.value.replace(/[^\d.]/g, '');
+        var i = v.indexOf('.');
+        if (i !== -1) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, '');
+        if (v !== weightEl.value) weightEl.value = v;
+      });
+    }
   }
 
   // 导出当前报价结果为 CSV
@@ -642,7 +656,7 @@
         lines.push([navLabel(sec, 0) + '（' + m[1] + '）']);
         lines.push(['邮编', '分区', '公斤段', '头程计算公式', '尾程计算公式', '除4000单价', '除6000单价', '总价(元)']);
         q.rows.forEach(function (r) {
-          lines.push([r.code, r.zone, r.label, r.headF, r.tailF, fmt4(r.div4000), fmt4(r.div6000), fmt(r.total)]);
+          lines.push([r.code, r.zone, r.label, r.headF, r.tailF, fmt(r.div4000), fmt(r.div6000), fmt(r.total)]);
         });
         lines.push(['合计', '', '', '', '', '', '', fmt(q.sum)]);
         lines.push([]);

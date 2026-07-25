@@ -995,6 +995,12 @@ def xiaobao_sheet_save(key):
         new_sections.append(base)
     data['sections'] = new_sections
 
+    # 价格表下方的备注（免责声明），空运/海运各一条，留空则前台用默认文案
+    if 'result_note_air' in body:
+        data['result_note_air'] = (body.get('result_note_air') or '').strip()
+    if 'result_note_sea' in body:
+        data['result_note_sea'] = (body.get('result_note_sea') or '').strip()
+
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
