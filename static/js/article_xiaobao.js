@@ -433,6 +433,12 @@
 
     html += settingsBlockHtml();
 
+    // 月度参数面板下方的自定义富文本备注（后台可编辑，支持加粗/改色）
+    var panelNote = currentData.panel_note_html || '';
+    if (panelNote && panelNote.replace(/<[^>]*>/g, '').trim()) {
+      html += '<div class="xb-panel-note wh-richtext">' + cleanRichtextHtml(brToParagraphs(panelNote)) + '</div>';
+    }
+
     var zones = searchState ? Object.keys(searchState.zoneByCode).map(function (c) {
       return searchState.zoneByCode[c].found ? searchState.zoneByCode[c].zone : null;
     }).filter(Boolean) : [];
@@ -533,6 +539,20 @@
     }
   }
 
+  // 查询后滚动到第一个价格结果表
+  function scrollToResult() {
+    // 等 DOM 渲染完成
+    setTimeout(function () {
+      var el = document.querySelector('.xb-result');
+      if (!el) return;
+      if (window.innerWidth > 768) {
+        var content = $('#whContent');
+        if (content) { content.scrollTo({ top: el.offsetTop - 10, behavior: 'smooth' }); return; }
+      }
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  }
+
   // ---- 查询 ----
   function parseCodes(raw, maxCodes) {
     var cap = maxCodes || MAX_CODES;
@@ -565,6 +585,7 @@
         searchState = { codes: codes, zoneByCode: zoneByCode, weight: (Number(weight) || 0) };
         renderSummary(res.data || [], summaryEl);
         renderContent();
+        scrollToResult();
       })
       .catch(function () { if (summaryEl) summaryEl.innerHTML = '<div class="xb-pc-hint">网络错误</div>'; });
   }
@@ -676,7 +697,9 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = '虚拟小包报价.csv';
+    var fileBase = String((currentData && currentData.name) || '虚拟小包报价')
+      .replace(/[\\/:*?"<>|]/g, '').trim() || '虚拟小包报价';
+    a.download = fileBase + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

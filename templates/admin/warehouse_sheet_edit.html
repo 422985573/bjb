@@ -600,6 +600,13 @@
                     <input id="wseResultNoteSea" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
                 </div>
             </div>
+            <div class="wse-sp-row" style="margin-top:12px;">
+                <div class="wse-sp-group" style="flex:1;">
+                    <label>文章内容备注（显示在月度参数面板下方、价格表上方，支持加粗/改色）</label>
+                    <div class="wse-richtext-toolbar" id="wsePanelNoteToolbar"></div>
+                    <div class="wse-richtext-editor" id="wsePanelNoteEditor"></div>
+                </div>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -638,6 +645,7 @@
         if (noteAir) noteAir.value = sheetData.result_note_air || '';
         var noteSea = document.getElementById('wseResultNoteSea');
         if (noteSea) noteSea.value = sheetData.result_note_sea || '';
+        initPanelNoteEditor();
         render();
       })
       .catch(function() {
@@ -646,6 +654,38 @@
   }
 
   var rtEditors = {};
+  var panelNoteEditor = null;
+
+  // 初始化「文章内容备注」富文本编辑器（月度参数面板下方，只需初始化一次）
+  function initPanelNoteEditor() {
+    var wang = window.wangEditor;
+    if (!wang) return;
+    var editorEl = document.getElementById('wsePanelNoteEditor');
+    if (!editorEl || panelNoteEditor) return;
+
+    var initialHtml = cleanRichtextHtml(brToParagraphs(sheetData.panel_note_html || ''));
+    sheetData.panel_note_html = initialHtml;
+
+    panelNoteEditor = wang.createEditor({
+      selector: '#wsePanelNoteEditor',
+      html: initialHtml,
+      config: {
+        placeholder: '请输入备注内容…',
+        onChange: function(ed) {
+          sheetData.panel_note_html = cleanRichtextHtml(ed.getHtml());
+        }
+      },
+      mode: 'default'
+    });
+    wang.createToolbar({
+      editor: panelNoteEditor,
+      selector: '#wsePanelNoteToolbar',
+      config: {
+        toolbarKeys: ['headerSelect', 'bold', 'color', 'bgColor', 'fontSize', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo']
+      },
+      mode: 'default'
+    });
+  }
 
   function cleanRichtextHtml(html) {
     if (!html) return '';
@@ -1572,6 +1612,11 @@
     if (noteAir) payload.result_note_air = noteAir.value;
     var noteSea = document.getElementById('wseResultNoteSea');
     if (noteSea) payload.result_note_sea = noteSea.value;
+    if (panelNoteEditor) {
+      payload.panel_note_html = cleanRichtextHtml(panelNoteEditor.getHtml());
+    } else {
+      payload.panel_note_html = sheetData.panel_note_html || '';
+    }
 
     fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY) + '/save', {
       method: 'POST',
