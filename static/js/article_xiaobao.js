@@ -340,6 +340,16 @@
       });
   }
 
+  // 所有可见价格表支持的最大计费重量档（kg）
+  function globalMaxWeight() {
+    var mx = 0;
+    visiblePriceTables().forEach(function (sec) {
+      var mb = maxWeightBound(sec.headers || []);
+      if (mb > mx) mx = mb;
+    });
+    return mx;
+  }
+
   // 计算某价格表下命中邮编的报价明细（供结果表与导出复用）
   // mode: 'air'(默认,空运) 用 unit_price；'sea'(海运) 用 sea_unit_price
   function computeQuotes(sec, mode) {
@@ -436,6 +446,17 @@
       return searchState.zoneByCode[c].found ? searchState.zoneByCode[c].zone : null;
     }).filter(Boolean) : [];
 
+    // 计费重量超过所有价格表支持的最大档时，整体不查询、不出价
+    var curWeight = searchState ? searchState.weight : 0;
+    var globalMax = globalMaxWeight();
+    if (searchState && curWeight > 0 && globalMax > 0 && curWeight > globalMax) {
+      html += '<div class="xb-result"><div class="xb-result-empty">计费重量 ' + curWeight +
+        'kg 已超过最大支持重量 ' + globalMax + 'kg，该渠道暂不支持报价，请重新输入。</div></div>';
+      $('#whContent').innerHTML = html;
+      renderNav(priceTables);
+      return;
+    }
+
     priceTables.forEach(function (sec, pi) {
       var dispSec = stripHiddenCols(sec);
       html += '<div class="wh-section" id="xbSec' + pi + '">';
@@ -459,6 +480,16 @@
 
   // 计算某仓库报价结果表
   // mode: 'air'(默认,空运) / 'sea'(海运)
+  // 价格表支持的最大计费重量档（kg）；无重量列返回 0
+  function maxWeightBound(headers) {
+    var mx = 0;
+    for (var ci = 0; ci < headers.length; ci++) {
+      var b = parseWeightHeader(headers[ci]);
+      if (b != null && b > mx) mx = b;
+    }
+    return mx;
+  }
+
   function resultTableHtml(sec, mode) {
     var whName = navLabel(sec, 0);
     var weight = searchState ? searchState.weight : 0;
@@ -469,6 +500,12 @@
 
     if (!weight || weight <= 0) {
       h += '<div class="xb-result-empty">请输入重量(kg)后计算价格</div></div>';
+      return h;
+    }
+
+    var maxBound = maxWeightBound(sec.headers || []);
+    if (maxBound > 0 && weight > maxBound) {
+      h += '<div class="xb-result-empty">计费重量已超过 ' + maxBound + 'kg，该渠道暂不支持报价</div></div>';
       return h;
     }
 
@@ -586,6 +623,14 @@
   function renderSummary(data, summaryEl) {
     if (!summaryEl) return;
     if (!data.length) { summaryEl.innerHTML = ''; return; }
+    // 计费重量超过最大支持重量：侧栏也只提示超限，不展示命中结果
+    var curWeight = searchState ? searchState.weight : 0;
+    var globalMax = globalMaxWeight();
+    if (curWeight > 0 && globalMax > 0 && curWeight > globalMax) {
+      summaryEl.innerHTML = '<div class="xb-pc-hint" style="color:#dc2626;">计费重量 ' + curWeight +
+        'kg 已超过最大支持重量 ' + globalMax + 'kg，暂不支持报价。</div>';
+      return;
+    }
     var h = '';
     data.forEach(function (it) {
       if (it.found) {
