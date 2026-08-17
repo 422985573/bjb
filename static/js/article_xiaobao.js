@@ -285,14 +285,7 @@
         }
       }
     }
-    // 超出最大档：Base + Kilo × 进位重量
-    if (baseIdx >= 0 && kiloIdx >= 0) {
-      var base = Number(cellValue(row[baseIdx]));
-      var kilo = Number(cellValue(row[kiloIdx]));
-      if (!isNaN(base) && !isNaN(kilo)) {
-        return { label: '>' + maxBound + 'KG', aud: base + kilo * Math.ceil(weight) };
-      }
-    }
+    // 超过最大重量档不出价格（例如 >21KG）
     return null;
   }
 

@@ -308,6 +308,10 @@
     text-align: center;
     padding: 4px;
 }
+/* Base / Kilo 列仅供前台计算使用，后台编辑不展示（数据仍保留、保存不丢失） */
+.wse-table .wse-col-hidden {
+    display: none;
+}
 .wse-del-btn {
     background: none;
     border: none;
@@ -975,6 +979,7 @@
   function renderPriceTable(sec, si, cols) {
     var rows = sec.rows || [];
     var headers = sec.headers || [];
+    var hiddenCols = wseHiddenColSet(headers);
     var split = splitNotesAndData(rows, cols);
     var dataIdx = split.dataIdx;
     var noteIdx = split.noteIdx;
@@ -985,7 +990,7 @@
     if (headers.length) {
       h += '<thead><tr>';
       for (var hi = 0; hi < cols; hi++) {
-        h += '<th>' + esc(headers[hi] || '') + '</th>';
+        h += '<th' + (hiddenCols[hi] ? ' class="wse-col-hidden"' : '') + '>' + esc(headers[hi] || '') + '</th>';
       }
       h += '<th></th></tr></thead>';
     }
@@ -1004,7 +1009,7 @@
           for (var ci = 1; ci < cols; ci++) {
             var val = ci < row.length ? wseCellValue(row[ci]) : '';
             if (val === null || val === undefined) val = '';
-            h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+            h += '<td' + (hiddenCols[ci] ? ' class="wse-col-hidden"' : '') + '><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
           }
           h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除小项">&times;</button></td>';
           h += '</tr>';
@@ -1019,7 +1024,7 @@
         for (var ci = 0; ci < cols; ci++) {
           var val = ci < row.length ? wseCellValue(row[ci]) : '';
           if (val === null || val === undefined) val = '';
-          h += '<td><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
+          h += '<td' + (hiddenCols[ci] ? ' class="wse-col-hidden"' : '') + '><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
         }
         h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除行">&times;</button></td>';
         h += '</tr>';
@@ -1158,6 +1163,16 @@
       return c.v != null ? c.v : (c.text != null ? c.text : '');
     }
     return c;
+  }
+  // 价格表中需要隐藏（仅前台计算用、后台不展示）的列：Base / Kilo
+  // 只做视觉隐藏，input 仍在 DOM 中，保存时数据不丢失（前台 >22KG 计算需要）
+  function wseHiddenColSet(headers) {
+    var map = {};
+    (headers || []).forEach(function(hd, i) {
+      var k = String(hd == null ? '' : hd).trim().toLowerCase();
+      if (k === 'base' || k === 'kilo') map[i] = true;
+    });
+    return map;
   }
   function wseCellColspan(c) {
     if (c && typeof c === 'object' && !Array.isArray(c)) {
