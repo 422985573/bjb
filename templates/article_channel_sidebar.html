@@ -29,20 +29,22 @@
     <div class="csb-hero">
         <div class="csb-hero-inner">
             <div class="csb-hero-search">
-                <img class="csb-hero-icon" src="{{ static_with_version('css/xb.jpg') }}" alt="搜索">
-                <div class="csb-field csb-field--pc">
-                    <span class="csb-field-label">邮编</span>
-                    <input type="text" class="csb-hero-pc" id="globalPostcodeInput" placeholder="输入单个邮编查询报价" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="globalSearchPostcodeDebounced()" aria-label="全局邮编搜索">
-                    <button type="button" id="globalSearchClearBtn" class="csb-hero-clear" aria-label="清除邮编" title="清除" hidden>×</button>
+                <div class="csb-hero-search-row">
+                    <img class="csb-hero-icon" src="{{ static_with_version('css/xb.jpg') }}" alt="搜索">
+                    <div class="csb-field csb-field--pc">
+                        <span class="csb-field-label">邮编</span>
+                        <input type="text" class="csb-hero-pc" id="globalPostcodeInput" placeholder="输入单个邮编查询报价" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="globalSearchPostcodeDebounced()" aria-label="全局邮编搜索">
+                        <button type="button" id="globalSearchClearBtn" class="csb-hero-clear" aria-label="清除邮编" title="清除" hidden>×</button>
+                    </div>
+                    <div class="csb-field csb-field--weight">
+                        <span class="csb-field-label">计费重量</span>
+                        <input type="text" inputmode="decimal" class="csb-hero-weight" id="cbWeight" placeholder="kg">
+                    </div>
+                    <button type="button" class="csb-hero-qbtn" id="csbHeroQuery">查询报价</button>
                 </div>
-                <div class="csb-field csb-field--weight">
-                    <span class="csb-field-label">计费重量</span>
-                    <input type="text" inputmode="decimal" class="csb-hero-weight" id="cbWeight" placeholder="kg">
-                </div>
-                <button type="button" class="csb-hero-qbtn" id="csbHeroQuery">查询报价</button>
+                <div class="csb-hero-result" id="globalSearchResult" aria-live="polite"></div>
             </div>
-            <div class="csb-hero-tip">顶部支持单个邮编查询；批量查询请使用左侧「邮编查询」</div>
-            <div class="csb-hero-result" id="globalSearchResult" aria-live="polite"></div>
+            <div class="csb-hero-tip">顶部支持单个邮编查询</div>
             <div class="csb-hero-actions">
                 <a class="csb-link" href="https://www.aubvip.com/" target="_blank" rel="noopener">公司官网</a>
                 <a class="csb-link" href="https://auspost.com.au" target="_blank" rel="noopener">澳邮POST网站</a>
@@ -55,22 +57,8 @@
     </div>
 
     <div class="csb-layout">
-        <!-- 左侧栏：批量邮编查询 + 报价目录 -->
+        <!-- 左侧栏：报价目录 -->
         <aside class="csb-sidebar">
-            <div class="csb-sidebar-title">批量邮编查询</div>
-            <div class="csb-pc-box">
-                <textarea id="batchPcInput" placeholder="输入邮编，可一次多个（用空格、逗号或换行分隔，最多50个）"></textarea>
-                <div class="csb-weight-row">
-                    <label>计费重量(kg)</label>
-                    <input type="text" inputmode="decimal" id="batchWeight" placeholder="如 1.5">
-                </div>
-                <div class="csb-pc-actions">
-                    <button class="csb-pc-btn" id="batchQueryBtn">查询报价</button>
-                    <button class="csb-pc-btn csb-pc-btn--ghost" id="batchClearBtn">清空</button>
-                </div>
-                <div class="csb-pc-summary" id="batchSummary"></div>
-                <div class="csb-pc-hint">按邮编匹配可派送的渠道；批量查询多个邮编取并集</div>
-            </div>
             <div class="csb-sidebar-title">报价目录</div>
             <ul class="channel-nav-list csb-nav-list" id="channelNavList"></ul>
             <div class="csb-sidebar-title csb-wh-nav-title">海外仓派送</div>

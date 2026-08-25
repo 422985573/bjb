@@ -14,7 +14,7 @@
   var whMaps = {};   // { key: postcode_zone_map }
   var whData = {};   // { key: 完整 sheet data（含 sections，用于运费总价计算） }
   var whReady = {};  // { key: true } 渲染完成
-  var whSettings = { fuel_rate: 20, gst_rate: 10 };  // 海外仓运费参数（后台可配燃油率；GST 固定 10%）
+  var whSettings = { fuel_rates: {}, gst_rate: 10 };  // 海外仓运费参数（各表燃油率独立；GST 固定 10%）
 
   function $(id) { return document.getElementById(id); }
 
@@ -136,8 +136,9 @@
     var card = $('wh-card-' + key);
     if (!card || !whMaps[key]) return false;
     var map = whMaps[key];
-    // 清高亮
+    // 清高亮与行隐藏
     card.querySelectorAll('.wh-table tbody tr.wh-hit').forEach(function (tr) { tr.classList.remove('wh-hit'); });
+    card.querySelectorAll('.wh-table tbody tr.wh-row-hidden').forEach(function (tr) { tr.classList.remove('wh-row-hidden'); });
     var resultEl = $('wh-result-' + key);
 
     if (!codes || !codes.length) {
@@ -166,8 +167,9 @@
 
     card.classList.remove('hidden-by-search');
     var matchers = zones.map(makeZoneMatcher);
+    // 查询后只展示命中行，其余行隐藏（避免整表几百行太长）
     card.querySelectorAll('.wh-table tbody tr').forEach(function (tr) {
-      if (tr.classList.contains('wh-group-row')) return;
+      if (tr.classList.contains('wh-group-row')) { tr.classList.add('wh-row-hidden'); return; }
       var cells = tr.querySelectorAll('td');
       var matched = false;
       for (var i = 0; i < cells.length && !matched; i++) {
@@ -175,6 +177,7 @@
         for (var j = 0; j < matchers.length; j++) { if (matchers[j](txt)) { matched = true; break; } }
       }
       if (matched) tr.classList.add('wh-hit');
+      else tr.classList.add('wh-row-hidden');
     });
     if (resultEl) resultEl.textContent = '分区：' + zoneLabels.join('，') + (missCodes.length ? '（' + missCodes.join('/') + ' 未命中）' : '');
     // 命中后渲染运费总价表（悉尼仓/墨尔本仓各一行）
@@ -211,7 +214,9 @@
     var zone = (whMaps[key] || {})[code];
     if (!zone) return [];
     var matcher = makeZoneMatcher(zone);
-    var fuel = Number(whSettings.fuel_rate) || 0;
+    var fuelRates = whSettings.fuel_rates || {};
+    var fuel = Number(fuelRates[key]);
+    if (isNaN(fuel)) fuel = 20;
     var gst = Number(whSettings.gst_rate) || 0;
     var fuelMult = 1 + fuel / 100;
     var gstMult = 1 + gst / 100;
