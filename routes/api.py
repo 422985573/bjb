@@ -892,6 +892,49 @@ def warehouse_adjust_price():
     return jsonify({'success': True, 'adjusted_count': adjusted})
 
 
+@api_bp.route('/warehouse-sheet/<key>/rename', methods=['POST'])
+@admin_required
+def warehouse_sheet_rename(key):
+    """重命名海外仓价格表标题（前台卡片 H2 / 大标题取自 sheet.name）。
+    同时写回该目录 _index.json 与对应 sheet JSON 的 name，保持一致。"""
+    body = request.json or {}
+    dirname = body.get('dir')
+    name = (body.get('name') or '').strip()
+    if not name:
+        return jsonify({'success': False, 'message': '标题不能为空'}), 400
+    if len(name) > 100:
+        return jsonify({'success': False, 'message': '标题过长'}), 400
+
+    safe_key = re.sub(r'[^a-zA-Z0-9_]', '', key)
+    sheet_path = _wh_sheet_path(key, dirname)
+    if not os.path.isfile(sheet_path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+
+    with open(sheet_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data['name'] = name
+    with open(sheet_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # 同步 _index.json 里的 name
+    index_path = _wh_index_path(dirname)
+    if os.path.isfile(index_path):
+        with open(index_path, 'r', encoding='utf-8') as f:
+            index = json.load(f)
+        changed = False
+        for entry in index:
+            if entry.get('key') == safe_key:
+                entry['name'] = name
+                changed = True
+        if changed:
+            with open(index_path, 'w', encoding='utf-8') as f:
+                json.dump(index, f, ensure_ascii=False, indent=2)
+
+    _load_all_postcode_maps.cache_clear()
+    _logger.info('warehouse sheet rename key=%s dir=%s name=%s', key, dirname, name)
+    return jsonify({'success': True, 'name': name})
+
+
 @api_bp.route('/warehouse-sheet/<key>/save', methods=['POST'])
 @admin_required
 def warehouse_sheet_save(key):
@@ -926,6 +969,17 @@ def warehouse_sheet_save(key):
         new_sections.append(base)
     data['sections'] = new_sections
 
+    # 价格表下方的备注（免责声明），单条，留空则前台用默认文案
+    if 'result_note' in body:
+        data['result_note'] = (body.get('result_note') or '').strip()
+        # 清理旧的空运/海运双备注字段，避免残留
+        data.pop('result_note_air', None)
+        data.pop('result_note_sea', None)
+
+    # 月度参数面板下方的富文本备注（支持加粗/改色）
+    if 'panel_note_html' in body:
+        data['panel_note_html'] = body.get('panel_note_html') or ''
+
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -945,10 +999,25 @@ def _wh_settings_path(dirname=None):
 
 
 def _read_wh_settings(dirname=None):
+    """海外仓运费参数。
+
+    存储结构（data/<dir>/_settings.json）：
+        {
+          "gst_rate": 10,
+          "monthly": {
+            "allied": {"8": {"unit_price":36,"sea_unit_price":5,"exchange_rate":4.8,"fuel_rate":12.3}, ...},
+            "border": {...}, "tfm": {...}, "toll": {...}
+          }
+        }
+    返回时附带按“服务器当前月”解析出的各表 fuel_rates / exchange_rates（前台会用客户端当前月
+    再从 monthly 精确取值；这里的解析值仅作后备与旧读者兼容）。
+    兼容旧结构：顶层 fuel_rate（单值）/ fuel_rates（各表）→ 落入各表各月的 fuel_rate 默认。
+    """
     path = _wh_settings_path(dirname)
     gst_rate = 10
     fuel_default = 20
-    fuel_rates = {}
+    legacy_fuel_rates = {}
+    monthly = {}
     if os.path.isfile(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
@@ -956,24 +1025,49 @@ def _read_wh_settings(dirname=None):
             if isinstance(saved, dict):
                 if 'gst_rate' in saved:
                     gst_rate = saved['gst_rate']
-                # 旧单值 fuel_rate → 作为各表默认
-                if 'fuel_rate' in saved:
+                if 'fuel_rate' in saved:          # 旧单值
                     fuel_default = saved['fuel_rate']
-                fr = saved.get('fuel_rates')
+                fr = saved.get('fuel_rates')      # 旧各表
                 if isinstance(fr, dict):
-                    fuel_rates = dict(fr)
+                    legacy_fuel_rates = dict(fr)
+                mo = saved.get('monthly')
+                if isinstance(mo, dict):
+                    for k, v in mo.items():
+                        if isinstance(v, dict):
+                            monthly[k] = {str(mk): dict(mv) for mk, mv in v.items() if isinstance(mv, dict)}
         except (ValueError, OSError):
             pass
-    # 补齐 4 张表的燃油率（缺的用默认）
-    full = {}
+    # 补齐 4 张表的 monthly 容器
     for k in _WH_SHEET_KEYS:
-        full[k] = fuel_rates.get(k, fuel_default)
-    return {'gst_rate': gst_rate, 'fuel_rates': full}
+        monthly.setdefault(k, {})
+
+    cur_month = str(datetime.now().month)
+
+    def _month_param(k, field, default):
+        rec = monthly.get(k, {}).get(cur_month) or {}
+        v = rec.get(field)
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return default
+
+    fuel_rates = {}
+    exchange_rates = {}
+    for k in _WH_SHEET_KEYS:
+        fuel_rates[k] = _month_param(k, 'fuel_rate', legacy_fuel_rates.get(k, fuel_default))
+        exchange_rates[k] = _month_param(k, 'exchange_rate', 0)
+    return {
+        'gst_rate': gst_rate,
+        'monthly': monthly,
+        'current_month': int(cur_month),
+        'fuel_rates': fuel_rates,        # 当前月解析（后备/兼容）
+        'exchange_rates': exchange_rates,
+    }
 
 
 @api_bp.route('/warehouse-settings')
 def warehouse_settings_get():
-    """海外仓运费总价参数（各表燃油率%/GST%），前台公开读取。"""
+    """海外仓运费总价参数（各表分月：头程单价/汇率/燃油率%，GST%），前台公开读取。"""
     return jsonify({'success': True, 'data': _read_wh_settings(request.args.get('dir'))})
 
 
@@ -989,28 +1083,52 @@ def warehouse_settings_save():
         except (ValueError, TypeError):
             return default
 
-    cur = _read_wh_settings(dirname)
-    fuel_rates = dict(cur['fuel_rates'])
-    # 支持两种入参：{key, fuel_rate}（单表保存）或 {fuel_rates:{...}}（批量）
-    incoming = body.get('fuel_rates')
-    if isinstance(incoming, dict):
-        for k in _WH_SHEET_KEYS:
-            if k in incoming:
-                fuel_rates[k] = _num(incoming[k], fuel_rates.get(k, 20))
-    key = body.get('key')
-    if key in _WH_SHEET_KEYS and 'fuel_rate' in body:
-        fuel_rates[key] = _num(body.get('fuel_rate'), fuel_rates.get(key, 20))
-
-    data = {
-        'gst_rate': _num(body.get('gst_rate'), cur.get('gst_rate', 10)),
-        'fuel_rates': fuel_rates,
-    }
+    # 读磁盘原始结构（保留其它表/其它月），只改本次提交部分
     path = _wh_settings_path(dirname)
+    raw = {}
+    if os.path.isfile(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                raw = json.load(f) or {}
+        except (ValueError, OSError):
+            raw = {}
+    if not isinstance(raw, dict):
+        raw = {}
+    monthly = raw.get('monthly')
+    if not isinstance(monthly, dict):
+        monthly = {}
+    # 旧 fuel_rates 一次性迁移进 monthly 当前月，避免升级后燃油率丢失
+    legacy_fr = raw.get('fuel_rates') if isinstance(raw.get('fuel_rates'), dict) else {}
+    cur_month = str(datetime.now().month)
+    for k in _WH_SHEET_KEYS:
+        monthly.setdefault(k, {})
+        if k in legacy_fr and cur_month not in monthly[k]:
+            monthly[k][cur_month] = {'fuel_rate': _num(legacy_fr[k], 20)}
+
+    gst_rate = _num(body.get('gst_rate'), raw.get('gst_rate', 10))
+    key = body.get('key')
+
+    # 分月参数保存：{key, month, unit_price, sea_unit_price, exchange_rate, fuel_rate}
+    if key in _WH_SHEET_KEYS and body.get('month') is not None:
+        month = str(int(_num(body.get('month'), datetime.now().month)))
+        rec = dict(monthly.get(key, {}).get(month) or {})
+        for field in ('unit_price', 'sea_unit_price', 'exchange_rate', 'fuel_rate'):
+            if field in body:
+                rec[field] = _num(body.get(field), rec.get(field, 0))
+        monthly.setdefault(key, {})[month] = rec
+    # 兼容旧调用：{key, fuel_rate}（写入当前月燃油率）
+    elif key in _WH_SHEET_KEYS and 'fuel_rate' in body:
+        month = cur_month
+        rec = dict(monthly.get(key, {}).get(month) or {})
+        rec['fuel_rate'] = _num(body.get('fuel_rate'), rec.get('fuel_rate', 20))
+        monthly.setdefault(key, {})[month] = rec
+
+    data = {'gst_rate': gst_rate, 'monthly': monthly}
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    _logger.info('warehouse settings save dir=%s fuel_rates=%s', dirname, data['fuel_rates'])
-    return jsonify({'success': True, 'data': data})
+    _logger.info('warehouse settings save dir=%s key=%s month=%s', dirname, key, body.get('month'))
+    return jsonify({'success': True, 'data': _read_wh_settings(dirname)})
 
 
 

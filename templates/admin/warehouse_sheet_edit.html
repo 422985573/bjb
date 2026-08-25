@@ -532,11 +532,32 @@
 .wse-sp-msg { font-size: 13px; font-weight: 600; }
 .wse-sp-msg.ok { color: #16a34a; }
 .wse-sp-msg.err { color: #dc2626; }
+
+/* ===== 内嵌模式（文章编辑器 iframe 同页编辑，无页头/无最大宽度限制） ===== */
+{% if is_embed %}
+.main-nav { display: none !important; }
+.main-wrapper { padding: 0 !important; margin: 0 !important; }
+body { background: #fff; }
+{% endif %}
+.wse-page--embed { max-width: none; margin: 0; padding: 14px 16px 20px; }
+.wse-embed-titlebar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 12px; margin-bottom: 14px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+}
+.wse-embed-icon { font-size: 18px; }
+.wse-embed-title-input {
+    flex: 1; min-width: 200px; padding: 8px 12px;
+    border: 1px solid #cbd5e1; border-radius: 6px;
+    font-size: 15px; font-weight: 600; color: #0f172a;
+}
+.wse-embed-title-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="wse-page">
+<div class="wse-page{% if is_embed %} wse-page--embed{% endif %}">
+    {% if not is_embed %}
     <div class="wse-header">
         {% if back_url %}
         <a href="{{ back_url }}" class="wse-back">&larr; 返回</a>
@@ -547,6 +568,12 @@
         {% endif %}
         <h2>{{ sheet_name }}</h2>
     </div>
+    {% else %}
+    <div class="wse-embed-titlebar">
+        <span class="wse-embed-icon">🏬</span>
+        <input type="text" class="wse-embed-title-input" id="wseEmbedTitle" value="{{ sheet_name }}" placeholder="价格表标题" aria-label="价格表标题">
+    </div>
+    {% endif %}
     {% if article %}
     <div class="wse-article-bar">
         <form method="POST" class="wse-article-form" id="wseInfoForm">
@@ -574,17 +601,17 @@
             <a href="{{ url_for('front.article_detail', article_code=article['article_code']) }}" target="_blank" class="wse-af-btn">预览文章</a>
             <a href="{{ url_for('admin.xiaobao_zones_page') }}" class="wse-af-btn wse-af-btn--primary">维护分区表（邮编→分区）</a>
         </div>
-        <div class="wse-settings-panel">
+    </div>
+    {% endif %}
+    {% if article or is_embed %}
+    <div class="wse-settings-panel">
             <div class="wse-sp-title">月度参数设置（前台按当前月展示并参与报价计算）</div>
             <div class="wse-sp-row">
                 <div class="wse-sp-group"><label>月份</label>
                     <select id="wseMonth"></select>
                 </div>
-                <div class="wse-sp-group"><label>空运头程运输费用单价(元/kg)</label>
+                <div class="wse-sp-group"><label>头程运输费用单价(元/kg)</label>
                     <input id="wseUnit" type="number" step="0.01">
-                </div>
-                <div class="wse-sp-group"><label>海运头程运输费用单价(元/kg)</label>
-                    <input id="wseSeaUnit" type="number" step="0.01">
                 </div>
                 <div class="wse-sp-group"><label>澳币换算人民币汇率</label>
                     <input id="wseRate" type="number" step="0.0001">
@@ -596,14 +623,8 @@
             </div>
             <div class="wse-sp-row" style="margin-top:12px;">
                 <div class="wse-sp-group" style="flex:1;">
-                    <label>空运备注（显示在空运报价结果表底部，留空则用默认文案）</label>
-                    <input id="wseResultNoteAir" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
-                </div>
-            </div>
-            <div class="wse-sp-row" style="margin-top:8px;">
-                <div class="wse-sp-group" style="flex:1;">
-                    <label>海运备注（显示在海运报价结果表底部，留空则用默认文案）</label>
-                    <input id="wseResultNoteSea" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
+                    <label>备注（显示在报价结果表底部，留空则用默认文案）</label>
+                    <input id="wseResultNote" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
                 </div>
             </div>
             <div class="wse-sp-row" style="margin-top:12px;">
@@ -613,7 +634,6 @@
                     <div class="wse-richtext-editor" id="wsePanelNoteEditor"></div>
                 </div>
             </div>
-        </div>
     </div>
     {% endif %}
     <div class="wse-toolbar">
@@ -657,10 +677,9 @@ function wseGoBack(e) {
         }
         sheetData = res.data;
         (sheetData.sections || []).forEach(function(s, i) { s._oidx = i; });
-        var noteAir = document.getElementById('wseResultNoteAir');
-        if (noteAir) noteAir.value = sheetData.result_note_air || '';
-        var noteSea = document.getElementById('wseResultNoteSea');
-        if (noteSea) noteSea.value = sheetData.result_note_sea || '';
+        var note = document.getElementById('wseResultNote');
+        // 兼容旧数据：优先 result_note，回退到旧的空运备注/海运备注
+        if (note) note.value = sheetData.result_note || sheetData.result_note_air || sheetData.result_note_sea || '';
         initPanelNoteEditor();
         render();
       })
@@ -1636,10 +1655,8 @@ function wseGoBack(e) {
 
     var payload = {sections: sections};
     if (DATA_DIR) payload.dir = DATA_DIR;
-    var noteAir = document.getElementById('wseResultNoteAir');
-    if (noteAir) payload.result_note_air = noteAir.value;
-    var noteSea = document.getElementById('wseResultNoteSea');
-    if (noteSea) payload.result_note_sea = noteSea.value;
+    var note = document.getElementById('wseResultNote');
+    if (note) payload.result_note = note.value;
     if (panelNoteEditor) {
       payload.panel_note_html = cleanRichtextHtml(panelNoteEditor.getHtml());
     } else {
@@ -1666,6 +1683,7 @@ function wseGoBack(e) {
         var jobs = [];
         if (typeof window.wseSaveSettings === 'function') { jobs.push(window.wseSaveSettings()); }
         if (typeof window.wseSaveInfo === 'function') { jobs.push(window.wseSaveInfo()); }
+        if (typeof window.wseSaveExtra === 'function') { jobs.push(window.wseSaveExtra()); }
         Promise.all(jobs).then(function(rets) {
           saveBtn.disabled = false;
           var ok = rets.every(function(v) { return v !== false; });
@@ -1688,6 +1706,123 @@ function wseGoBack(e) {
   function escAttr(v) {
     return v.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  {% if is_embed %}
+  // 内嵌模式（文章编辑器 iframe 同页编辑）。
+  // 向父页上报内容高度，避免 iframe 内出现二级滚动条。
+  (function () {
+    var last = 0;
+    // 测量真实内容高度（.wse-page 的底边），而不是 documentElement/body 的 scrollHeight——
+    // 后者会被撑到 iframe 视口高度，父页放大 iframe 后又上报更大值，形成无限增高的反馈回路。
+    function contentHeight() {
+      var page = document.querySelector('.wse-page');
+      if (page) {
+        var r = page.getBoundingClientRect();
+        return Math.ceil(r.bottom + window.scrollY);
+      }
+      return document.body ? document.body.scrollHeight : 0;
+    }
+    function report() {
+      var h = contentHeight();
+      if (h && Math.abs(h - last) > 4) {
+        last = h;
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({type: 'wse-embed-height', key: SHEET_KEY, height: h + 24}, '*');
+          }
+        } catch (e) {}
+      }
+    }
+    // 只观察内容容器，避免 body 高度随 iframe 视口变化触发回调。
+    if (window.ResizeObserver) {
+      var target = document.querySelector('.wse-page') || document.body;
+      if (target) new ResizeObserver(report).observe(target);
+    }
+    setInterval(report, 800);
+  })();
+
+  // 顶部「标题」随「保存全部」一并保存（改名 API）。
+  window.wseSaveExtra = function () {
+    var titleEl = document.getElementById('wseEmbedTitle');
+    if (!titleEl) return Promise.resolve(true);
+    var name = (titleEl.value || '').trim();
+    if (!name) return Promise.resolve(true);
+    return fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY) + '/rename', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({dir: DATA_DIR, name: name})
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (res && res.success) {
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({type: 'wse-renamed', key: SHEET_KEY, name: res.name}, '*');
+          }
+        } catch (e) {}
+        return true;
+      }
+      return false;
+    }).catch(function () { return false; });
+  };
+
+  // 月度参数面板（各表独立、分月存储；随「保存全部」提交当前所选月）。
+  (function () {
+    var el = function (id) { return document.getElementById(id); };
+    var monthSel = el('wseMonth');
+    if (!monthSel) return;
+    var monthly = {};                 // { "8": {unit_price, sea_unit_price, exchange_rate, fuel_rate} }
+    var curMonth = new Date().getMonth() + 1;
+
+    for (var m = 1; m <= 12; m++) {
+      var op = document.createElement('option');
+      op.value = m; op.textContent = m + '月' + (m === curMonth ? '（当前）' : '');
+      if (m === curMonth) op.selected = true;
+      monthSel.appendChild(op);
+    }
+
+    function fill(month) {
+      var s = monthly[String(month)] || {};
+      // 头程单价：新字段 unit_price，回退旧的空运/海运头程单价兼容历史数据
+      var unit = s.unit_price != null ? s.unit_price : (s.sea_unit_price != null ? s.sea_unit_price : '');
+      el('wseUnit').value = unit;
+      el('wseRate').value = s.exchange_rate != null ? s.exchange_rate : '';
+      el('wseFuel').value = s.fuel_rate != null ? s.fuel_rate : '';
+    }
+    function msg(text, ok) { var e = el('wseSettingsMsg'); if (e) { e.textContent = text; e.className = 'wse-sp-msg ' + (ok ? 'ok' : 'err'); } }
+
+    if (DATA_DIR) {
+      fetch('/api/warehouse-settings?dir=' + encodeURIComponent(DATA_DIR))
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (res && res.success && res.data && res.data.monthly) {
+            monthly = res.data.monthly[SHEET_KEY] || {};
+          }
+          fill(parseInt(monthSel.value));
+        }).catch(function () { fill(parseInt(monthSel.value)); });
+    }
+
+    monthSel.addEventListener('change', function () { fill(parseInt(monthSel.value)); });
+
+    // 供「保存全部」统一调用：保存当前月度参数（本表本月），返回 Promise。
+    window.wseSaveSettings = function () {
+      var month = parseInt(monthSel.value);
+      var payload = {
+        dir: DATA_DIR, key: SHEET_KEY, month: month,
+        unit_price: el('wseUnit').value,
+        exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value
+      };
+      return fetch('/api/warehouse-settings/save', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (res && res.success) {
+          if (res.data && res.data.monthly) monthly = res.data.monthly[SHEET_KEY] || monthly;
+          msg(month + '月参数已保存', true);
+          return true;
+        }
+        msg((res && res.message) || '参数保存失败', false);
+        return false;
+      }).catch(function () { msg('参数保存网络错误', false); return false; });
+    };
+  })();
+  {% endif %}
 
   init();
 })();
@@ -1712,8 +1847,7 @@ function wseGoBack(e) {
 
   function fill(month) {
     var s = data[String(month)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
-    el('wseUnit').value = s.unit_price;
-    el('wseSeaUnit').value = s.sea_unit_price || 0;
+    el('wseUnit').value = s.unit_price != null ? s.unit_price : (s.sea_unit_price || 0);
     el('wseRate').value = s.exchange_rate;
     el('wseFuel').value = s.fuel_rate;
   }
@@ -1730,7 +1864,7 @@ function wseGoBack(e) {
   // 供“保存全部”统一调用：保存当前月度参数，返回 Promise。
   window.wseSaveSettings = function () {
     var month = parseInt(monthSel.value);
-    var item = { month: month, unit_price: el('wseUnit').value, sea_unit_price: el('wseSeaUnit').value, exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value };
+    var item = { month: month, unit_price: el('wseUnit').value, sea_unit_price: el('wseUnit').value, exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value };
     return fetch('/api/xiaobao-settings/save', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: [item] })
     }).then(function (r) { return r.json(); }).then(function (res) {

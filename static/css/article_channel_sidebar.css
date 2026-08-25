@@ -133,6 +133,13 @@
 .csb-wh-nav-list { padding-top: 8px; }
 .csb-wh-nav-item { font-weight: 500; }
 
+/* 浮动渠道目录抽屉内「海外仓派送」分组标题 */
+.channel-nav-panel .cnp-group-title {
+    margin: 12px 4px 6px; padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 13px; font-weight: 700; color: #1e293b; letter-spacing: 1px;
+}
+
 /* ===== 海外仓价格表内联展示（与渠道表同页顺序展示） ===== */
 .csb-wh-inline { margin-top: 8px; }
 .wh-card {
@@ -165,13 +172,22 @@
 /* ===== 运费总价表 ===== */
 .wh-quote { margin-top: 16px; }
 .wh-quote-title { text-align: center; font-size: 15px; font-weight: 700; color: #0f172a; margin: 10px 0 8px; }
+.wh-quote-table + .wh-quote-title { margin-top: 18px; }
 .wh-quote-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .wh-quote-table th, .wh-quote-table td { border: 1px solid #e2e8f0; padding: 7px 9px; text-align: center; }
 .wh-quote-table th { background: #eff6ff; color: #1e40af; font-weight: 600; }
 .wh-quote-formula { color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wh-quote-total { font-weight: 700; color: #dc2626; }
+.wh-quote-sum-row td { background: #f8fafc; font-weight: 700; color: #0f172a; }
+.wh-quote-sum-row td:last-child { color: #dc2626; }
 .wh-quote-need { color: #94a3b8; font-weight: 400; font-size: 12px; }
 .wh-quote-note { margin-top: 8px; font-size: 12px; color: #64748b; line-height: 1.5; }
+.wh-quote-disclaimer { margin-top: 4px; font-size: 12px; color: #94a3b8; line-height: 1.5; }
+
+/* 报价表模块顶部备注（后台「文章内容备注」富文本） */
+.wh-panel-note { margin: 8px 0 14px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #2563eb; border-radius: 6px; font-size: 13px; color: #334155; line-height: 1.6; }
+.wh-panel-note :is(p, ul, ol) { margin: 4px 0; }
+.wh-panel-note img { max-width: 100%; height: auto; }
 
 /* 隐藏占位面板：仅供 article.js 逻辑运行，不显示 */
 .csb-hidden-panel { display: none !important; }
