@@ -2160,57 +2160,10 @@
 
         {% if dahuo_wh_sheets %}
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-            <div style="font-size:12px; color:var(--text-light); margin-bottom:8px;">海外仓价格表（独立副本，编辑不影响海外仓文章）</div>
-            {% for s in dahuo_wh_sheets %}
-            <div class="wh-sheet-row" style="margin-bottom:10px;">
-                <a class="module-list-item" style="cursor:pointer; text-decoration:none; margin-bottom:4px;"
-                   href="{{ url_for('admin.warehouse_sheet_edit', key=s.key) }}?dir={{ dahuo_wh_dir }}&back={{ url_for('admin.article_edit', article_id=article.id) | urlencode }}" target="_blank" rel="noopener">
-                    <span class="module-list-item-icon">🏬</span>
-                    <span class="module-list-item-title">编辑 {{ s.name }}</span>
-                </a>
-                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-left:2px;">
-                    <label style="font-size:12px; color:var(--text-light);">燃油费率(%)</label>
-                    <input type="text" class="wh-fuel-input" data-wh-key="{{ s.key }}" inputmode="decimal" style="width:60px; padding:5px 8px; border:1px solid var(--border); border-radius:6px;">
-                    <button type="button" class="module-btn" style="padding:5px 12px;" onclick="saveWhFuelRate('{{ s.key }}')">保存</button>
-                    <span class="wh-fuel-msg" data-wh-key="{{ s.key }}" style="font-size:12px;"></span>
-                </div>
-            </div>
-            {% endfor %}
-            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">运费总价 = max(首重+Per/1KG×计费重, Minimum) ×(1+燃油率)×(1+10%GST)。每张表燃油率独立，GST 固定 10%。</div>
-            <script>
-              (function () {
-                var DIR = '{{ dahuo_wh_dir }}';
-                function loadFuel() {
-                  fetch('/api/warehouse-settings?dir=' + encodeURIComponent(DIR))
-                    .then(function (r) { return r.json(); })
-                    .then(function (res) {
-                      if (res && res.success && res.data && res.data.fuel_rates) {
-                        var rates = res.data.fuel_rates;
-                        document.querySelectorAll('.wh-fuel-input').forEach(function (el) {
-                          var k = el.getAttribute('data-wh-key');
-                          if (rates[k] !== undefined) el.value = rates[k];
-                        });
-                      }
-                    }).catch(function () {});
-                }
-                window.saveWhFuelRate = function (key) {
-                  var el = document.querySelector('.wh-fuel-input[data-wh-key="' + key + '"]');
-                  var msg = document.querySelector('.wh-fuel-msg[data-wh-key="' + key + '"]');
-                  var val = parseFloat(el && el.value);
-                  if (isNaN(val)) { if (msg) { msg.textContent = '请输入数字'; msg.style.color = '#dc2626'; } return; }
-                  fetch('/api/warehouse-settings/save', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dir: DIR, key: key, fuel_rate: val })
-                  }).then(function (r) { return r.json(); }).then(function (res) {
-                    if (msg) {
-                      msg.textContent = res && res.success ? '已保存' : '保存失败';
-                      msg.style.color = res && res.success ? '#16a34a' : '#dc2626';
-                    }
-                  }).catch(function () { if (msg) { msg.textContent = '网络错误'; msg.style.color = '#dc2626'; } });
-                };
-                loadFuel();
-              })();
-            </script>
+            <a class="module-list-item" href="#dahuoWhSection" style="cursor:pointer; text-decoration:none;">
+                <span class="module-list-item-icon">🏬</span>
+                <span class="module-list-item-title">海外仓价格表（下方同页编辑）</span>
+            </a>
         </div>
         {% endif %}
 
@@ -2491,6 +2444,49 @@
             </div>
             {% endfor %}
         </div>
+        {% if dahuo_wh_sheets %}
+        <section id="dahuoWhSection" class="dahuo-wh-section">
+            <div class="dahuo-wh-head">
+                <h2>海外仓价格表（独立副本，编辑不影响海外仓文章）</h2>
+                <p>下方每张表可直接编辑：顶部改<strong>标题</strong>与<strong>燃油费率</strong>，表格改数据，点该表的「保存全部」即保存。运费总价 = max(首重+Per/1KG×计费重, Minimum)×(1+燃油率)×(1+10%GST)，GST 固定 10%。</p>
+            </div>
+            {% for s in dahuo_wh_sheets %}
+            <div class="dahuo-wh-card" data-wh-key="{{ s.key }}">
+                <iframe class="dahuo-wh-frame"
+                        data-wh-key="{{ s.key }}"
+                        src="{{ url_for('admin.warehouse_sheet_edit', key=s.key) }}?dir={{ dahuo_wh_dir }}&embed=1"
+                        title="编辑 {{ s.name }}"
+                        loading="lazy"></iframe>
+            </div>
+            {% endfor %}
+        </section>
+        <style>
+        .dahuo-wh-section { margin-top: 26px; padding-top: 18px; border-top: 2px solid var(--border); }
+        .dahuo-wh-head h2 { font-size: 17px; color: #0f172a; margin: 0 0 6px; }
+        .dahuo-wh-head p { font-size: 12px; color: var(--text-light); margin: 0 0 14px; line-height: 1.6; }
+        .dahuo-wh-card {
+            border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+            margin-bottom: 18px; background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+        }
+        .dahuo-wh-frame { width: 100%; border: 0; display: block; height: 640px; }
+        </style>
+        <script>
+        (function () {
+          // 内嵌 iframe 保存标题后同步父页侧栏文案；并按内容自适应高度。
+          window.addEventListener('message', function (ev) {
+            var d = ev.data || {};
+            if (d.type === 'wse-renamed' && d.key) {
+              var frame = document.querySelector('.dahuo-wh-frame[data-wh-key="' + d.key + '"]');
+              if (frame) frame.setAttribute('title', '编辑 ' + d.name);
+            }
+            if (d.type === 'wse-embed-height' && d.key && d.height) {
+              var f = document.querySelector('.dahuo-wh-frame[data-wh-key="' + d.key + '"]');
+              if (f) f.style.height = Math.max(360, d.height) + 'px';
+            }
+          });
+        })();
+        </script>
+        {% endif %}
     </div>
 </div>
 

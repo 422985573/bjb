@@ -269,6 +269,8 @@ def warehouse_sheet_edit(key):
     back = request.args.get('back') or ''
     if not (back.startswith('/') and not back.startswith('//')):
         back = ''
+    # embed=1：无边框内嵌模式（供文章编辑器 iframe 同页编辑，隐藏页头/返回，顶部显示可编辑标题）
+    is_embed = request.args.get('embed') == '1'
     return render_template(
         'admin/warehouse_sheet_edit.html',
         sheet_key=key,
@@ -276,6 +278,7 @@ def warehouse_sheet_edit(key):
         is_large=sheet_meta.get('is_large', False),
         data_dir=safe_dir,
         back_url=back,
+        is_embed=is_embed,
     )
 
 

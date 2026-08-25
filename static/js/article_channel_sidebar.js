@@ -14,7 +14,7 @@
   var whMaps = {};   // { key: postcode_zone_map }
   var whData = {};   // { key: 完整 sheet data（含 sections，用于运费总价计算） }
   var whReady = {};  // { key: true } 渲染完成
-  var whSettings = { fuel_rates: {}, gst_rate: 10 };  // 海外仓运费参数（各表燃油率独立；GST 固定 10%）
+  var whSettings = { monthly: {}, fuel_rates: {}, exchange_rates: {}, gst_rate: 10 };  // 海外仓运费参数（各表分月：燃油率/汇率；GST 固定 10%）
 
   function $(id) { return document.getElementById(id); }
 
@@ -68,18 +68,27 @@
     var rows = sec.rows || [];
     var headers = sec.headers || [];
     if (!rows.length && !headers.length) return '';
+    // 隐藏「Minimum Charge / 最低收费」列（仅前台展示隐藏，原始数据不动）
+    var keep = [];
+    for (var ci = 0; ci < headers.length; ci++) {
+      var hk = String(headers[ci] == null ? '' : headers[ci]).replace(/\s+/g, '').toLowerCase();
+      if (hk.indexOf('minimum') >= 0 || hk.indexOf('最低') >= 0) continue;
+      keep.push(ci);
+    }
+    if (!keep.length) { for (var ck = 0; ck < headers.length; ck++) keep.push(ck); }
+    var pick = function (row) { return keep.map(function (i) { return row[i]; }); };
     var h = '<div class="wh-table-wrap"><table class="wh-table"><thead><tr>';
-    headers.forEach(function (th) { h += '<th>' + esc(th) + '</th>'; });
+    pick(headers).forEach(function (th) { h += '<th>' + esc(th) + '</th>'; });
     h += '</tr></thead><tbody>';
     rows.forEach(function (row) {
-      // 州名分组行（只有首格有值，其余空）：整行合并展示
+      // 州名分组行（只有首格有值，其余空）：整行合并展示（按原始行判定）
       var filled = row.filter(function (c) { return c !== '' && c !== null && c !== undefined; });
       if (row.length >= 3 && filled.length === 1 && (row[0] !== '' && row[0] != null)) {
-        h += '<tr class="wh-group-row"><td colspan="' + row.length + '">' + esc(row[0]) + '</td></tr>';
+        h += '<tr class="wh-group-row"><td colspan="' + keep.length + '">' + esc(row[0]) + '</td></tr>';
         return;
       }
       h += '<tr>';
-      row.forEach(function (c) { h += '<td>' + esc(c) + '</td>'; });
+      pick(row).forEach(function (c) { h += '<td>' + esc(c) + '</td>'; });
       h += '</tr>';
     });
     h += '</tbody></table></div>';
@@ -91,6 +100,10 @@
     if (!card) return;
     var name = (data && data.name) || key;
     var html = '<h2 class="wh-card-title">' + esc(name) + '</h2>';
+    // 文章内容备注（后台「月度参数面板下方、价格表上方」的富文本）
+    if (data && data.panel_note_html) {
+      html += '<div class="wh-panel-note">' + whRichtextToHtml(data.panel_note_html) + '</div>';
+    }
     html += '<div class="wh-card-result" id="wh-result-' + key + '"></div>';
     (data.sections || []).forEach(function (sec) {
       if (sec.type === 'price_table') {
@@ -198,6 +211,18 @@
   function whNum(v) { var n = parseFloat(v); return isNaN(n) ? null : n; }
   function fmt2(n) { return (Math.round(n * 100) / 100).toString(); }
 
+  // 取某表「当前月」的参数（燃油率/汇率/头程单价）；优先客户端当前月的 monthly，缺失回退服务器解析值
+  function whMonthParam(key, field, def) {
+    var monthly = whSettings.monthly || {};
+    var rec = (monthly[key] || {})[String(new Date().getMonth() + 1)] || {};
+    var v = parseFloat(rec[field]);
+    if (!isNaN(v)) return v;
+    var fallbackMap = (field === 'fuel_rate') ? whSettings.fuel_rates
+      : (field === 'exchange_rate') ? whSettings.exchange_rates : null;
+    var fv = fallbackMap ? parseFloat(fallbackMap[key]) : NaN;
+    return isNaN(fv) ? def : fv;
+  }
+
   // 仓别名（从 price_table 标题提取 悉尼仓/墨尔本仓）
   function warehouseLabel(title) {
     var t = String(title || '');
@@ -207,31 +232,28 @@
     return m ? m[1] : '';
   }
 
-  // 计算某表某邮编在各价格表（各仓）的报价行；weight 为 0/空 时只出公式不出总价
+  // 计算某表某邮编在各价格表（各仓）的报价行；weight 为 0/空 时公式照出、数字列留空
   function computeWarehouseRows(key, code, weight) {
     var data = whData[key];
     if (!data) return [];
     var zone = (whMaps[key] || {})[code];
     if (!zone) return [];
     var matcher = makeZoneMatcher(zone);
-    var fuelRates = whSettings.fuel_rates || {};
-    var fuel = Number(fuelRates[key]);
-    if (isNaN(fuel)) fuel = 20;
-    var gst = Number(whSettings.gst_rate) || 0;
+    var unitPrice = whMonthParam(key, 'unit_price', 0);  // 头程运输费用单价
+    var fuel = whMonthParam(key, 'fuel_rate', 0);
+    var rate = whMonthParam(key, 'exchange_rate', 0);   // 澳币→人民币汇率（0=不折算）
     var fuelMult = 1 + fuel / 100;
-    var gstMult = 1 + gst / 100;
-    var w = weight > 0 ? Math.ceil(weight) : 0;   // 向上取整 KG
+    var fuelPctTxt = (Math.round((100 + fuel) * 100) / 100) + '%';   // 如 13% → "113%"
+    var w = weight > 0 ? Math.ceil(weight) : 0;   // 除4000计费重（进位 KG）
 
     var out = [];
     (data.sections || []).forEach(function (sec) {
       if (sec.type !== 'price_table') return;
       var headers = sec.headers || [];
-      var baseIdx = whColIndex(headers, ['首重']);
       var perIdx = whColIndex(headers, ['per', '单价', '/1kg']);
-      var minIdx = whColIndex(headers, ['minimum', '最低', 'min']);
       var zoneIdx = whColIndex(headers, ['zone', '分区']);
-      // 附加费等表没有 首重/Per 列 → 跳过
-      if (baseIdx < 0 || perIdx < 0) return;
+      // 附加费等表没有 Per/1KG 列 → 跳过
+      if (perIdx < 0) return;
       if (zoneIdx < 0) zoneIdx = (headers.length > 3) ? 1 : 0;
 
       var hitRow = null;
@@ -242,24 +264,32 @@
       });
       if (!hitRow) return;
 
-      var base = whNum(hitRow[baseIdx]);
-      var per = whNum(hitRow[perIdx]);
-      var minv = minIdx >= 0 ? whNum(hitRow[minIdx]) : null;
-      if (base == null || per == null) return;
+      var per = whNum(hitRow[perIdx]);   // 符合邮编对应的单价（Per/1KG，AUD/kg）
+      if (per == null) return;
+
+      // 公式列：始终把「除4000计费重」按文字显示（不代入数字）
+      var headF = fmt2(unitPrice) + '*' + fuelPctTxt + '*' + fmt2(rate) + '*除4000计费重';
+      var tailF = fmt2(per) + '*' + fuelPctTxt + '*' + fmt2(rate) + '*除4000计费重';
 
       var row = {
         warehouse: warehouseLabel(sec.title), code: code, zone: zone,
-        base: base, per: per, min: minv, w: w
+        per: per, w: w, rate: rate, unitPrice: unitPrice,
+        label: w > 0 ? (w + 'KG') : '—', headF: headF, tailF: tailF
       };
-      if (w > 0) {
-        var sub = base + per * w;
-        if (minv != null && minv > sub) sub = minv;
-        row.total = sub * fuelMult * gstMult;
-        row.formula = 'max(' + fmt2(base) + '+' + fmt2(per) + '×' + w + (minv != null ? ', ' + fmt2(minv) : '') +
-          ')×' + fmt2(fuelMult) + '×' + fmt2(gstMult);
+      if (w > 0 && rate > 0) {
+        var head = unitPrice * fuelMult * rate * w;   // 头程（元）= 头程单价×(1+燃油)×汇率×计费重
+        var tail = per * fuelMult * rate * w;         // 尾程（元）= 邮编单价×(1+燃油)×汇率×计费重
+        row.head = head;
+        row.tail = tail;
+        row.total = head + tail;
+        row.div4000 = row.total / w;                              // 除4000单价 = 总价 ÷ 除4000计费重
+        row.div6000 = row.total / (w * 4000 / 6000);             // 除6000单价 = 总价 ÷ 除6000计费重
       } else {
+        row.head = null;
+        row.tail = null;
         row.total = null;
-        row.formula = 'max(首重+Per×计费重' + (minv != null ? ', Min' : '') + ')×(1+燃油' + fuel + '%)×(1+GST' + gst + '%)';
+        row.div4000 = null;
+        row.div6000 = null;
       }
       out.push(row);
     });
@@ -274,6 +304,8 @@
     if (!isNaN(side) && side > 0) return side;
     return 0;
   }
+
+  function fmtM(n) { return (Math.round(n * 100) / 100).toFixed(2); }
 
   function renderWhQuote(key, codes) {
     var host = $('wh-quote-' + key);
@@ -292,22 +324,56 @@
     });
     if (!allRows.length) { host.innerHTML = ''; return; }
 
-    var h = '<div class="wh-quote-title">最终全程运费总价（AUD）</div>';
-    h += '<table class="wh-quote-table"><thead><tr>' +
-      '<th>仓别</th><th>邮编</th><th>分区</th><th>计费重(kg)</th><th>计算公式</th><th>总价(AUD)</th>' +
-      '</tr></thead><tbody>';
+    // 按仓分组，保持出现顺序（悉尼仓/墨尔本仓）
+    var order = [];
+    var groups = {};
     allRows.forEach(function (r) {
-      h += '<tr>' +
-        '<td>' + esc(r.warehouse) + '</td>' +
-        '<td>' + esc(r.code) + '</td>' +
-        '<td>' + esc(r.zone) + '</td>' +
-        '<td>' + (r.w > 0 ? r.w : '—') + '</td>' +
-        '<td class="wh-quote-formula">' + esc(r.formula) + '</td>' +
-        '<td class="wh-quote-total">' + (r.total != null ? fmt2(r.total) : '<span class="wh-quote-need">填重量后计算</span>') + '</td>' +
-        '</tr>';
+      var wh = r.warehouse || '';
+      if (!groups[wh]) { groups[wh] = []; order.push(wh); }
+      groups[wh].push(r);
     });
-    h += '</tbody></table>';
-    h += '<div class="wh-quote-note">备注：总价 = max(首重 + Per/1KG × 计费重, Minimum) ×(1+燃油率)×(1+10%GST)，重量不足 1KG 按 1KG 进位。</div>';
+
+    var h = '';
+    order.forEach(function (wh) {
+      var rows = groups[wh];
+      var title = '最终全程运费总价' + (wh ? '（' + wh + '）' : '');
+      h += '<div class="wh-quote-title">' + esc(title) + '</div>';
+      h += '<table class="wh-quote-table"><thead><tr>' +
+        '<th>邮编</th><th>公斤段</th><th>头程计算公式</th><th>尾程计算公式</th>' +
+        '<th>除4000单价</th><th>除6000单价</th><th>总价(元)</th>' +
+        '</tr></thead><tbody>';
+      var sum = 0, hasTotal = false;
+      rows.forEach(function (r) {
+        var noRate = (r.w > 0 && !(r.rate > 0));   // 有重量但没设汇率
+        var cell = function (v) {
+          if (r.total != null && v != null) return fmtM(v);
+          return '<span class="wh-quote-need">' + (noRate ? '未设汇率' : '填重量后计算') + '</span>';
+        };
+        if (r.total != null) { sum += r.total; hasTotal = true; }
+        h += '<tr>' +
+          '<td>' + esc(r.code) + '</td>' +
+          '<td>' + esc(r.label) + '</td>' +
+          '<td class="wh-quote-formula">' + esc(r.headF) + '</td>' +
+          '<td class="wh-quote-formula">' + esc(r.tailF) + '</td>' +
+          '<td>' + cell(r.div4000) + '</td>' +
+          '<td>' + cell(r.div6000) + '</td>' +
+          '<td class="wh-quote-total">' + cell(r.total) + '</td>' +
+          '</tr>';
+      });
+      h += '<tr class="wh-quote-sum-row"><td colspan="6">合计</td><td>' +
+        (hasTotal ? fmtM(sum) : '<span class="wh-quote-need">—</span>') + '</td></tr>';
+      h += '</tbody></table>';
+    });
+
+    h += '<div class="wh-quote-note">备注：头程 = 头程运输费用单价 ×(1+燃油率)× 汇率 × 除4000计费重；' +
+      '尾程 = 邮编对应单价 ×(1+燃油率)× 汇率 × 除4000计费重；总价 = 头程 + 尾程；' +
+      '除4000单价 = 总价 ÷ 除4000计费重，除6000单价 = 总价 ÷ 除6000计费重。除4000计费重 = 长×宽×高 ÷ 4000。</div>';
+    // 后台自定义备注（免责声明），留空则用默认文案
+    var data = whData[key] || {};
+    var resultNote = (data.result_note != null && String(data.result_note).trim())
+      ? String(data.result_note).trim()
+      : '选择服务则代表已完整阅读渠道说明和费用详解。';
+    h += '<div class="wh-quote-disclaimer">' + esc(resultNote) + '</div>';
     host.innerHTML = h;
   }
 
@@ -510,6 +576,9 @@
         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         document.querySelectorAll('.csb-wh-nav-item.active').forEach(function (b) { b.classList.remove('active'); });
         btn.classList.add('active');
+        // 移动端点选后收起浮动抽屉（与渠道目录一致）
+        var panel = $('channelNavPanel');
+        if (panel && window.matchMedia('(max-width: 768px)').matches) panel.removeAttribute('open');
       });
     });
   }

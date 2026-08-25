@@ -56,43 +56,42 @@
         </div>
     </div>
 
-    <div class="csb-layout">
-        <!-- 左侧栏：报价目录 -->
-        <aside class="csb-sidebar">
-            <div class="csb-sidebar-title">报价目录</div>
-            <ul class="channel-nav-list csb-nav-list" id="channelNavList"></ul>
-            <div class="csb-sidebar-title csb-wh-nav-title">海外仓派送</div>
-            <ul class="channel-nav-list csb-nav-list csb-wh-nav-list" id="csbWhNavList">
+    <!-- 内容区：渠道模块 + 海外仓 4 张小价格表（同页展示，单栏全宽） -->
+    <main class="csb-content article-content">
+        {% include 'partials/_article_modules.html' %}
+        <!-- 海外仓价格表（页面加载时并行拉 slim detail 渲染；只展小价格表，不展分区大表） -->
+        <section class="csb-wh-inline" id="whInline" data-wh-dir="warehouse_au_dahuo">
+            <div class="wh-card" id="wh-card-allied" data-wh-key="allied"></div>
+            <div class="wh-card" id="wh-card-border" data-wh-key="border"></div>
+            <div class="wh-card" id="wh-card-tfm" data-wh-key="tfm"></div>
+            <div class="wh-card" id="wh-card-toll" data-wh-key="toll"></div>
+        </section>
+    </main>
+
+    <!-- 浮动渠道目录抽屉：点击展开可快速定位渠道 / 海外仓；搜索邮编时自动弹出可走的渠道 -->
+    <details class="channel-nav-panel" id="channelNavPanel">
+        <summary class="cnp-summary">
+            <span class="cnp-icon">☰</span>
+            <span class="cnp-title">渠道目录</span>
+            <span class="cnp-search-wrap" id="cnpSearchWrap" hidden>
+                <span class="cnp-search-code" id="cnpSearchCode"></span>
+                <button type="button" class="cnp-search-clear" id="cnpSearchClearBtn" aria-label="清除搜索邮编" title="清除邮编">×</button>
+            </span>
+            <span class="cnp-hint">点击展开</span>
+            <span class="cnp-arrow" aria-hidden="true">
+                <img src="{{ static_with_version('images/icon-chevron.svg') }}" alt="">
+            </span>
+        </summary>
+        <div class="channel-nav-panel-body">
+            <ul class="channel-nav-list" id="channelNavList"></ul>
+            <div class="cnp-group-title">海外仓派送</div>
+            <ul class="channel-nav-list csb-wh-nav-list" id="csbWhNavList">
                 <li><button type="button" class="channel-nav-link csb-wh-nav-item" data-scroll-target="#wh-card-allied">Allied价格表</button></li>
                 <li><button type="button" class="channel-nav-link csb-wh-nav-item" data-scroll-target="#wh-card-border">Border价格表</button></li>
                 <li><button type="button" class="channel-nav-link csb-wh-nav-item" data-scroll-target="#wh-card-tfm">TFM价格表</button></li>
                 <li><button type="button" class="channel-nav-link csb-wh-nav-item" data-scroll-target="#wh-card-toll">TOLL价格表</button></li>
             </ul>
-        </aside>
-
-        <!-- 右侧内容区：渠道模块 + 海外仓 4 张小价格表（同页展示） -->
-        <main class="csb-content article-content">
-            {% include 'partials/_article_modules.html' %}
-            <!-- 海外仓价格表（页面加载时并行拉 slim detail 渲染；只展小价格表，不展分区大表） -->
-            <section class="csb-wh-inline" id="whInline" data-wh-dir="warehouse_au_dahuo">
-                <div class="wh-card" id="wh-card-allied" data-wh-key="allied"></div>
-                <div class="wh-card" id="wh-card-border" data-wh-key="border"></div>
-                <div class="wh-card" id="wh-card-tfm" data-wh-key="tfm"></div>
-                <div class="wh-card" id="wh-card-toll" data-wh-key="toll"></div>
-            </section>
-        </main>
-    </div>
-
-    <!-- 隐藏占位：让 article.js 的 setupChannelNavigator 正常执行并填充 #channelNavList -->
-    <details class="channel-nav-panel csb-hidden-panel" id="channelNavPanel" hidden>
-        <summary class="cnp-summary">
-            <span class="cnp-title">渠道目录</span>
-            <span class="cnp-search-wrap" id="cnpSearchWrap" hidden>
-                <span class="cnp-search-code" id="cnpSearchCode"></span>
-                <button type="button" class="cnp-search-clear" id="cnpSearchClearBtn" aria-label="清除搜索邮编">×</button>
-            </span>
-        </summary>
-        <div class="channel-nav-panel-body"></div>
+        </div>
     </details>
 
     <!-- 图片全屏灯箱 -->
