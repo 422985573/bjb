@@ -538,10 +538,12 @@
 {% block content %}
 <div class="wse-page">
     <div class="wse-header">
-        {% if article %}
+        {% if back_url %}
+        <a href="{{ back_url }}" class="wse-back">&larr; 返回</a>
+        {% elif article %}
         <a href="{{ back_url }}" class="wse-back">&larr; 返回列表</a>
         {% else %}
-        <a href="javascript:history.back()" class="wse-back">&larr; 返回</a>
+        <a href="#" class="wse-back" onclick="wseGoBack(event)">&larr; 返回</a>
         {% endif %}
         <h2>{{ sheet_name }}</h2>
     </div>
@@ -625,18 +627,28 @@
 
 <script src="{{ static_with_version('vendor/wangeditor/index.js') }}"></script>
 <script>
+// 返回：新标签打开时优先关闭本标签；否则回退到浏览器历史。
+function wseGoBack(e) {
+  if (e) e.preventDefault();
+  try { window.close(); } catch (err) {}
+  // window.close 对用户手动打开的标签无效，稍后仍在本页则回退历史
+  setTimeout(function () { if (!window.closed) { if (window.history.length > 1) history.back(); } }, 100);
+}
 (function() {
   'use strict';
 
   var SHEET_KEY = '{{ sheet_key }}';
   var API_SHEET_BASE = '{{ api_sheet_base or "/api/warehouse-sheet/" }}';
+  // 数据目录：默认空（走后端默认 warehouse_au）；#50 独立副本传 warehouse_au_dahuo。
+  var DATA_DIR = '{{ data_dir or "" }}';
+  var DIR_QS = DATA_DIR ? ('?dir=' + encodeURIComponent(DATA_DIR)) : '';
   var PAGE_SIZE = {{ 50 if is_large else 0 }};
   var sheetData = null;
   var pageNums = {};
   var searchTerm = '';
 
   function init() {
-    fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY))
+    fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY) + DIR_QS)
       .then(function(r) { return r.json(); })
       .then(function(res) {
         if (!res.success) {
@@ -1623,6 +1635,7 @@
     result.textContent = '保存中...';
 
     var payload = {sections: sections};
+    if (DATA_DIR) payload.dir = DATA_DIR;
     var noteAir = document.getElementById('wseResultNoteAir');
     if (noteAir) payload.result_note_air = noteAir.value;
     var noteSea = document.getElementById('wseResultNoteSea');

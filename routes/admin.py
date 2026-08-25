@@ -160,8 +160,20 @@ def article_edit(article_id):
                 _dg_dirty = True
         if _dg_dirty:
             conn.commit()
+        # #50「新大货快递报价文章」：在编辑器提供 4 张海外仓表（独立副本）的编辑入口。
+        dahuo_wh_sheets = []
+        cat_name = next((c['name'] for c in categories if c['id'] == article.get('category_id')), '')
+        if cat_name == '新大货快递报价文章':
+            dahuo_index = os.path.join(config._BASE_DIR, 'data', 'warehouse_au_dahuo', '_index.json')
+            if os.path.isfile(dahuo_index):
+                with open(dahuo_index, 'r', encoding='utf-8') as f:
+                    dahuo_wh_sheets = [
+                        {'key': s['key'], 'name': s['name']}
+                        for s in json.load(f) if s.get('key') != 'mulu'
+                    ]
         return render_template('admin/editor.html', article=article, categories=categories, modules=modules,
-                              back_url=url_for('admin.articles'), fixed_category_id=None, fixed_category_name=None)
+                              back_url=url_for('admin.articles'), fixed_category_id=None, fixed_category_name=None,
+                              dahuo_wh_sheets=dahuo_wh_sheets, dahuo_wh_dir='warehouse_au_dahuo')
 
 
 @admin_bp.route('/article/<int:article_id>/copy')
@@ -243,8 +255,9 @@ def warehouse_editor(article_id):
 @admin_bp.route('/warehouse-sheet/<key>/edit')
 @admin_required
 def warehouse_sheet_edit(key):
-    """单个 sheet 编辑页"""
-    index_path = os.path.join(config._BASE_DIR, 'data', 'warehouse_au', '_index.json')
+    """单个 sheet 编辑页（?dir= 指定数据目录，默认 warehouse_au；#50 用独立副本 warehouse_au_dahuo）"""
+    safe_dir = re.sub(r'[^a-zA-Z0-9_]', '', request.args.get('dir') or '') or 'warehouse_au'
+    index_path = os.path.join(config._BASE_DIR, 'data', safe_dir, '_index.json')
     if not os.path.isfile(index_path):
         abort(404)
     with open(index_path, 'r', encoding='utf-8') as f:
@@ -252,11 +265,17 @@ def warehouse_sheet_edit(key):
     sheet_meta = next((s for s in sheets_index if s['key'] == key), None)
     if not sheet_meta:
         abort(404)
+    # 返回目标：优先用 ?back= 显式传入（仅允许站内相对路径，防开放重定向）
+    back = request.args.get('back') or ''
+    if not (back.startswith('/') and not back.startswith('//')):
+        back = ''
     return render_template(
         'admin/warehouse_sheet_edit.html',
         sheet_key=key,
         sheet_name=sheet_meta['name'],
         is_large=sheet_meta.get('is_large', False),
+        data_dir=safe_dir,
+        back_url=back,
     )
 
 
