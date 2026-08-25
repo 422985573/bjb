@@ -1,0 +1,119 @@
+{# 文章模块循环：image / text / channel / dg_grid / surcharge_* / overseas_warehouse
+   供 article.html 与 article_channel_sidebar.html 共用，保持渠道表结构一致（供 article.js 驱动）。 #}
+{% for module in modules %}
+    {% set content = module.content | from_json %}
+
+    {% if module.type == 'image' %}
+    <div class="module module-image">
+        <img src="{{ content.url }}" alt="{{ content.alt or '配图' }}">
+        {% if content.caption %}
+        <div class="image-caption">{{ content.caption }}</div>
+        {% endif %}
+        {% if content.remark %}
+        <div class="module-remark">{{ content.remark | safe_html }}</div>
+        {% endif %}
+    </div>
+
+    {% elif module.type == 'text' %}
+    <div class="module module-text">
+        <div class="text-content">{{ content.text | safe_html }}</div>
+        {% if content.remark %}
+        <div class="module-remark">{{ content.remark | safe_html }}</div>
+        {% endif %}
+    </div>
+
+    {% elif module.type == 'channel' %}
+    <div class="module module-channel">
+        {% if content.title %}
+        <div class="channel-title">{{ content.title }}</div>
+        {% endif %}
+        {# 详情页表格完全按后台保存的 content.weights 动态列显示，与编辑端一致 #}
+        {% set weight_cols = content.weights | default([]) %}
+        <div class="channel-table-wrapper" data-module-id="{{ module.id }}">
+            <table class="channel-table">
+                <thead>
+                    <tr>
+                        <th>目的港</th>
+                        <th>邮编</th>
+                        <th>区域</th>
+                        {% for weight in weight_cols %}
+                        {% set weight_text = weight|string %}
+                        {% set weight_text_lower = weight_text|lower %}
+                        {% set col_role = 'generic' %}
+                        {% set role_class = '' %}
+                        {% if '备注' in weight_text %}
+                        {% set col_role = 'remark' %}
+                        {% set role_class = 'remark-header' %}
+                        {% elif '澳洲小包限定标准' in weight_text or '规则' in weight_text or '标准' in weight_text %}
+                        {% set col_role = 'standard' %}
+                        {% set role_class = 'standard-header' %}
+                        {% elif '挂号费' in weight_text or '单价' in weight_text %}
+                        {% set col_role = 'fee' %}
+                        {% elif '首' in weight_text or '续' in weight_text or 'kg' in weight_text_lower or '重量' in weight_text %}
+                        {% set col_role = 'price' %}
+                        {% endif %}
+                        <th class="col-dynamic col-{{ col_role }} {{ role_class }}" data-col-role="{{ col_role }}">{{ weight }}</th>
+                        {% endfor %}
+                        <th>到门时效</th>
+                        <th>渠道</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for state in (content.states | default([])) %}
+                    <tr data-postcode-range="{{ state.postcode_range }}">
+                        <td class="state-cell" data-merge-state="{{ state.name_cn }}">{{ state.name_cn }}</td>
+                        <td class="postcode-cell" data-merge-postcode="{{ state.postcode_range }}" data-full-postcode="{{ state.postcode_range }}">{{ state.postcode_range | format_postcode }}</td>
+                        <td class="area-cell" data-merge-area="{{ state.area_type }}">{{ state.area_type if state.area_type else '-' }}</td>
+                        {% for i in range(weight_cols|length) %}
+                        {% set weight_text = (weight_cols[i]|string) %}
+                        {% set weight_text_lower = weight_text|lower %}
+                        {% set col_role = 'generic' %}
+                        {% set role_class = '' %}
+                        {% if '备注' in weight_text %}
+                        {% set col_role = 'remark' %}
+                        {% set role_class = 'remark-cell' %}
+                        {% elif '澳洲小包限定标准' in weight_text or '规则' in weight_text or '标准' in weight_text %}
+                        {% set col_role = 'standard' %}
+                        {% set role_class = 'standard-cell' %}
+                        {% elif '挂号费' in weight_text or '单价' in weight_text %}
+                        {% set col_role = 'fee' %}
+                        {% elif '首' in weight_text or '续' in weight_text or 'kg' in weight_text_lower or '重量' in weight_text %}
+                        {% set col_role = 'price' %}
+                        {% endif %}
+                        <td class="col-dynamic col-{{ col_role }} {{ role_class }}" data-col-role="{{ col_role }}">{{ (state.prices[i] if state.prices and i < (state.prices|length) else '') or '—' }}</td>
+                        {% endfor %}
+                        <td class="delivery-cell" data-merge-delivery="{{ state.delivery_time }}">{{ state.delivery_time }}</td>
+                        <td class="channel-cell" data-merge-channel="{{ state.channel }}">{{ state.channel }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="postcode-query-box">
+            <span class="query-label">邮编查询：</span>
+            <input type="text" class="postcode-input" placeholder="输入邮编" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="autoSearchPostcode(this)" style="font-size:16px;">
+            <span class="distance-result"></span>
+        </div>
+
+        {% if content.remark %}
+        <div class="module-remark">{{ content.remark | safe_html }}</div>
+        {% endif %}
+    </div>
+
+    {% elif module.type == 'dg_grid' %}
+    {% include 'partials/dg_grid_article_block.html' %}
+
+    {% elif module.type == 'surcharge_cn' %}
+    {% with sc_template = 'cn' %}{% include 'partials/surcharge_block.html' %}{% endwith %}
+
+    {% elif module.type == 'surcharge_intl' %}
+    {% with sc_template = 'intl' %}{% include 'partials/surcharge_block.html' %}{% endwith %}
+
+    {% elif module.type == 'surcharge' %}
+    {% include 'partials/surcharge_block.html' %}
+
+    {% elif module.type == 'overseas_warehouse' %}
+    {% include 'partials/overseas_warehouse_block.html' %}
+    {% endif %}
+{% endfor %}

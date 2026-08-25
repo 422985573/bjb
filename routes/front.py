@@ -139,6 +139,14 @@ def article_detail(article_code):
                 article=article,
                 modules=modules,
             )
+        # 新大货快递报价表：channel 模块 + 指定分类 → 渠道数据 + 小包报价表布局（侧栏报价目录）
+        if 'channel' in mod_types and (article.get('category_name') or '') == '新大货快递报价文章':
+            return render_template(
+                'article_channel_sidebar.html',
+                article=article,
+                modules=modules,
+                has_dg_grid=has_dg_grid,
+            )
         # 仅含 dg_grid（柜类报价表）模块的文章使用独立页模板（无渠道目录、无邮编搜索条）
         article_dg_page = bool(modules) and all(t == 'dg_grid' for t in mod_types)
         if article_dg_page:

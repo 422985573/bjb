@@ -1,0 +1,188 @@
+/* ============================================================
+   渠道数据 + 小包报价表布局（侧栏报价目录）
+   页面级滚动 + sticky 侧栏（不用内滚动，兼容 article.js 的 sticky 表头/目录跳转）
+   ============================================================ */
+
+.csb-page { max-width: 1280px; margin: 0 auto; padding: 12px 16px 40px; }
+.csb-page .breadcrumb { margin-bottom: 12px; }
+
+/* ===== 顶部蓝色搜索横幅 ===== */
+.csb-hero {
+    background: linear-gradient(135deg, #3f6ef6 0%, #2f5fe6 100%);
+    border-radius: 14px;
+    padding: 26px 22px 22px;
+    margin: 4px 0 20px;
+}
+.csb-hero-inner { max-width: 980px; margin: 0 auto; }
+.csb-hero-search {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 999px;
+    padding: 8px 8px 8px 12px;
+    box-shadow: 0 10px 28px rgba(15, 39, 110, 0.22);
+}
+.csb-hero-icon { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; object-position: center; background: #fff; flex: none; }
+.csb-field {
+    display: flex; align-items: center; gap: 8px;
+    background: #f4f6fb; border: 1px solid #e2e8f0; border-radius: 999px;
+    padding: 4px 14px; transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.csb-field--pc { flex: 1; min-width: 0; }
+.csb-field--weight { flex: none; width: 190px; }
+.csb-field:focus-within { background: #fff; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.csb-field-label {
+    flex: none; font-size: 13px; font-weight: 700; color: #2563eb;
+    padding-right: 8px; border-right: 1px solid #d9e0ec;
+}
+.csb-hero-pc {
+    flex: 1; min-width: 0; border: none; outline: none;
+    font-size: 15px; padding: 7px 2px; background: transparent; color: #0f172a;
+}
+.csb-hero-pc::placeholder { color: #9aa6b8; }
+.csb-hero-clear {
+    flex: none; border: none; background: #e2e8f0; color: #64748b;
+    width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+    font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+}
+.csb-hero-clear:hover { background: #cbd5e1; }
+.csb-hero-weight {
+    width: 100%; border: none; outline: none;
+    font-size: 15px; padding: 7px 2px; background: transparent; color: #0f172a;
+}
+.csb-hero-weight::placeholder { color: #9aa6b8; }
+.csb-hero-qbtn {
+    flex: none; border: none; border-radius: 999px; background: #2563eb; color: #fff;
+    font-weight: 700; font-size: 14px; padding: 12px 26px; cursor: pointer; transition: background .15s;
+}
+.csb-hero-qbtn:hover { background: #1d4ed8; }
+.csb-hero-tip { margin-top: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.85); }
+.csb-hero-result { margin-top: 8px; text-align: center; font-size: 13px; font-weight: 600; color: #fff2b8; min-height: 0; }
+.csb-hero-result:empty { display: none; }
+.csb-hero-actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    margin-top: 14px; justify-content: center;
+}
+.csb-link {
+    display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 8px;
+    background: rgba(255,255,255,0.14); color: #fff; font-size: 13px; font-weight: 600;
+    text-decoration: none; border: 1px solid rgba(255,255,255,0.32); transition: background .15s;
+}
+.csb-link:hover { background: rgba(255,255,255,0.26); }
+.csb-hero-btn { padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 700; }
+.csb-hero-btn--ghost { background: rgba(255,255,255,0.14); color: #fff; border: 1px solid rgba(255,255,255,0.32); }
+.csb-hero-btn--ghost:hover { background: rgba(255,255,255,0.26); }
+.csb-hero-btn--export { background: #fff; color: #2563eb; }
+.csb-hero-btn--export:hover { background: #eef4ff; }
+.csb-page .article-export-floating.article-export-inline { position: static; margin: 0; box-shadow: none; background: transparent; padding: 0; }
+
+/* ===== 两栏布局：页面级滚动 + sticky 侧栏 ===== */
+.csb-layout { display: flex; gap: 20px; align-items: flex-start; }
+.csb-sidebar {
+    width: 300px; flex-shrink: 0;
+    position: sticky; top: 12px;
+    max-height: calc(100vh - 24px); overflow-y: auto;
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 16px 0 12px; box-sizing: border-box;
+}
+.csb-sidebar::-webkit-scrollbar { width: 4px; }
+.csb-sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+.csb-content { flex: 1; min-width: 0; }
+.csb-content .module:first-child { margin-top: 0; }
+
+.csb-sidebar-title {
+    font-size: 14px; font-weight: 700; color: #1e293b;
+    padding: 4px 16px 10px; border-bottom: 1px solid #e2e8f0; margin: 0;
+}
+.csb-sidebar-title + .csb-sidebar-title { margin-top: 8px; }
+
+/* ===== 侧栏批量邮编查询 ===== */
+.csb-pc-box { padding: 12px 16px 4px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+.csb-pc-box textarea {
+    width: 100%; box-sizing: border-box; min-height: 96px; resize: vertical;
+    padding: 10px 12px; border: 1px solid #d5dbe3; border-radius: 8px;
+    font-size: 13px; line-height: 1.5; font-family: inherit; transition: border-color .15s, box-shadow .15s;
+}
+.csb-pc-box textarea::placeholder { color: #b3bccb; }
+.csb-pc-box textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.csb-weight-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.csb-weight-row label { font-size: 13px; color: #475569; font-weight: 600; white-space: nowrap; }
+.csb-weight-row input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #d5dbe3; border-radius: 8px; font-size: 13px; transition: border-color .15s, box-shadow .15s; }
+.csb-weight-row input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.csb-pc-actions { display: flex; gap: 8px; margin-top: 10px; }
+.csb-pc-btn { flex: 1; padding: 9px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: #2563eb; color: #fff; transition: background .15s; }
+.csb-pc-btn:hover { background: #1d4ed8; }
+.csb-pc-btn--ghost { background: #f1f5f9; color: #334155; }
+.csb-pc-btn--ghost:hover { background: #e2e8f0; }
+.csb-pc-summary { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.csb-pc-summary:empty { display: none; }
+.csb-pc-hint { margin-top: 10px; font-size: 11px; color: #94a3b8; line-height: 1.5; }
+
+/* 命中结果 chips */
+.csb-pc-item { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 999px; font-size: 12px; background: #fff; border: 1px solid #dbe4ff; }
+.csb-pc-item.miss { border-color: #fbd2d2; }
+.csb-pc-code { font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; letter-spacing: .3px; }
+.csb-pc-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; padding: 2px 7px; border-radius: 999px; background: #16a34a; color: #fff; font-weight: 700; font-size: 11px; }
+.csb-pc-item.miss .csb-pc-badge { background: #dc2626; }
+.csb-pc-loc { color: #64748b; font-size: 11px; line-height: 1.25; }
+
+/* ===== 侧栏报价目录（复用 channel-nav-link 样式，仅调整容器） ===== */
+.csb-nav-list { padding: 8px 8px 4px; margin: 0; list-style: none; max-height: none; overflow: visible; }
+
+/* 海外仓派送目录组 */
+.csb-wh-nav-title { margin-top: 6px; }
+.csb-wh-nav-list { padding-top: 8px; }
+.csb-wh-nav-item { font-weight: 500; }
+
+/* ===== 海外仓价格表内联展示（与渠道表同页顺序展示） ===== */
+.csb-wh-inline { margin-top: 8px; }
+.wh-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 18px 20px; margin: 18px 0;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+}
+.wh-card.hidden-by-search { display: none; }
+.wh-card-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 6px; }
+.wh-card-result { font-size: 13px; font-weight: 600; color: #2563eb; min-height: 0; margin-bottom: 10px; }
+.wh-card-result:empty { display: none; }
+.wh-card-section-title { font-size: 14px; font-weight: 600; color: #1e40af; margin: 14px 0 8px; }
+.wh-card-error { color: #ef4444; padding: 10px 0; font-size: 13px; }
+
+/* 海外仓小表：表头不 sticky（40-52 行无需），避免与渠道 sticky 表头冲突 */
+.csb-page .wh-card .wh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.csb-page .wh-card .wh-table th {
+    position: static; background: #eff6ff; color: #1e40af; font-weight: 600;
+    padding: 8px 10px; border: 1px solid #dbeafe; text-align: center;
+}
+.csb-page .wh-card .wh-table td { padding: 6px 10px; border: 1px solid #e5e7eb; text-align: center; }
+.csb-page .wh-card .wh-table tbody tr.wh-group-row td { background: #f8fafc; font-weight: 700; text-align: left; color: #334155; }
+/* 命中行高亮 */
+.csb-page .wh-card .wh-table tbody tr.wh-hit td { background: #fff7ed; box-shadow: inset 0 0 0 1px #fb923c; }
+.wh-card .wh-richtext { font-size: 13px; color: #475569; line-height: 1.7; }
+.wh-card .wh-richtext p { margin: 4px 0; }
+
+/* ===== 运费总价表 ===== */
+.wh-quote { margin-top: 16px; }
+.wh-quote-title { text-align: center; font-size: 15px; font-weight: 700; color: #0f172a; margin: 10px 0 8px; }
+.wh-quote-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wh-quote-table th, .wh-quote-table td { border: 1px solid #e2e8f0; padding: 7px 9px; text-align: center; }
+.wh-quote-table th { background: #eff6ff; color: #1e40af; font-weight: 600; }
+.wh-quote-formula { color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wh-quote-total { font-weight: 700; color: #dc2626; }
+.wh-quote-need { color: #94a3b8; font-weight: 400; font-size: 12px; }
+.wh-quote-note { margin-top: 8px; font-size: 12px; color: #64748b; line-height: 1.5; }
+
+/* 隐藏占位面板：仅供 article.js 逻辑运行，不显示 */
+.csb-hidden-panel { display: none !important; }
+
+/* ===== 移动端：单列，侧栏不再 sticky ===== */
+@media (max-width: 900px) {
+    .csb-layout { flex-direction: column; }
+    .csb-sidebar { width: 100%; position: static; max-height: none; }
+    .csb-field--weight { width: 150px; }
+}
+@media (max-width: 640px) {
+    .csb-hero-search { flex-wrap: wrap; border-radius: 16px; padding: 10px; gap: 8px; }
+    .csb-field--pc { flex: 1 1 100%; order: 1; }
+    .csb-field--weight { flex: 1 1 100%; width: auto; order: 2; }
+    .csb-hero-qbtn { flex: 1 1 100%; order: 3; }
+}

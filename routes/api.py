@@ -741,21 +741,26 @@ def export_article_xlsx(article_code):
 # 澳洲海外仓报价 — sheet 数据查询 + 批量调价
 # ---------------------------------------------------------------------------
 
-_WAREHOUSE_DATA_DIR = os.path.join(config._BASE_DIR, 'data', 'warehouse_au')
+def _wh_dir(dirname=None):
+    """按文章的 data_dir 定位海外仓价格表目录；白名单校验，空/非法回退默认 'warehouse_au'。"""
+    safe = re.sub(r'[^a-zA-Z0-9_]', '', dirname or '')
+    if not safe:
+        safe = 'warehouse_au'
+    return os.path.join(config._BASE_DIR, 'data', safe)
 
 
-def _wh_index_path():
-    return os.path.join(_WAREHOUSE_DATA_DIR, '_index.json')
+def _wh_index_path(dirname=None):
+    return os.path.join(_wh_dir(dirname), '_index.json')
 
 
-def _wh_sheet_path(key):
+def _wh_sheet_path(key, dirname=None):
     safe = re.sub(r'[^a-zA-Z0-9_]', '', key)
-    return os.path.join(_WAREHOUSE_DATA_DIR, f'{safe}.json')
+    return os.path.join(_wh_dir(dirname), f'{safe}.json')
 
 
 @api_bp.route('/warehouse-sheets')
 def warehouse_sheets_index():
-    path = _wh_index_path()
+    path = _wh_index_path(request.args.get('dir'))
     if not os.path.isfile(path):
         return jsonify({'success': False, 'message': '数据未初始化'}), 404
     with open(path, 'r', encoding='utf-8') as f:
@@ -810,11 +815,15 @@ def warehouse_postcode_lookup():
 
 @api_bp.route('/warehouse-sheet/<key>')
 def warehouse_sheet_detail(key):
-    path = _wh_sheet_path(key)
+    path = _wh_sheet_path(key, request.args.get('dir'))
     if not os.path.isfile(path):
         return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
     with open(path, 'r', encoding='utf-8') as f:
         data = json.load(f)
+
+    # slim=1：剔除上万行 zone_table，只回 price_table/richtext + postcode_zone_map（供统一搜索页按邮编查分区）。
+    if request.args.get('slim'):
+        data['sections'] = [s for s in data.get('sections', []) if s.get('type') != 'zone_table']
 
     search = (request.args.get('search') or '').strip().lower()
     if search:
@@ -887,14 +896,14 @@ def warehouse_adjust_price():
 @admin_required
 def warehouse_sheet_save(key):
     """保存小表编辑数据"""
-    path = _wh_sheet_path(key)
+    body = request.json or {}
+    path = _wh_sheet_path(key, body.get('dir'))
     if not os.path.isfile(path):
         return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
 
     with open(path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    body = request.json or {}
     sections = body.get('sections')
     if not isinstance(sections, list):
         return jsonify({'success': False, 'message': '参数错误'}), 400
@@ -925,9 +934,60 @@ def warehouse_sheet_save(key):
     return jsonify({'success': True})
 
 
-# ---------------------------------------------------------------------------
-# 虚拟小包报价表 — sheet 数据（价格表 JSON）+ 分区表（DB 查询关系表）
-# ---------------------------------------------------------------------------
+# 海外仓运费总价参数（燃油率/GST），按目录（dir）存 _settings.json；GST 固定 10% 默认。
+def _wh_settings_path(dirname=None):
+    return os.path.join(_wh_dir(dirname), '_settings.json')
+
+
+def _read_wh_settings(dirname=None):
+    path = _wh_settings_path(dirname)
+    data = {'fuel_rate': 20, 'gst_rate': 10}
+    if os.path.isfile(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                saved = json.load(f)
+            if isinstance(saved, dict):
+                if 'fuel_rate' in saved:
+                    data['fuel_rate'] = saved['fuel_rate']
+                if 'gst_rate' in saved:
+                    data['gst_rate'] = saved['gst_rate']
+        except (ValueError, OSError):
+            pass
+    return data
+
+
+@api_bp.route('/warehouse-settings')
+def warehouse_settings_get():
+    """海外仓运费总价参数（燃油率%/GST%），前台公开读取。"""
+    return jsonify({'success': True, 'data': _read_wh_settings(request.args.get('dir'))})
+
+
+@api_bp.route('/warehouse-settings/save', methods=['POST'])
+@admin_required
+def warehouse_settings_save():
+    body = request.json or {}
+    dirname = body.get('dir')
+
+    def _num(v, default):
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return default
+
+    cur = _read_wh_settings(dirname)
+    data = {
+        'fuel_rate': _num(body.get('fuel_rate'), cur.get('fuel_rate', 20)),
+        'gst_rate': _num(body.get('gst_rate'), cur.get('gst_rate', 10)),
+    }
+    path = _wh_settings_path(dirname)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    _logger.info('warehouse settings save dir=%s fuel=%s', dirname, data['fuel_rate'])
+    return jsonify({'success': True, 'data': data})
+
+
+
 
 _XIAOBAO_DATA_DIR = os.path.join(config._BASE_DIR, 'data', 'xiaobao')
 

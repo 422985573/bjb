@@ -7,6 +7,14 @@
   var API_POSTCODE_LOOKUP = '/api/warehouse-postcode-lookup';
   var PAGE_SIZE = 200;
 
+  // 数据目录：默认 warehouse_au；CSB 页可通过 WHRenderer.load(key, dir) 指定独立副本目录。
+  var WH_DIR = '';
+  // 给 URL 追加 dir 查询参数（已有 ? 时用 &），空 dir 不追加，保持默认目录、向后兼容。
+  function withDir(url) {
+    if (!WH_DIR) return url;
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'dir=' + encodeURIComponent(WH_DIR);
+  }
+
   var sheetsIndex = [];
   var currentKey = '';
   var currentData = null;
@@ -21,6 +29,9 @@
   var bottomOverscroll = 0;
   var topOverscroll = 0;
   var BOTTOM_OVERSCROLL_THRESHOLD = 120;
+
+  // CSB 模式：本脚本被「渠道+侧栏」页复用时为 true —— 不自动加载首个 sheet、不劫持滚动、不显示下一表提示。
+  var CSB_MODE = false;
 
   function $(sel, ctx) { return (ctx || document).querySelector(sel); }
   function $$(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
@@ -51,7 +62,7 @@
   }
 
   function init() {
-    fetch(API_INDEX)
+    fetch(withDir(API_INDEX))
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res.success) return;
@@ -61,13 +72,28 @@
         bindAutoNextSheet();
       })
       .catch(function () {
-        $('#whNavList').innerHTML = '<li class="wh-nav-item wh-nav-loading">加载失败</li>';
+        var nav = $('#whNavList');
+        if (nav) nav.innerHTML = '<li class="wh-nav-item wh-nav-loading">加载失败</li>';
       });
+  }
+
+  // 供其它页面（如渠道+侧栏页 CSB）复用：确保 index 已加载后，把指定 sheet 渲染进 #whContent。
+  // 不渲染 warehouse 自带的目录/邮编全局框，不劫持滚动（bindAutoNextSheet 不调用）。
+  function ensureIndexThen(cb) {
+    if (sheetsIndex.length) { cb(); return; }
+    fetch(withDir(API_INDEX))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.success) sheetsIndex = res.data || [];
+        cb();
+      })
+      .catch(function () { cb(); });
   }
 
   function renderNav() {
     var ul = $('#whNavList');
     var tocList = $('#whTocList');
+    if (!ul) return;
     ul.innerHTML = '';
     if (tocList) tocList.innerHTML = '';
     sheetsIndex.forEach(function (s) {
@@ -142,7 +168,7 @@
     var content = $('#whContent');
     content.innerHTML = '<div class="wh-loading" id="whLoading"><div class="wh-spinner"></div><span>加载中...</span></div>';
 
-    fetch(API_SHEET + encodeURIComponent(key))
+    fetch(withDir(API_SHEET + encodeURIComponent(key)))
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res.success) {
@@ -176,7 +202,8 @@
 
     html += renderNextSheetHint();
 
-    $('#whContent').innerHTML = html;
+    var contentEl = $('#whContent');
+    if (contentEl) contentEl.innerHTML = html;
 
     $$('.wh-search-input').forEach(function (inp) {
       inp.addEventListener('input', debounce(function () {
@@ -855,7 +882,7 @@
       return;
     }
 
-    fetch(API_POSTCODE_LOOKUP + '?code=' + encodeURIComponent(code))
+    fetch(withDir(API_POSTCODE_LOOKUP + '?code=' + encodeURIComponent(code)))
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res.success || !res.data || !res.data.length) {
@@ -889,6 +916,7 @@
   }
 
   function renderNextSheetHint() {
+    if (CSB_MODE) return '';
     if (!sheetsIndex.length || !currentKey) return '';
     var idx = -1;
     for (var i = 0; i < sheetsIndex.length; i++) {
@@ -1037,9 +1065,33 @@
     window.addEventListener('touchend', onTouchEnd, { passive: true });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
+  // 导出受控入口：供 CSB 页按 key 懒加载单张 warehouse 表进 #whContent（dir 指定独立数据目录）。
+  window.WHRenderer = {
+    load: function (key, dir) {
+      CSB_MODE = true;
+      // 切换目录时清缓存与索引，避免跨目录串数据。
+      if (typeof dir === 'string' && dir !== WH_DIR) {
+        WH_DIR = dir;
+        sheetsIndex = [];
+        sheetCache = {};
+        currentKey = '';
+        currentData = null;
+      }
+      ensureIndexThen(function () { loadSheet(key); });
+    }
+  };
+
+  // 标准 warehouse 页（有 #whSidebar）才自动初始化；CSB 页（#whContent[data-csb]，无 #whSidebar）不自动加载。
+  function bootstrap() {
+    var whContent = document.getElementById('whContent');
+    var isCsb = (whContent && whContent.getAttribute('data-csb') === '1') || !document.getElementById('whSidebar');
+    if (isCsb) { CSB_MODE = true; return; }
     init();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+  } else {
+    bootstrap();
   }
 })();
