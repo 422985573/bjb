@@ -15,11 +15,11 @@
 }
 .csb-hero-inner { max-width: 980px; margin: 0 auto; }
 .csb-hero-search {
-    display: flex; align-items: center; gap: 10px;
-    background: #fff; border-radius: 999px;
+    background: #fff; border-radius: 22px;
     padding: 8px 8px 8px 12px;
     box-shadow: 0 10px 28px rgba(15, 39, 110, 0.22);
 }
+.csb-hero-search-row { display: flex; align-items: center; gap: 10px; }
 .csb-hero-icon { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; object-position: center; background: #fff; flex: none; }
 .csb-field {
     display: flex; align-items: center; gap: 8px;
@@ -55,7 +55,7 @@
 }
 .csb-hero-qbtn:hover { background: #1d4ed8; }
 .csb-hero-tip { margin-top: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.85); }
-.csb-hero-result { margin-top: 8px; text-align: center; font-size: 13px; font-weight: 600; color: #fff2b8; min-height: 0; }
+.csb-hero-result { font-size: 14px; font-weight: 700; color: #16a34a; padding: 8px 6px 4px 62px; }
 .csb-hero-result:empty { display: none; }
 .csb-hero-actions {
     display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
@@ -157,6 +157,8 @@
 .csb-page .wh-card .wh-table tbody tr.wh-group-row td { background: #f8fafc; font-weight: 700; text-align: left; color: #334155; }
 /* 命中行高亮 */
 .csb-page .wh-card .wh-table tbody tr.wh-hit td { background: #fff7ed; box-shadow: inset 0 0 0 1px #fb923c; }
+/* 查询后仅展示命中行，其余行隐藏 */
+.csb-page .wh-card .wh-table tbody tr.wh-row-hidden { display: none; }
 .wh-card .wh-richtext { font-size: 13px; color: #475569; line-height: 1.7; }
 .wh-card .wh-richtext p { margin: 4px 0; }
 
@@ -181,8 +183,10 @@
     .csb-field--weight { width: 150px; }
 }
 @media (max-width: 640px) {
-    .csb-hero-search { flex-wrap: wrap; border-radius: 16px; padding: 10px; gap: 8px; }
+    .csb-hero-search { border-radius: 16px; padding: 10px; }
+    .csb-hero-search-row { flex-wrap: wrap; gap: 8px; }
     .csb-field--pc { flex: 1 1 100%; order: 1; }
     .csb-field--weight { flex: 1 1 100%; width: auto; order: 2; }
     .csb-hero-qbtn { flex: 1 1 100%; order: 3; }
+    .csb-hero-result { padding-left: 6px; }
 }

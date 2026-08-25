@@ -934,31 +934,46 @@ def warehouse_sheet_save(key):
     return jsonify({'success': True})
 
 
-# 海外仓运费总价参数（燃油率/GST），按目录（dir）存 _settings.json；GST 固定 10% 默认。
+# 海外仓运费总价参数：GST 固定 10%；燃油率**按表(key)独立**存于 _settings.json。
+# 结构：{"gst_rate":10, "fuel_rates":{"allied":20,"border":20,"tfm":20,"toll":20}}
+# 兼容旧结构 {"fuel_rate":20,...}：作为各表默认。
+_WH_SHEET_KEYS = ['allied', 'border', 'tfm', 'toll']
+
+
 def _wh_settings_path(dirname=None):
     return os.path.join(_wh_dir(dirname), '_settings.json')
 
 
 def _read_wh_settings(dirname=None):
     path = _wh_settings_path(dirname)
-    data = {'fuel_rate': 20, 'gst_rate': 10}
+    gst_rate = 10
+    fuel_default = 20
+    fuel_rates = {}
     if os.path.isfile(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 saved = json.load(f)
             if isinstance(saved, dict):
-                if 'fuel_rate' in saved:
-                    data['fuel_rate'] = saved['fuel_rate']
                 if 'gst_rate' in saved:
-                    data['gst_rate'] = saved['gst_rate']
+                    gst_rate = saved['gst_rate']
+                # 旧单值 fuel_rate → 作为各表默认
+                if 'fuel_rate' in saved:
+                    fuel_default = saved['fuel_rate']
+                fr = saved.get('fuel_rates')
+                if isinstance(fr, dict):
+                    fuel_rates = dict(fr)
         except (ValueError, OSError):
             pass
-    return data
+    # 补齐 4 张表的燃油率（缺的用默认）
+    full = {}
+    for k in _WH_SHEET_KEYS:
+        full[k] = fuel_rates.get(k, fuel_default)
+    return {'gst_rate': gst_rate, 'fuel_rates': full}
 
 
 @api_bp.route('/warehouse-settings')
 def warehouse_settings_get():
-    """海外仓运费总价参数（燃油率%/GST%），前台公开读取。"""
+    """海外仓运费总价参数（各表燃油率%/GST%），前台公开读取。"""
     return jsonify({'success': True, 'data': _read_wh_settings(request.args.get('dir'))})
 
 
@@ -975,15 +990,26 @@ def warehouse_settings_save():
             return default
 
     cur = _read_wh_settings(dirname)
+    fuel_rates = dict(cur['fuel_rates'])
+    # 支持两种入参：{key, fuel_rate}（单表保存）或 {fuel_rates:{...}}（批量）
+    incoming = body.get('fuel_rates')
+    if isinstance(incoming, dict):
+        for k in _WH_SHEET_KEYS:
+            if k in incoming:
+                fuel_rates[k] = _num(incoming[k], fuel_rates.get(k, 20))
+    key = body.get('key')
+    if key in _WH_SHEET_KEYS and 'fuel_rate' in body:
+        fuel_rates[key] = _num(body.get('fuel_rate'), fuel_rates.get(key, 20))
+
     data = {
-        'fuel_rate': _num(body.get('fuel_rate'), cur.get('fuel_rate', 20)),
         'gst_rate': _num(body.get('gst_rate'), cur.get('gst_rate', 10)),
+        'fuel_rates': fuel_rates,
     }
     path = _wh_settings_path(dirname)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    _logger.info('warehouse settings save dir=%s fuel=%s', dirname, data['fuel_rate'])
+    _logger.info('warehouse settings save dir=%s fuel_rates=%s', dirname, data['fuel_rates'])
     return jsonify({'success': True, 'data': data})
 
 
