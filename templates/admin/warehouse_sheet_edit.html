@@ -610,9 +610,21 @@ body { background: #fff; }
                 <div class="wse-sp-group"><label>月份</label>
                     <select id="wseMonth"></select>
                 </div>
+                {% if data_dir %}
+                <div class="wse-sp-group"><label>大陆空运头程费用单价(元/kg)</label>
+                    <input id="wseUnit" type="number" step="0.01">
+                </div>
+                <div class="wse-sp-group"><label>香港空运头程费用单价(元/kg)</label>
+                    <input id="wseHkUnit" type="number" step="0.01">
+                </div>
+                <div class="wse-sp-group"><label>海运头程费用单价(元/kg)</label>
+                    <input id="wseSeaUnit" type="number" step="0.01">
+                </div>
+                {% else %}
                 <div class="wse-sp-group"><label>头程运输费用单价(元/kg)</label>
                     <input id="wseUnit" type="number" step="0.01">
                 </div>
+                {% endif %}
                 <div class="wse-sp-group"><label>澳币换算人民币汇率</label>
                     <input id="wseRate" type="number" step="0.0001">
                 </div>
@@ -894,9 +906,10 @@ function wseGoBack(e) {
       h += '<select class="wse-adjust-col" id="wseAdjustCol' + si + '">';
       h += '<option value="all">所有价格列</option>';
       var seen = {};
+      var hiddenColsAdj = wseHiddenColSet(headers);
       for (var ci = 0; ci < headers.length; ci++) {
         var hName = headers[ci];
-        if (!hName || seen[hName]) continue;
+        if (!hName || seen[hName] || hiddenColsAdj[ci]) continue;
         var hasNum = false;
         rows.forEach(function(row) { if (hasNum) return; var v = ci < row.length ? row[ci] : ''; if (v !== '' && v !== null) { var n = parseFloat(v); if (!isNaN(n) && String(n) === String(v).toString().trim()) hasNum = true; } });
         if (hasNum) { seen[hName] = true; h += '<option value="' + escAttr(hName) + '">' + esc(hName) + '</option>'; }
@@ -1202,6 +1215,9 @@ function wseGoBack(e) {
     (headers || []).forEach(function(hd, i) {
       var k = String(hd == null ? '' : hd).trim().toLowerCase();
       if (k === 'base' || k === 'kilo') map[i] = true;
+      // 隐藏「Minimum Charge / 最低收费」列（仅编辑器隐藏显示，原始数据仍随保存保留）
+      var kk = k.replace(/\s+/g, '');
+      if (kk.indexOf('minimum') >= 0 || kk.indexOf('最低') >= 0) map[i] = true;
     });
     return map;
   }
@@ -1607,7 +1623,9 @@ function wseGoBack(e) {
     var headers = sec.headers || [];
     var targetCols = {};
     if (colName === 'all') {
-      for (var ci = 0; ci < (headers.length || 999); ci++) targetCols[ci] = true;
+      var hiddenAll = wseHiddenColSet(headers);
+      var maxc = headers.length || 999;
+      for (var ci = 0; ci < maxc; ci++) { if (!hiddenAll[ci]) targetCols[ci] = true; }
     } else {
       for (var ci = 0; ci < headers.length; ci++) {
         if (headers[ci] === colName) targetCols[ci] = true;
@@ -1780,9 +1798,11 @@ function wseGoBack(e) {
 
     function fill(month) {
       var s = monthly[String(month)] || {};
-      // 头程单价：新字段 unit_price，回退旧的空运/海运头程单价兼容历史数据
+      // 头程单价：大陆空运=unit_price（回退旧字段兼容历史数据），香港空运=hk_unit_price，海运=sea_unit_price
       var unit = s.unit_price != null ? s.unit_price : (s.sea_unit_price != null ? s.sea_unit_price : '');
       el('wseUnit').value = unit;
+      if (el('wseHkUnit')) el('wseHkUnit').value = s.hk_unit_price != null ? s.hk_unit_price : '';
+      if (el('wseSeaUnit')) el('wseSeaUnit').value = s.sea_unit_price != null ? s.sea_unit_price : '';
       el('wseRate').value = s.exchange_rate != null ? s.exchange_rate : '';
       el('wseFuel').value = s.fuel_rate != null ? s.fuel_rate : '';
     }
@@ -1807,6 +1827,8 @@ function wseGoBack(e) {
       var payload = {
         dir: DATA_DIR, key: SHEET_KEY, month: month,
         unit_price: el('wseUnit').value,
+        hk_unit_price: el('wseHkUnit') ? el('wseHkUnit').value : '',
+        sea_unit_price: el('wseSeaUnit') ? el('wseSeaUnit').value : '',
         exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value
       };
       return fetch('/api/warehouse-settings/save', {

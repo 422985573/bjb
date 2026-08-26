@@ -151,14 +151,19 @@
 .wh-card-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 6px; }
 .wh-card-result { font-size: 13px; font-weight: 600; color: #2563eb; min-height: 0; margin-bottom: 10px; }
 .wh-card-result:empty { display: none; }
-.wh-card-section-title { font-size: 14px; font-weight: 600; color: #1e40af; margin: 14px 0 8px; }
+/* 分区/表标题：蓝底白字横条，与上方卡派渠道 .channel-title 一致 */
+.wh-card-section-title {
+    background: var(--primary, #2563eb); color: #fff;
+    font-size: 15px; font-weight: 600; text-align: center;
+    padding: 12px 16px; margin: 14px 0 0;
+}
 .wh-card-error { color: #ef4444; padding: 10px 0; font-size: 13px; }
 
 /* 海外仓小表：表头不 sticky（40-52 行无需），避免与渠道 sticky 表头冲突 */
 .csb-page .wh-card .wh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .csb-page .wh-card .wh-table th {
-    position: static; background: #eff6ff; color: #1e40af; font-weight: 600;
-    padding: 8px 10px; border: 1px solid #dbeafe; text-align: center;
+    position: static; background: var(--primary, #2563eb); color: #fff; font-weight: 600;
+    padding: 8px 10px; border: 1px solid var(--primary, #2563eb); text-align: center;
 }
 .csb-page .wh-card .wh-table td { padding: 6px 10px; border: 1px solid #e5e7eb; text-align: center; }
 .csb-page .wh-card .wh-table tbody tr.wh-group-row td { background: #f8fafc; font-weight: 700; text-align: left; color: #334155; }
@@ -171,11 +176,11 @@
 
 /* ===== 运费总价表 ===== */
 .wh-quote { margin-top: 16px; }
-.wh-quote-title { text-align: center; font-size: 15px; font-weight: 700; color: #0f172a; margin: 10px 0 8px; }
+.wh-quote-title { background: var(--primary, #2563eb); color: #fff; text-align: center; font-size: 15px; font-weight: 700; padding: 12px 16px; margin: 10px 0 0; }
 .wh-quote-table + .wh-quote-title { margin-top: 18px; }
 .wh-quote-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .wh-quote-table th, .wh-quote-table td { border: 1px solid #e2e8f0; padding: 7px 9px; text-align: center; }
-.wh-quote-table th { background: #eff6ff; color: #1e40af; font-weight: 600; }
+.wh-quote-table th { background: var(--primary, #2563eb); color: #fff; font-weight: 600; border-color: var(--primary, #2563eb); }
 .wh-quote-formula { color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wh-quote-total { font-weight: 700; color: #dc2626; }
 .wh-quote-sum-row td { background: #f8fafc; font-weight: 700; color: #0f172a; }

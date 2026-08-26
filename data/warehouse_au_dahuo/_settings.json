@@ -1,9 +1,29 @@
 {
   "gst_rate": 10,
-  "fuel_rates": {
-    "allied": 20.0,
-    "border": 20,
-    "tfm": 20,
-    "toll": 20.0
+  "monthly": {
+    "allied": {
+      "8": {
+        "fuel_rate": 20.0,
+        "unit_price": 0,
+        "hk_unit_price": 0,
+        "sea_unit_price": 0,
+        "exchange_rate": 0
+      }
+    },
+    "border": {
+      "8": {
+        "fuel_rate": 20.0
+      }
+    },
+    "tfm": {
+      "8": {
+        "fuel_rate": 20.0
+      }
+    },
+    "toll": {
+      "8": {
+        "fuel_rate": 20.0
+      }
+    }
   }
 }
