@@ -1112,7 +1112,7 @@ def warehouse_settings_save():
     if key in _WH_SHEET_KEYS and body.get('month') is not None:
         month = str(int(_num(body.get('month'), datetime.now().month)))
         rec = dict(monthly.get(key, {}).get(month) or {})
-        for field in ('unit_price', 'sea_unit_price', 'exchange_rate', 'fuel_rate'):
+        for field in ('unit_price', 'hk_unit_price', 'sea_unit_price', 'exchange_rate', 'fuel_rate'):
             if field in body:
                 rec[field] = _num(body.get(field), rec.get(field, 0))
         monthly.setdefault(key, {})[month] = rec

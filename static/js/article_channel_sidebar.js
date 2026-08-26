@@ -232,6 +232,13 @@
     return m ? m[1] : '';
   }
 
+  // 头程三种运输方式（只有头程单价不同，尾程/邮编单价相同）
+  var WH_MODES = [
+    { name: '大陆空运', field: 'unit_price' },
+    { name: '香港空运', field: 'hk_unit_price' },
+    { name: '海运', field: 'sea_unit_price' }
+  ];
+
   // 计算某表某邮编在各价格表（各仓）的报价行；weight 为 0/空 时公式照出、数字列留空
   function computeWarehouseRows(key, code, weight) {
     var data = whData[key];
@@ -239,7 +246,12 @@
     var zone = (whMaps[key] || {})[code];
     if (!zone) return [];
     var matcher = makeZoneMatcher(zone);
-    var unitPrice = whMonthParam(key, 'unit_price', 0);  // 头程运输费用单价
+    // 三种头程单价：大陆空运 / 香港空运 / 海运
+    var units = {
+      '大陆空运': whMonthParam(key, 'unit_price', 0),
+      '香港空运': whMonthParam(key, 'hk_unit_price', 0),
+      '海运': whMonthParam(key, 'sea_unit_price', 0)
+    };
     var fuel = whMonthParam(key, 'fuel_rate', 0);
     var rate = whMonthParam(key, 'exchange_rate', 0);   // 澳币→人民币汇率（0=不折算）
     var fuelMult = 1 + fuel / 100;
@@ -267,30 +279,16 @@
       var per = whNum(hitRow[perIdx]);   // 符合邮编对应的单价（Per/1KG，AUD/kg）
       if (per == null) return;
 
-      // 公式列：始终把「除4000计费重」按文字显示（不代入数字）
-      var headF = fmt2(unitPrice) + '*' + fuelPctTxt + '*' + fmt2(rate) + '*除4000计费重';
+      // 尾程（三种方式相同）：公式列始终把「除4000计费重」按文字显示（不代入数字）
       var tailF = fmt2(per) + '*' + fuelPctTxt + '*' + fmt2(rate) + '*除4000计费重';
+      var hasNum = (w > 0 && rate > 0);
+      var tail = hasNum ? (per * fuelMult * rate * w) : null;   // 尾程（元）= 邮编单价×(1+燃油)×汇率×计费重
 
       var row = {
         warehouse: warehouseLabel(sec.title), code: code, zone: zone,
-        per: per, w: w, rate: rate, unitPrice: unitPrice,
-        label: w > 0 ? (w + 'KG') : '—', headF: headF, tailF: tailF
+        per: per, w: w, rate: rate, fuelMult: fuelMult, fuelPctTxt: fuelPctTxt,
+        units: units, label: w > 0 ? (w + 'KG') : '—', tailF: tailF, tail: tail, hasNum: hasNum
       };
-      if (w > 0 && rate > 0) {
-        var head = unitPrice * fuelMult * rate * w;   // 头程（元）= 头程单价×(1+燃油)×汇率×计费重
-        var tail = per * fuelMult * rate * w;         // 尾程（元）= 邮编单价×(1+燃油)×汇率×计费重
-        row.head = head;
-        row.tail = tail;
-        row.total = head + tail;
-        row.div4000 = row.total / w;                              // 除4000单价 = 总价 ÷ 除4000计费重
-        row.div6000 = row.total / (w * 4000 / 6000);             // 除6000单价 = 总价 ÷ 除6000计费重
-      } else {
-        row.head = null;
-        row.tail = null;
-        row.total = null;
-        row.div4000 = null;
-        row.div6000 = null;
-      }
       out.push(row);
     });
     return out;
@@ -336,36 +334,50 @@
     var h = '';
     order.forEach(function (wh) {
       var rows = groups[wh];
-      var title = '最终全程运费总价' + (wh ? '（' + wh + '）' : '');
-      h += '<div class="wh-quote-title">' + esc(title) + '</div>';
-      h += '<table class="wh-quote-table"><thead><tr>' +
-        '<th>邮编</th><th>公斤段</th><th>头程计算公式</th><th>尾程计算公式</th>' +
-        '<th>除4000单价</th><th>除6000单价</th><th>总价(元)</th>' +
-        '</tr></thead><tbody>';
-      var sum = 0, hasTotal = false;
-      rows.forEach(function (r) {
-        var noRate = (r.w > 0 && !(r.rate > 0));   // 有重量但没设汇率
-        var cell = function (v) {
-          if (r.total != null && v != null) return fmtM(v);
-          return '<span class="wh-quote-need">' + (noRate ? '未设汇率' : '填重量后计算') + '</span>';
-        };
-        if (r.total != null) { sum += r.total; hasTotal = true; }
-        h += '<tr>' +
-          '<td>' + esc(r.code) + '</td>' +
-          '<td>' + esc(r.label) + '</td>' +
-          '<td class="wh-quote-formula">' + esc(r.headF) + '</td>' +
-          '<td class="wh-quote-formula">' + esc(r.tailF) + '</td>' +
-          '<td>' + cell(r.div4000) + '</td>' +
-          '<td>' + cell(r.div6000) + '</td>' +
-          '<td class="wh-quote-total">' + cell(r.total) + '</td>' +
-          '</tr>';
+      // 每仓出三张表：大陆空运 / 香港空运 / 海运（仅头程单价不同，尾程相同）
+      WH_MODES.forEach(function (mode) {
+        var whTxt = wh ? '（' + wh + '）' : '';
+        var title = '最终全程运费总价 — ' + mode.name + whTxt;
+        h += '<div class="wh-quote-title">' + esc(title) + '</div>';
+        h += '<table class="wh-quote-table"><thead><tr>' +
+          '<th>邮编</th><th>公斤段</th><th>头程计算公式</th><th>尾程计算公式</th>' +
+          '<th>除4000单价</th><th>除6000单价</th><th>总价(元)</th>' +
+          '</tr></thead><tbody>';
+        var sum = 0, hasTotal = false;
+        rows.forEach(function (r) {
+          var noRate = (r.w > 0 && !(r.rate > 0));   // 有重量但没设汇率
+          var unit = (r.units && r.units[mode.name] != null) ? r.units[mode.name] : 0;
+          var headF = fmt2(unit) + '*' + r.fuelPctTxt + '*' + fmt2(r.rate) + '*除4000计费重';
+          var total = null, div4000 = null, div6000 = null;
+          if (r.hasNum) {
+            var head = unit * r.fuelMult * r.rate * r.w;   // 头程（元）= 头程单价×(1+燃油)×汇率×计费重
+            total = head + r.tail;                          // 总价 = 头程 + 尾程
+            div4000 = total / r.w;                          // 除4000单价 = 总价 ÷ 除4000计费重
+            div6000 = total / (r.w * 4000 / 6000);          // 除6000单价 = 总价 ÷ 除6000计费重
+            sum += total; hasTotal = true;
+          }
+          var cell = function (v) {
+            if (total != null && v != null) return fmtM(v);
+            return '<span class="wh-quote-need">' + (noRate ? '未设汇率' : '填重量后计算') + '</span>';
+          };
+          h += '<tr>' +
+            '<td>' + esc(r.code) + '</td>' +
+            '<td>' + esc(r.label) + '</td>' +
+            '<td class="wh-quote-formula">' + esc(headF) + '</td>' +
+            '<td class="wh-quote-formula">' + esc(r.tailF) + '</td>' +
+            '<td>' + cell(div4000) + '</td>' +
+            '<td>' + cell(div6000) + '</td>' +
+            '<td class="wh-quote-total">' + cell(total) + '</td>' +
+            '</tr>';
+        });
+        h += '<tr class="wh-quote-sum-row"><td colspan="6">合计</td><td>' +
+          (hasTotal ? fmtM(sum) : '<span class="wh-quote-need">—</span>') + '</td></tr>';
+        h += '</tbody></table>';
       });
-      h += '<tr class="wh-quote-sum-row"><td colspan="6">合计</td><td>' +
-        (hasTotal ? fmtM(sum) : '<span class="wh-quote-need">—</span>') + '</td></tr>';
-      h += '</tbody></table>';
     });
 
-    h += '<div class="wh-quote-note">备注：头程 = 头程运输费用单价 ×(1+燃油率)× 汇率 × 除4000计费重；' +
+    h += '<div class="wh-quote-note">备注：每仓分「大陆空运 / 香港空运 / 海运」三张表，三者仅头程单价不同、尾程相同。' +
+      '头程 = 对应头程运输费用单价 ×(1+燃油率)× 汇率 × 除4000计费重；' +
       '尾程 = 邮编对应单价 ×(1+燃油率)× 汇率 × 除4000计费重；总价 = 头程 + 尾程；' +
       '除4000单价 = 总价 ÷ 除4000计费重，除6000单价 = 总价 ÷ 除6000计费重。除4000计费重 = 长×宽×高 ÷ 4000。</div>';
     // 后台自定义备注（免责声明），留空则用默认文案

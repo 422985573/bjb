@@ -2160,10 +2160,13 @@
 
         {% if dahuo_wh_sheets %}
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-            <a class="module-list-item" href="#dahuoWhSection" style="cursor:pointer; text-decoration:none;">
+            <div class="module-list-item-title" style="display:block; padding:2px 4px 6px; font-weight:600; color:#0f172a; cursor:default;">尾程快递运输（下方同页编辑）</div>
+            {% for s in dahuo_wh_sheets %}
+            <a class="module-list-item" href="#dahuoWhCard-{{ s.key }}" style="cursor:pointer; text-decoration:none;">
                 <span class="module-list-item-icon">🏬</span>
-                <span class="module-list-item-title">海外仓价格表（下方同页编辑）</span>
+                <span class="module-list-item-title">{{ s.name }}</span>
             </a>
+            {% endfor %}
         </div>
         {% endif %}
 
@@ -2447,11 +2450,11 @@
         {% if dahuo_wh_sheets %}
         <section id="dahuoWhSection" class="dahuo-wh-section">
             <div class="dahuo-wh-head">
-                <h2>海外仓价格表（独立副本，编辑不影响海外仓文章）</h2>
+                <h2>尾程快递运输（独立副本，编辑不影响海外仓文章）</h2>
                 <p>下方每张表可直接编辑：顶部改<strong>标题</strong>与<strong>燃油费率</strong>，表格改数据，点该表的「保存全部」即保存。运费总价 = max(首重+Per/1KG×计费重, Minimum)×(1+燃油率)×(1+10%GST)，GST 固定 10%。</p>
             </div>
             {% for s in dahuo_wh_sheets %}
-            <div class="dahuo-wh-card" data-wh-key="{{ s.key }}">
+            <div class="dahuo-wh-card" id="dahuoWhCard-{{ s.key }}" data-wh-key="{{ s.key }}">
                 <iframe class="dahuo-wh-frame"
                         data-wh-key="{{ s.key }}"
                         src="{{ url_for('admin.warehouse_sheet_edit', key=s.key) }}?dir={{ dahuo_wh_dir }}&embed=1"
