@@ -58,7 +58,13 @@
 
     <!-- 内容区：渠道模块 + 海外仓 4 张小价格表（同页展示，单栏全宽） -->
     <main class="csb-content article-content">
-        {% include 'partials/_article_modules.html' %}
+        {# 把模块拆成两段：卡派渠道等在上，4 张快递表插在中间，附加/品名/海外仓/赔偿等信息块在下 #}
+        {% set ns = namespace(last_channel=-1) %}
+        {% for m in modules %}
+            {% if m.type == 'channel' %}{% set ns.last_channel = loop.index0 %}{% endif %}
+        {% endfor %}
+        {% set split = (ns.last_channel + 1) if ns.last_channel >= 0 else (modules | length) %}
+        {% with modules = modules[:split] %}{% include 'partials/_article_modules.html' %}{% endwith %}
         <!-- 海外仓价格表（页面加载时并行拉 slim detail 渲染；只展小价格表，不展分区大表） -->
         <section class="csb-wh-inline" id="whInline" data-wh-dir="warehouse_au_dahuo">
             <div class="wh-card" id="wh-card-allied" data-wh-key="allied"></div>
@@ -66,6 +72,7 @@
             <div class="wh-card" id="wh-card-tfm" data-wh-key="tfm"></div>
             <div class="wh-card" id="wh-card-toll" data-wh-key="toll"></div>
         </section>
+        {% with modules = modules[split:] %}{% include 'partials/_article_modules.html' %}{% endwith %}
     </main>
 
     <!-- 浮动渠道目录抽屉：点击展开可快速定位渠道 / 海外仓；搜索邮编时自动弹出可走的渠道 -->
@@ -84,7 +91,6 @@
         </summary>
         <div class="channel-nav-panel-body">
             <ul class="channel-nav-list" id="channelNavList"></ul>
-            <div class="cnp-group-title">尾程快递运输</div>
             <ul class="channel-nav-list csb-wh-nav-list" id="csbWhNavList">
                 <li><button type="button" class="channel-nav-link csb-wh-nav-item" data-scroll-target="#wh-card-allied">Allied价格表</button></li>
                 <li><button type="button" class="channel-nav-link csb-wh-nav-item" data-scroll-target="#wh-card-border">Border价格表</button></li>

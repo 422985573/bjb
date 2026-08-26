@@ -966,6 +966,9 @@ def warehouse_sheet_save(key):
             base['rows'] = sec_data['rows']
         if 'title' in sec_data:
             base['title'] = sec_data['title']
+        # #50 快递副本（warehouse_au_dahuo）允许编辑表头；其余目录不发 headers，沿用原文件
+        if isinstance(sec_data.get('headers'), list):
+            base['headers'] = sec_data['headers']
         new_sections.append(base)
     data['sections'] = new_sections
 

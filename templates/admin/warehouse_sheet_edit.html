@@ -401,6 +401,89 @@
     top: 0;
     z-index: 1;
 }
+/* 可编辑表头输入框（#50 快递副本）：沿用表头底色，加粗居中 */
+.wse-table th .wse-th-input {
+    width: 100%;
+    min-width: 60px;
+    padding: 5px 7px;
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    text-align: center;
+    box-sizing: border-box;
+}
+.wse-table th .wse-th-input:focus {
+    outline: none;
+    background: #e0ecff;
+}
+.wse-table th:has(.wse-th-input) { padding: 0; }
+
+/* ===== #50 快递副本：渠道式编辑增强（明显输入框 / 复制行 / 列管理），仅 body.wse-dahuo-edit 生效 ===== */
+/* 数据格做成明显的输入框（默认无边框透明 → 加边框浅底，聚焦高亮） */
+body.wse-dahuo-edit .wse-table tbody td > input[type="text"] {
+    border: 1px solid #d5dbe3;
+    border-radius: 6px;
+    background: #fff;
+    padding: 5px 8px;
+    transition: border-color .12s, box-shadow .12s;
+}
+body.wse-dahuo-edit .wse-table tbody td > input[type="text"]:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+}
+/* 复制行按钮（蓝色 ⧉），与渠道编辑器一致 */
+.wse-copy-btn {
+    margin-right: 4px;
+    border: none;
+    border-radius: 6px;
+    background: #4b9cff;
+    color: #fff;
+    cursor: pointer;
+    padding: 3px 8px;
+    font-size: 14px;
+    line-height: 1;
+    vertical-align: middle;
+}
+.wse-copy-btn:hover { background: #2f8bff; }
+/* 列管理面板（费用项目）：样式与渠道编辑器 .weight-editor 完全一致 */
+.wse-colmgr {
+    margin: 10px 0 12px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+.wse-colmgr-title { color: #2563eb; margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+.wse-colmgr-hint { font-size: 13px; color: #64748b; margin: 0 0 12px; line-height: 1.5; }
+.wse-colmgr-pills { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.wse-colmgr-pill { display: flex; align-items: center; gap: 5px; }
+.wse-colmgr-pill.dragging { opacity: .5; }
+.wse-colmgr-pill.drag-over { outline: 2px dashed #2563eb; outline-offset: 2px; }
+.wse-colmgr-drag {
+    cursor: grab; color: #64748b; padding: 4px 6px; border-radius: 4px;
+    user-select: none; font-size: 14px; line-height: 1;
+}
+.wse-colmgr-drag:hover { color: #2563eb; background: #eef2f7; }
+.wse-colmgr-drag:active { cursor: grabbing; }
+.wse-colmgr-input {
+    background: #fff; border: 1px solid #d5dbe3; border-radius: 4px;
+    color: #334155; padding: 8px 12px; width: 100px;
+}
+.wse-colmgr-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.wse-colmgr-hidden-tag { font-size: 11px; color: #f59e0b; }
+.wse-colmgr-del {
+    background: #ef4444; color: #fff; border: none; border-radius: 4px;
+    width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 1;
+}
+.wse-colmgr-del:hover { background: #dc2626; }
+.wse-colmgr-add {
+    background: #2563eb; color: #fff; border: none; border-radius: 4px;
+    padding: 8px 15px; cursor: pointer;
+}
+.wse-colmgr-add:hover { background: #1d4ed8; }
 
 @media (max-width: 768px) {
     .wse-page { padding: 12px; }
@@ -674,6 +757,8 @@ function wseGoBack(e) {
   // 数据目录：默认空（走后端默认 warehouse_au）；#50 独立副本传 warehouse_au_dahuo。
   var DATA_DIR = '{{ data_dir or "" }}';
   var DIR_QS = DATA_DIR ? ('?dir=' + encodeURIComponent(DATA_DIR)) : '';
+  // 仅 #50 快递副本（warehouse_au_dahuo）允许编辑表头；#47 warehouse_au / #49 虚拟小包不变。
+  var EDIT_HEADERS = (DATA_DIR === 'warehouse_au_dahuo');
   var PAGE_SIZE = {{ 50 if is_large else 0 }};
   var sheetData = null;
   var pageNums = {};
@@ -762,6 +847,8 @@ function wseGoBack(e) {
 
   function render() {
     var sections = sheetData.sections || [];
+    // #50 快递副本：开启渠道式编辑增强（明显输入框样式），仅本页 body 打标
+    if (EDIT_HEADERS && document.body) document.body.classList.add('wse-dahuo-edit');
     var html = '';
     rtEditors = {};
     // 最后一个富文本块的下标，用于在其后放置「增加文章内容」按钮
@@ -1020,6 +1107,157 @@ function wseGoBack(e) {
     return groups;
   }
 
+  // 表头单元格：#50 快递副本可编辑（写回 sec.headers），其余目录保持只读文本。
+  function wseThCell(headers, hi, si, hiddenCls) {
+    var cls = hiddenCls ? (' class="' + hiddenCls + '"') : '';
+    var val = (headers && headers[hi] != null) ? String(headers[hi]) : '';
+    if (EDIT_HEADERS) {
+      return '<th' + cls + '><input type="text" class="wse-th-input" value="' + escAttr(val) +
+        '" data-header-si="' + si + '" data-hi="' + hi + '" oninput="wseSetHeader(this)" title="表头可编辑"></th>';
+    }
+    return '<th' + cls + '>' + esc(val) + '</th>';
+  }
+  window.wseSetHeader = function(inp) {
+    var si = parseInt(inp.dataset.headerSi, 10);
+    var hi = parseInt(inp.dataset.hi, 10);
+    var sec = sheetData && sheetData.sections ? sheetData.sections[si] : null;
+    if (sec) { sec.headers = sec.headers || []; sec.headers[hi] = inp.value; }
+  };
+
+  // ===== #50 快递副本：渠道式编辑增强（复制行 / 列管理） =====
+  function wseMaxCols(sec) {
+    var c = 0;
+    (sec.rows || []).forEach(function(r) { if (r.length > c) c = r.length; });
+    if ((sec.headers || []).length > c) c = sec.headers.length;
+    return c;
+  }
+
+  // 行操作单元格：#50 快递副本额外带「复制行」按钮（蓝色 ⧉），其余目录仅删除。
+  function wseRowActions(si, ri, delTitle) {
+    var h = '<td class="wse-row-actions">';
+    if (EDIT_HEADERS) {
+      h += '<button type="button" class="wse-copy-btn" onclick="wseCopyRow(' + si + ',' + ri + ')" title="复制行">&#10697;</button>';
+    }
+    h += '<button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="' + (delTitle || '删除行') + '">&times;</button></td>';
+    return h;
+  }
+
+  // 列管理面板（费用/列项目）：仅 #50 快递副本 price_table 显示，可增删/改名/拖动排序。
+  function renderColManager(sec, si) {
+    if (!EDIT_HEADERS || sec.type !== 'price_table') return '';
+    var headers = sec.headers || [];
+    var n = wseMaxCols(sec);
+    var hidden = wseHiddenColSet(headers);
+    var h = '<div class="wse-colmgr" data-si="' + si + '">';
+    h += '<h4 class="wse-colmgr-title">💰 费用项目</h4>';
+    h += '<p class="wse-colmgr-hint">费用列可随时用「+ 添加费用项目」增加、用 × 删除（可删到 0 列再添加）。价格表里每行可用 × 删行、⧉ 复制行，与行操作一样方便。拖动 ⋮⋮ 可改列顺序。</p>';
+    h += '<div class="wse-colmgr-pills">';
+    for (var ci = 0; ci < n; ci++) {
+      var name = headers[ci] != null ? String(headers[ci]) : '';
+      h += '<div class="wse-colmgr-pill" draggable="true" data-si="' + si + '" data-ci="' + ci + '">';
+      h += '<span class="wse-colmgr-drag" title="拖动可调整列顺序">⋮⋮</span>';
+      h += '<input type="text" class="wse-colmgr-input" value="' + escAttr(name) + '" data-si="' + si + '" data-ci="' + ci + '" onchange="wseColRename(this)" placeholder="列名">';
+      if (hidden[ci]) h += '<span class="wse-colmgr-hidden-tag" title="前台展示时隐藏">隐</span>';
+      h += '<button type="button" class="wse-colmgr-del" onclick="wseColDelete(' + si + ',' + ci + ')" title="删除此费用列">&times;</button>';
+      h += '</div>';
+    }
+    h += '<button type="button" class="wse-colmgr-add" onclick="wseColAdd(' + si + ')">+ 添加费用项目</button>';
+    h += '</div>';
+    h += '</div>';
+    return h;
+  }
+
+  window.wseCopyRow = function(si, ri) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec || !sec.rows[ri]) return;
+    var clone = JSON.parse(JSON.stringify(sec.rows[ri]));
+    sec.rows.splice(ri + 1, 0, clone);
+    rerenderSection(si);
+  };
+
+  window.wseColRename = function(inp) {
+    syncInputsToData();
+    var si = parseInt(inp.dataset.si, 10);
+    var ci = parseInt(inp.dataset.ci, 10);
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    sec.headers = sec.headers || [];
+    while (sec.headers.length <= ci) sec.headers.push('');
+    sec.headers[ci] = inp.value;
+    rerenderSection(si);
+  };
+
+  window.wseColAdd = function(si) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var cols = wseMaxCols(sec);
+    sec.headers = sec.headers || [];
+    while (sec.headers.length < cols) sec.headers.push('');
+    sec.headers.push('新列');
+    (sec.rows || []).forEach(function(r) { while (r.length < cols) r.push(''); r.push(''); });
+    rerenderSection(si);
+  };
+
+  window.wseColDelete = function(si, ci) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var nm = (sec.headers && sec.headers[ci] != null) ? String(sec.headers[ci]) : ('第' + (ci + 1) + '列');
+    if (!confirm('确认删除「' + (nm || ('第' + (ci + 1) + '列')) + '」整列？该列所有数据会一并删除，保存后不可恢复。')) return;
+    if (sec.headers && ci < sec.headers.length) sec.headers.splice(ci, 1);
+    (sec.rows || []).forEach(function(r) { if (ci < r.length) r.splice(ci, 1); });
+    rerenderSection(si);
+  };
+
+  function wseMoveColumn(si, from, to) {
+    var sec = sheetData.sections[si];
+    if (!sec || from === to) return;
+    var cols = wseMaxCols(sec);
+    sec.headers = sec.headers || [];
+    while (sec.headers.length < cols) sec.headers.push('');
+    var hMoved = sec.headers.splice(from, 1)[0];
+    sec.headers.splice(to, 0, hMoved);
+    (sec.rows || []).forEach(function(r) {
+      while (r.length < cols) r.push('');
+      var m = r.splice(from, 1)[0];
+      r.splice(to, 0, m);
+    });
+    rerenderSection(si);
+  }
+  window.wseMoveColumn = wseMoveColumn;
+
+  var colDragSrc = null;
+  function bindColManagerDrag() {
+    document.querySelectorAll('.wse-colmgr-pill').forEach(function(pill) {
+      pill.addEventListener('dragstart', function(e) {
+        colDragSrc = { si: parseInt(pill.dataset.si, 10), ci: parseInt(pill.dataset.ci, 10) };
+        e.dataTransfer.effectAllowed = 'move';
+        pill.classList.add('dragging');
+      });
+      pill.addEventListener('dragend', function() {
+        pill.classList.remove('dragging');
+        document.querySelectorAll('.wse-colmgr-pill.drag-over').forEach(function(p) { p.classList.remove('drag-over'); });
+      });
+      pill.addEventListener('dragover', function(e) {
+        if (colDragSrc && parseInt(pill.dataset.si, 10) === colDragSrc.si) { e.preventDefault(); pill.classList.add('drag-over'); }
+      });
+      pill.addEventListener('dragleave', function() { pill.classList.remove('drag-over'); });
+      pill.addEventListener('drop', function(e) {
+        e.preventDefault();
+        pill.classList.remove('drag-over');
+        if (!colDragSrc) return;
+        var si = parseInt(pill.dataset.si, 10);
+        var to = parseInt(pill.dataset.ci, 10);
+        if (si !== colDragSrc.si) { colDragSrc = null; return; }
+        syncInputsToData();
+        wseMoveColumn(si, colDragSrc.ci, to);
+        colDragSrc = null;
+      });
+    });
+  }
+
   function renderPriceTable(sec, si, cols) {
     var rows = sec.rows || [];
     var headers = sec.headers || [];
@@ -1030,11 +1268,13 @@ function wseGoBack(e) {
     var groups = buildCol0Groups(rows, dataIdx);
     var hasRowspanGroups = groups.some(function(g) { return g.indices.length >= 2; });
 
-    var h = '<div class="wse-table-wrap"><table class="wse-table">';
+    // #50 快递副本：列管理面板放在表格上方（增删/改名/拖动排序列）
+    var h = renderColManager(sec, si);
+    h += '<div class="wse-table-wrap"><table class="wse-table">';
     if (headers.length) {
       h += '<thead><tr>';
       for (var hi = 0; hi < cols; hi++) {
-        h += '<th' + (hiddenCols[hi] ? ' class="wse-col-hidden"' : '') + '>' + esc(headers[hi] || '') + '</th>';
+        h += wseThCell(headers, hi, si, hiddenCols[hi] ? 'wse-col-hidden' : '');
       }
       h += '<th></th></tr></thead>';
     }
@@ -1055,7 +1295,7 @@ function wseGoBack(e) {
             if (val === null || val === undefined) val = '';
             h += '<td' + (hiddenCols[ci] ? ' class="wse-col-hidden"' : '') + '><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
           }
-          h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除小项">&times;</button></td>';
+          h += wseRowActions(si, ri, '删除小项');
           h += '</tr>';
         });
         var lastRi = g.indices[cnt - 1];
@@ -1070,7 +1310,7 @@ function wseGoBack(e) {
           if (val === null || val === undefined) val = '';
           h += '<td' + (hiddenCols[ci] ? ' class="wse-col-hidden"' : '') + '><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
         }
-        h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除行">&times;</button></td>';
+        h += wseRowActions(si, ri, '删除行');
         h += '</tr>';
       });
     }
@@ -1089,7 +1329,7 @@ function wseGoBack(e) {
       }
       h += '<tr class="wse-note-merged-row" data-ri="' + ri + '">';
       h += '<td colspan="' + cols + '"><input type="text" class="wse-note-merged-input" value="' + escAttr(noteText) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + noteCi + '" data-merged="1" placeholder="整行说明"></td>';
-      h += '<td class="wse-row-actions"><button type="button" class="wse-del-btn" onclick="wseDelRow(this,' + si + ',' + ri + ')" title="删除整行">&times;</button></td>';
+      h += wseRowActions(si, ri, '删除整行');
       h += '</tr>';
     });
 
@@ -1128,7 +1368,7 @@ function wseGoBack(e) {
 
     var h = '<div class="wse-table-wrap"><table class="wse-table"><thead><tr>';
     for (var hi = 0; hi < headers.length; hi++) {
-      h += '<th>' + esc(headers[hi] || '') + '</th>';
+      h += wseThCell(headers, hi, si, '');
     }
     h += '<th></th></tr></thead><tbody>';
 
@@ -1173,7 +1413,7 @@ function wseGoBack(e) {
     var h = '<div class="wse-table-wrap"><table class="wse-table"><thead><tr>';
     h += '<th>State</th>';
     for (var hi = 0; hi < headers.length; hi++) {
-      h += '<th>' + esc(headers[hi] || '') + '</th>';
+      h += wseThCell(headers, hi, si, '');
     }
     h += '<th></th></tr></thead><tbody>';
 
@@ -1355,7 +1595,7 @@ function wseGoBack(e) {
     if (headers.length) {
       h += '<thead><tr>';
       for (var hi = 0; hi < headers.length; hi++) {
-        h += '<th>' + esc(headers[hi] || '') + '</th>';
+        h += wseThCell(headers, hi, si, '');
       }
       h += '<th></th>';
       h += '</tr></thead>';
@@ -1426,7 +1666,14 @@ function wseGoBack(e) {
       var sec = sheetData.sections[si];
       if (sec) sec.title = inp.value.trim();
     });
-    var inputs = document.querySelectorAll('.wse-section input[data-si]');
+    // 表头（#50 快递副本可编辑）写回 sec.headers
+    document.querySelectorAll('.wse-th-input[data-header-si]').forEach(function(inp) {
+      var si = parseInt(inp.dataset.headerSi, 10);
+      var hi = parseInt(inp.dataset.hi, 10);
+      var sec = sheetData.sections[si];
+      if (sec) { sec.headers = sec.headers || []; sec.headers[hi] = inp.value; }
+    });
+    var inputs = document.querySelectorAll('.wse-section input[data-si]:not(.wse-colmgr-input)');
     inputs.forEach(function(inp) {
       var si = parseInt(inp.dataset.si);
       var ri = parseInt(inp.dataset.ri);
@@ -1471,10 +1718,11 @@ function wseGoBack(e) {
   }
 
   function bindEvents() {
-    document.querySelectorAll('.wse-section input[data-si]').forEach(function(inp) {
+    document.querySelectorAll('.wse-section input[data-si]:not(.wse-colmgr-input)').forEach(function(inp) {
       inp.removeEventListener('change', onInputChange);
       inp.addEventListener('change', onInputChange);
     });
+    bindColManagerDrag();
   }
 
   function onInputChange(e) {
@@ -1664,7 +1912,10 @@ function wseGoBack(e) {
       if (sec.type === 'richtext') {
         return {type: 'richtext', html: cleanRichtextHtml(sec.html || ''), title: sec.title || '', _oidx: sec._oidx};
       }
-      return {rows: sec.rows || [], title: sec.title || '', _oidx: sec._oidx};
+      var out = {rows: sec.rows || [], title: sec.title || '', _oidx: sec._oidx};
+      // #50 快递副本：表头可编辑，一并回传（其余目录不发 headers，后端沿用原文件表头）
+      if (EDIT_HEADERS && sec.headers) out.headers = sec.headers;
+      return out;
     });
 
     saveBtn.disabled = true;

@@ -128,9 +128,9 @@
 /* ===== 侧栏报价目录（复用 channel-nav-link 样式，仅调整容器） ===== */
 .csb-nav-list { padding: 8px 8px 4px; margin: 0; list-style: none; max-height: none; overflow: visible; }
 
-/* 海外仓派送目录组 */
+/* 海外仓派送目录组：与卡派渠道目录统一为一列，无分组标题 */
 .csb-wh-nav-title { margin-top: 6px; }
-.csb-wh-nav-list { padding-top: 8px; }
+.csb-wh-nav-list { padding-top: 0; margin-top: 0; }
 .csb-wh-nav-item { font-weight: 500; }
 
 /* 浮动渠道目录抽屉内「海外仓派送」分组标题 */
@@ -148,14 +148,14 @@
     box-shadow: 0 1px 3px rgba(15,23,42,0.05);
 }
 .wh-card.hidden-by-search { display: none; }
-.wh-card-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 6px; }
+.wh-card-title { background: var(--primary, #2563eb); color: #FFD700; font-size: 18px; font-weight: 800; text-align: center; padding: 12px 16px; margin: 0; }
 .wh-card-result { font-size: 13px; font-weight: 600; color: #2563eb; min-height: 0; margin-bottom: 10px; }
 .wh-card-result:empty { display: none; }
-/* 分区/表标题：蓝底白字横条，与上方卡派渠道 .channel-title 一致 */
+/* 分区/表标题：蓝底金字横条，与上方卡派渠道 .channel-title + .channel-name-highlight 一致 */
 .wh-card-section-title {
-    background: var(--primary, #2563eb); color: #fff;
-    font-size: 15px; font-weight: 600; text-align: center;
-    padding: 12px 16px; margin: 14px 0 0;
+    background: var(--primary, #2563eb); color: #FFD700;
+    font-size: 15px; font-weight: 800; text-align: center;
+    padding: 12px 16px; margin: 0;
 }
 .wh-card-error { color: #ef4444; padding: 10px 0; font-size: 13px; }
 
@@ -176,7 +176,7 @@
 
 /* ===== 运费总价表 ===== */
 .wh-quote { margin-top: 16px; }
-.wh-quote-title { background: var(--primary, #2563eb); color: #fff; text-align: center; font-size: 15px; font-weight: 700; padding: 12px 16px; margin: 10px 0 0; }
+.wh-quote-title { background: var(--primary, #2563eb); color: #FFD700; text-align: center; font-size: 15px; font-weight: 800; padding: 12px 16px; margin: 10px 0 0; }
 .wh-quote-table + .wh-quote-title { margin-top: 18px; }
 .wh-quote-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .wh-quote-table th, .wh-quote-table td { border: 1px solid #e2e8f0; padding: 7px 9px; text-align: center; }
