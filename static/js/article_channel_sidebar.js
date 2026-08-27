@@ -115,6 +115,9 @@
       }
     });
     card.innerHTML = html;
+    // 同步侧栏目录名称：后台重命名后目录与卡片标题保持一致
+    var navItem = document.querySelector('.csb-wh-nav-item[data-scroll-target="#wh-card-' + key + '"]');
+    if (navItem) navItem.textContent = name;
   }
 
   function loadWarehouseTables() {

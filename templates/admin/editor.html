@@ -2162,10 +2162,18 @@
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
             <div class="module-list-item-title" style="display:block; padding:2px 4px 6px; font-weight:600; color:#0f172a; cursor:default;">尾程快递运输（下方同页编辑）</div>
             {% for s in dahuo_wh_sheets %}
-            <a class="module-list-item" href="#dahuoWhCard-{{ s.key }}" style="cursor:pointer; text-decoration:none;">
-                <span class="module-list-item-icon">🏬</span>
-                <span class="module-list-item-title">{{ s.name }}</span>
-            </a>
+            <div class="module-list-item" style="cursor:default;">
+                <a href="#dahuoWhCard-{{ s.key }}" style="display:contents; text-decoration:none; color:inherit;">
+                    <span class="module-list-item-icon">🏬</span>
+                    <span class="module-list-item-title">{{ s.name }}</span>
+                </a>
+                <button class="dahuo-sheet-copy-btn" title="复制此价格表（仅后台）"
+                        onclick="copyDahuoSheet('{{ s.key }}', '{{ s.name }}')">复制</button>
+                {% if s.key not in ('allied', 'border', 'tfm', 'toll') %}
+                <button class="dahuo-sheet-del-btn" title="删除此副本"
+                        onclick="deleteDahuoSheet('{{ s.key }}', '{{ s.name }}')">删除</button>
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
         {% endif %}
@@ -2467,6 +2475,27 @@
         .dahuo-wh-section { margin-top: 26px; padding-top: 18px; border-top: 2px solid var(--border); }
         .dahuo-wh-head h2 { font-size: 17px; color: #0f172a; margin: 0 0 6px; }
         .dahuo-wh-head p { font-size: 12px; color: var(--text-light); margin: 0 0 14px; line-height: 1.6; }
+        .dahuo-sheet-copy-btn, .dahuo-sheet-del-btn {
+            flex-shrink: 0;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .dahuo-sheet-copy-btn {
+            background: #fff;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        .dahuo-sheet-copy-btn:hover { background: var(--primary); color: #fff; }
+        .dahuo-sheet-del-btn {
+            background: #fff;
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+        .dahuo-sheet-del-btn:hover { background: #ef4444; color: #fff; }
         .dahuo-wh-card {
             border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
             margin-bottom: 18px; background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,0.05);
@@ -6395,6 +6424,39 @@ function initUploadAreas() {
             }
         });
     });
+}
+
+async function copyDahuoSheet(key, name) {
+    if (!confirm(`复制「${name}」？将生成一份后台可编辑的副本，前台展示不变。`)) return;
+    try {
+        const res = await fetch(`/api/warehouse-sheet/${encodeURIComponent(key)}/copy`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dir: 'warehouse_au_dahuo' })
+        });
+        const data = await res.json();
+        if (!data.success) { alert('复制失败：' + (data.message || '未知错误')); return; }
+        alert(`已复制为「${data.name}」（key: ${data.key}）\n刷新页面后可在下方编辑。`);
+    } catch (e) {
+        alert('网络错误：' + e.message);
+    }
+}
+
+async function deleteDahuoSheet(key, name) {
+    if (!confirm(`确定删除「${name}」？此操作不可恢复。`)) return;
+    try {
+        const res = await fetch(`/api/warehouse-sheet/${encodeURIComponent(key)}/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dir: 'warehouse_au_dahuo' })
+        });
+        const data = await res.json();
+        if (!data.success) { alert('删除失败：' + (data.message || '未知错误')); return; }
+        alert(`「${name}」已删除。`);
+        location.reload();
+    } catch (e) {
+        alert('网络错误：' + e.message);
+    }
 }
 </script>
 {% endblock %}

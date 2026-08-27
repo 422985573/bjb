@@ -473,6 +473,11 @@ body.wse-dahuo-edit .wse-table tbody td > input[type="text"]:focus {
     color: #334155; padding: 8px 12px; width: 100px;
 }
 .wse-colmgr-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.wse-colmgr-formula {
+    background: #fff; border: 1px solid #d5dbe3; border-radius: 4px;
+    color: #334155; padding: 7px 8px; font-size: 12px; cursor: pointer;
+}
+.wse-colmgr-formula:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 .wse-colmgr-hidden-tag { font-size: 11px; color: #f59e0b; }
 .wse-colmgr-del {
     background: #ef4444; color: #fff; border: none; border-radius: 4px;
@@ -602,6 +607,13 @@ body.wse-dahuo-edit .wse-table tbody td > input[type="text"]:focus {
     margin-top: 16px; padding-top: 14px; border-top: 1px dashed #e2e8f0;
 }
 .wse-sp-title { font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 10px; }
+/* 重量档只读计算单元格（15/30/100/500KG，按公式自动算价） */
+.wse-table td.wse-calc-cell {
+    text-align: right; padding: 8px 12px; color: #0f172a;
+    font-variant-numeric: tabular-nums; font-weight: 600;
+    background: #f0f9ff; border: 1px solid #e0f2fe; cursor: default;
+}
+.wse-calc-need { color: #f59e0b; font-size: 12px; font-weight: 400; }
 .wse-sp-row { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
 .wse-sp-group { display: flex; flex-direction: column; gap: 4px; }
 .wse-sp-group label { font-size: 12px; color: #64748b; font-weight: 500; }
@@ -694,14 +706,14 @@ body { background: #fff; }
                     <select id="wseMonth"></select>
                 </div>
                 {% if data_dir %}
-                <div class="wse-sp-group"><label>大陆空运头程费用单价(元/kg)</label>
+                <div class="wse-sp-group"><label>头程费用(元/kg)</label>
                     <input id="wseUnit" type="number" step="0.01">
                 </div>
-                <div class="wse-sp-group"><label>香港空运头程费用单价(元/kg)</label>
-                    <input id="wseHkUnit" type="number" step="0.01">
+                <div class="wse-sp-group"><label>尾程运费单价(AUD/kg)</label>
+                    <input id="wseTailPer" type="number" step="0.0001">
                 </div>
-                <div class="wse-sp-group"><label>海运头程费用单价(元/kg)</label>
-                    <input id="wseSeaUnit" type="number" step="0.01">
+                <div class="wse-sp-group"><label>尾程操作费(AUD)</label>
+                    <input id="wseTailOp" type="number" step="0.01">
                 </div>
                 {% else %}
                 <div class="wse-sp-group"><label>头程运输费用单价(元/kg)</label>
@@ -1150,13 +1162,21 @@ function wseGoBack(e) {
     var hidden = wseHiddenColSet(headers);
     var h = '<div class="wse-colmgr" data-si="' + si + '">';
     h += '<h4 class="wse-colmgr-title">💰 费用项目</h4>';
-    h += '<p class="wse-colmgr-hint">费用列可随时用「+ 添加费用项目」增加、用 × 删除（可删到 0 列再添加）。价格表里每行可用 × 删行、⧉ 复制行，与行操作一样方便。拖动 ⋮⋮ 可改列顺序。</p>';
+    h += '<p class="wse-colmgr-hint">费用列可随时用「+ 添加费用项目」增加、用 × 删除（可删到 0 列再添加）。每列可选「公式」：选中后该列单价按公式自动算价、只读、无需手填；选「手动填写」则照常手动录入。拖动 ⋮⋮ 可改列顺序。</p>';
     h += '<div class="wse-colmgr-pills">';
+    var colFormulas = sec.col_formulas || [];
     for (var ci = 0; ci < n; ci++) {
       var name = headers[ci] != null ? String(headers[ci]) : '';
+      var curFk = colFormulas[ci] != null ? String(colFormulas[ci]) : '';
       h += '<div class="wse-colmgr-pill" draggable="true" data-si="' + si + '" data-ci="' + ci + '">';
       h += '<span class="wse-colmgr-drag" title="拖动可调整列顺序">⋮⋮</span>';
       h += '<input type="text" class="wse-colmgr-input" value="' + escAttr(name) + '" data-si="' + si + '" data-ci="' + ci + '" onchange="wseColRename(this)" placeholder="列名">';
+      h += '<select class="wse-colmgr-formula" data-si="' + si + '" data-ci="' + ci + '" onchange="wseColFormula(this)" title="选择该列的计价公式">';
+      h += '<option value=""' + (curFk === '' ? ' selected' : '') + '>手动填写</option>';
+      WSE_FORMULAS.forEach(function(f) {
+        h += '<option value="' + f.key + '"' + (curFk === f.key ? ' selected' : '') + '>' + f.label + '</option>';
+      });
+      h += '</select>';
       if (hidden[ci]) h += '<span class="wse-colmgr-hidden-tag" title="前台展示时隐藏">隐</span>';
       h += '<button type="button" class="wse-colmgr-del" onclick="wseColDelete(' + si + ',' + ci + ')" title="删除此费用列">&times;</button>';
       h += '</div>';
@@ -1188,6 +1208,27 @@ function wseGoBack(e) {
     rerenderSection(si);
   };
 
+  // 补齐 col_formulas 到与 headers 等长（缺项按手动填写 ''）
+  function wseEnsureColFormulas(sec) {
+    if (!sec) return [];
+    var n = Math.max(wseMaxCols(sec), (sec.headers || []).length);
+    sec.col_formulas = sec.col_formulas || [];
+    while (sec.col_formulas.length < n) sec.col_formulas.push('');
+    return sec.col_formulas;
+  }
+
+  // 选择/切换某列的计价公式（''=手动填写）
+  window.wseColFormula = function(sel) {
+    syncInputsToData();
+    var si = parseInt(sel.dataset.si, 10);
+    var ci = parseInt(sel.dataset.ci, 10);
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var cf = wseEnsureColFormulas(sec);
+    cf[ci] = sel.value || '';
+    rerenderSection(si);
+  };
+
   window.wseColAdd = function(si) {
     syncInputsToData();
     var sec = sheetData.sections[si];
@@ -1197,6 +1238,7 @@ function wseGoBack(e) {
     while (sec.headers.length < cols) sec.headers.push('');
     sec.headers.push('新列');
     (sec.rows || []).forEach(function(r) { while (r.length < cols) r.push(''); r.push(''); });
+    wseEnsureColFormulas(sec);   // 新列默认手动填写 ''
     rerenderSection(si);
   };
 
@@ -1206,7 +1248,9 @@ function wseGoBack(e) {
     if (!sec) return;
     var nm = (sec.headers && sec.headers[ci] != null) ? String(sec.headers[ci]) : ('第' + (ci + 1) + '列');
     if (!confirm('确认删除「' + (nm || ('第' + (ci + 1) + '列')) + '」整列？该列所有数据会一并删除，保存后不可恢复。')) return;
+    wseEnsureColFormulas(sec);
     if (sec.headers && ci < sec.headers.length) sec.headers.splice(ci, 1);
+    if (ci < sec.col_formulas.length) sec.col_formulas.splice(ci, 1);
     (sec.rows || []).forEach(function(r) { if (ci < r.length) r.splice(ci, 1); });
     rerenderSection(si);
   };
@@ -1219,6 +1263,9 @@ function wseGoBack(e) {
     while (sec.headers.length < cols) sec.headers.push('');
     var hMoved = sec.headers.splice(from, 1)[0];
     sec.headers.splice(to, 0, hMoved);
+    var cf = wseEnsureColFormulas(sec);
+    var fMoved = cf.splice(from, 1)[0];
+    cf.splice(to, 0, fMoved);
     (sec.rows || []).forEach(function(r) {
       while (r.length < cols) r.push('');
       var m = r.splice(from, 1)[0];
@@ -1258,6 +1305,72 @@ function wseGoBack(e) {
     });
   }
 
+  // ===== #50 快递副本：费用列可「选用公式」自动算价（只读） =====
+  // 固定公式列表：选中某档 → 该列单价按对应重量 W 自动算；不选则手动填。
+  var WSE_FORMULAS = [
+    { key: '15',  label: '15kg 公式',  w: 15  },
+    { key: '30',  label: '30kg 公式',  w: 30  },
+    { key: '100', label: '100kg 公式', w: 100 },
+    { key: '500', label: '500kg 公式', w: 500 }
+  ];
+  function wseFormulaW(fk) {
+    var f = WSE_FORMULAS.find(function(x) { return x.key === String(fk); });
+    return f ? f.w : null;
+  }
+  // 该段列公式映射 { ci -> W }；无任何公式列返回 {}
+  function wseFormulaMap(sec) {
+    var fmap = {};
+    if (!EDIT_HEADERS || !sec) return fmap;
+    (sec.col_formulas || []).forEach(function(fk, ci) {
+      var w = wseFormulaW(fk);
+      if (w != null) fmap[ci] = w;
+    });
+    return fmap;
+  }
+  function wseSecHasFormula(sec) {
+    return Object.keys(wseFormulaMap(sec)).length > 0;
+  }
+  // 读取月度全局参数（头程费用/尾程运费单价/尾程操作费/汇率/燃油率），实时取输入框当前值
+  function wseReadMonthlyParams() {
+    var f = function(id){ var e = document.getElementById(id); var n = e ? parseFloat(e.value) : NaN; return isNaN(n) ? 0 : n; };
+    return { head: f('wseUnit'), rate: f('wseRate'), fuel: f('wseFuel'), tailPer: f('wseTailPer'), tailOp: f('wseTailOp') };
+  }
+  // 单档计算：返回 number|null（缺汇率 → null 显占位）。尾程运费单价/操作费为月度全局参数。
+  function wseCalcCell(w, p) {
+    if (!(w > 0) || !(p.rate > 0)) return null;
+    var per = p.tailPer || 0;
+    var op  = p.tailOp || 0;
+    var tail  = (per * w + op) * p.rate * (1 + p.fuel / 100);   // 尾程 = (尾程运费单价×W + 尾程操作费) × 汇率 × (1+燃油率%)
+    var total = p.head * w + tail;                               // 总价 = 头程费用×W + 尾程
+    return total / w;                                            // 单价 = 总价 ÷ W
+  }
+  // 计算单元格 HTML（只读，非 input）
+  function wseCalcCellHtml(w, params, si, ri, hiddenCls) {
+    var v = wseCalcCell(w, params);
+    var inner = (v == null) ? '<span class="wse-calc-need">填参数</span>' : v.toFixed(2);
+    var cls = 'wse-calc-cell' + (hiddenCls ? ' ' + hiddenCls : '');
+    return '<td class="' + cls + '" data-si="' + si + '" data-ri="' + ri + '" data-wkg="' + w + '">' + inner + '</td>';
+  }
+  // 实时重算某段所有计算单元格（用当前月度全局参数，不整段重渲染）
+  function wseRecalcSection(si) {
+    var el = document.querySelector('.wse-section[data-si="' + si + '"]');
+    if (!el) return;
+    var sec = sheetData.sections[si];
+    if (!sec || !wseSecHasFormula(sec)) return;
+    var params = wseReadMonthlyParams();
+    el.querySelectorAll('.wse-calc-cell[data-wkg]').forEach(function(td) {
+      var w = parseFloat(td.getAttribute('data-wkg'));
+      var v = wseCalcCell(w, params);
+      td.innerHTML = (v == null) ? '<span class="wse-calc-need">填参数</span>' : v.toFixed(2);
+    });
+  }
+  // 重算所有含公式列的价格段（月度参数变化时用）
+  function wseRecalcAll() {
+    (sheetData && sheetData.sections ? sheetData.sections : []).forEach(function(sec, si) {
+      if (sec.type === 'price_table' && wseSecHasFormula(sec)) wseRecalcSection(si);
+    });
+  }
+
   function renderPriceTable(sec, si, cols) {
     var rows = sec.rows || [];
     var headers = sec.headers || [];
@@ -1267,6 +1380,9 @@ function wseGoBack(e) {
     var noteIdx = split.noteIdx;
     var groups = buildCol0Groups(rows, dataIdx);
     var hasRowspanGroups = groups.some(function(g) { return g.indices.length >= 2; });
+    // 选用了公式的费用列 → 只读自动算价（仅快递副本目录启用）
+    var wcolMap = wseFormulaMap(sec);
+    var calcParams = Object.keys(wcolMap).length ? wseReadMonthlyParams() : null;
 
     // #50 快递副本：列管理面板放在表格上方（增删/改名/拖动排序列）
     var h = renderColManager(sec, si);
@@ -1291,6 +1407,10 @@ function wseGoBack(e) {
             h += '<td rowspan="' + cnt + '" class="wse-group-cell"><input type="text" value="' + escAttr(col0Val) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="0"></td>';
           }
           for (var ci = 1; ci < cols; ci++) {
+            if (wcolMap[ci] != null) {
+              h += wseCalcCellHtml(wcolMap[ci], calcParams, si, ri, hiddenCols[ci] ? 'wse-col-hidden' : '');
+              continue;
+            }
             var val = ci < row.length ? wseCellValue(row[ci]) : '';
             if (val === null || val === undefined) val = '';
             h += '<td' + (hiddenCols[ci] ? ' class="wse-col-hidden"' : '') + '><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
@@ -1306,6 +1426,10 @@ function wseGoBack(e) {
         var row = rows[ri];
         h += '<tr data-ri="' + ri + '">';
         for (var ci = 0; ci < cols; ci++) {
+          if (wcolMap[ci] != null) {
+            h += wseCalcCellHtml(wcolMap[ci], calcParams, si, ri, hiddenCols[ci] ? 'wse-col-hidden' : '');
+            continue;
+          }
           var val = ci < row.length ? wseCellValue(row[ci]) : '';
           if (val === null || val === undefined) val = '';
           h += '<td' + (hiddenCols[ci] ? ' class="wse-col-hidden"' : '') + '><input type="text" value="' + escAttr(String(val)) + '" data-si="' + si + '" data-ri="' + ri + '" data-ci="' + ci + '"></td>';
@@ -1722,6 +1846,7 @@ function wseGoBack(e) {
       inp.removeEventListener('change', onInputChange);
       inp.addEventListener('change', onInputChange);
     });
+    // 尾程运费/操作费已是月度全局参数，实时重算由月度参数面板的输入触发（见月度参数 IIFE）。
     bindColManagerDrag();
   }
 
@@ -1915,6 +2040,8 @@ function wseGoBack(e) {
       var out = {rows: sec.rows || [], title: sec.title || '', _oidx: sec._oidx};
       // #50 快递副本：表头可编辑，一并回传（其余目录不发 headers，后端沿用原文件表头）
       if (EDIT_HEADERS && sec.headers) out.headers = sec.headers;
+      // 每列的计价公式选择（''=手动填写）
+      if (EDIT_HEADERS && sec.col_formulas) out.col_formulas = sec.col_formulas;
       return out;
     });
 
@@ -2049,11 +2176,13 @@ function wseGoBack(e) {
 
     function fill(month) {
       var s = monthly[String(month)] || {};
-      // 头程单价：大陆空运=unit_price（回退旧字段兼容历史数据），香港空运=hk_unit_price，海运=sea_unit_price
+      // 头程费用：unit_price（回退旧字段兼容历史数据）
       var unit = s.unit_price != null ? s.unit_price : (s.sea_unit_price != null ? s.sea_unit_price : '');
       el('wseUnit').value = unit;
       if (el('wseHkUnit')) el('wseHkUnit').value = s.hk_unit_price != null ? s.hk_unit_price : '';
       if (el('wseSeaUnit')) el('wseSeaUnit').value = s.sea_unit_price != null ? s.sea_unit_price : '';
+      if (el('wseTailPer')) el('wseTailPer').value = s.tail_per != null ? s.tail_per : '';
+      if (el('wseTailOp')) el('wseTailOp').value = s.tail_op != null ? s.tail_op : '';
       el('wseRate').value = s.exchange_rate != null ? s.exchange_rate : '';
       el('wseFuel').value = s.fuel_rate != null ? s.fuel_rate : '';
     }
@@ -2067,10 +2196,17 @@ function wseGoBack(e) {
             monthly = res.data.monthly[SHEET_KEY] || {};
           }
           fill(parseInt(monthSel.value));
-        }).catch(function () { fill(parseInt(monthSel.value)); });
+          if (typeof wseRecalcAll === 'function') wseRecalcAll();
+        }).catch(function () { fill(parseInt(monthSel.value)); if (typeof wseRecalcAll === 'function') wseRecalcAll(); });
     }
 
-    monthSel.addEventListener('change', function () { fill(parseInt(monthSel.value)); });
+    monthSel.addEventListener('change', function () { fill(parseInt(monthSel.value)); if (typeof wseRecalcAll === 'function') wseRecalcAll(); });
+
+    // 头程费用/尾程运费单价/尾程操作费/汇率/燃油率改动 → 实时重算所有含重量档列的价格段
+    ['wseUnit', 'wseTailPer', 'wseTailOp', 'wseRate', 'wseFuel'].forEach(function (id) {
+      var e = el(id);
+      if (e) e.addEventListener('input', function () { if (typeof wseRecalcAll === 'function') wseRecalcAll(); });
+    });
 
     // 供「保存全部」统一调用：保存当前月度参数（本表本月），返回 Promise。
     window.wseSaveSettings = function () {
@@ -2080,6 +2216,8 @@ function wseGoBack(e) {
         unit_price: el('wseUnit').value,
         hk_unit_price: el('wseHkUnit') ? el('wseHkUnit').value : '',
         sea_unit_price: el('wseSeaUnit') ? el('wseSeaUnit').value : '',
+        tail_per: el('wseTailPer') ? el('wseTailPer').value : '',
+        tail_op: el('wseTailOp') ? el('wseTailOp').value : '',
         exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value
       };
       return fetch('/api/warehouse-settings/save', {

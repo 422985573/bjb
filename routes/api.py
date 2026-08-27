@@ -758,6 +758,18 @@ def _wh_sheet_path(key, dirname=None):
     return os.path.join(_wh_dir(dirname), f'{safe}.json')
 
 
+def _wh_index_keys(dirname=None):
+    """该目录 _index.json 中的全部 sheet key（含副本）。读失败回退 4 张原始表。"""
+    path = _wh_index_path(dirname)
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            idx = json.load(f)
+        keys = [e.get('key') for e in idx if isinstance(e, dict) and e.get('key')]
+        return keys or list(_WH_SHEET_KEYS)
+    except (ValueError, OSError):
+        return list(_WH_SHEET_KEYS)
+
+
 @api_bp.route('/warehouse-sheets')
 def warehouse_sheets_index():
     path = _wh_index_path(request.args.get('dir'))
@@ -935,6 +947,96 @@ def warehouse_sheet_rename(key):
     return jsonify({'success': True, 'name': name})
 
 
+@api_bp.route('/warehouse-sheet/<key>/copy', methods=['POST'])
+@admin_required
+def warehouse_sheet_copy(key):
+    """复制海外仓价格表（仅后台副本，不影响前台展示）。
+    新表 key = {key}_copy，若已存在则依次尝试 _copy2 / _copy3…"""
+    body = request.json or {}
+    dirname = body.get('dir') or 'warehouse_au_dahuo'
+
+    sheet_path = _wh_sheet_path(key, dirname)
+    if not os.path.isfile(sheet_path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+
+    index_path = _wh_index_path(dirname)
+    if not os.path.isfile(index_path):
+        return jsonify({'success': False, 'message': '目录文件不存在'}), 404
+
+    with open(sheet_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    with open(index_path, 'r', encoding='utf-8') as f:
+        index = json.load(f)
+
+    existing_keys = {e['key'] for e in index}
+    # 找一个未占用的新 key
+    candidate = key + '_copy'
+    suffix = 2
+    while candidate in existing_keys:
+        candidate = f'{key}_copy{suffix}'
+        suffix += 1
+
+    new_name = data.get('name', key) + ' 副本'
+    if suffix > 2:
+        new_name = data.get('name', key) + f' 副本{suffix - 1}'
+
+    new_data = dict(data)
+    new_data['key'] = candidate
+    new_data['name'] = new_name
+    # 副本不带搜索缓存字段（重建时会重新生成）
+    new_data.pop('postcode_zone_map', None)
+
+    new_path = _wh_sheet_path(candidate, dirname)
+    with open(new_path, 'w', encoding='utf-8') as f:
+        json.dump(new_data, f, ensure_ascii=False, indent=2)
+
+    # 统计行数（与 _index.json 保持一致的格式）
+    row_count = sum(len(sec.get('rows') or []) for sec in new_data.get('sections') or [])
+    index.append({'key': candidate, 'name': new_name, 'row_count': row_count,
+                  'is_large': data.get('is_large', False)})
+    with open(index_path, 'w', encoding='utf-8') as f:
+        json.dump(index, f, ensure_ascii=False, indent=2)
+
+    _load_all_postcode_maps.cache_clear()
+    _logger.info('warehouse sheet copy src=%s new=%s dir=%s', key, candidate, dirname)
+    return jsonify({'success': True, 'key': candidate, 'name': new_name})
+
+
+# 原始4张表不允许删除
+_WH_PROTECTED_KEYS = {'allied', 'border', 'tfm', 'toll'}
+
+
+@api_bp.route('/warehouse-sheet/<key>/delete', methods=['POST'])
+@admin_required
+def warehouse_sheet_delete(key):
+    """删除副本价格表。原始4张表（allied/border/tfm/toll）受保护，不可删除。"""
+    if key in _WH_PROTECTED_KEYS:
+        return jsonify({'success': False, 'message': '原始价格表不可删除'}), 403
+
+    body = request.json or {}
+    dirname = body.get('dir') or 'warehouse_au_dahuo'
+
+    sheet_path = _wh_sheet_path(key, dirname)
+    if not os.path.isfile(sheet_path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+
+    index_path = _wh_index_path(dirname)
+    if not os.path.isfile(index_path):
+        return jsonify({'success': False, 'message': '目录文件不存在'}), 404
+
+    os.remove(sheet_path)
+
+    with open(index_path, 'r', encoding='utf-8') as f:
+        index = json.load(f)
+    index = [e for e in index if e.get('key') != key]
+    with open(index_path, 'w', encoding='utf-8') as f:
+        json.dump(index, f, ensure_ascii=False, indent=2)
+
+    _load_all_postcode_maps.cache_clear()
+    _logger.info('warehouse sheet delete key=%s dir=%s', key, dirname)
+    return jsonify({'success': True})
+
+
 @api_bp.route('/warehouse-sheet/<key>/save', methods=['POST'])
 @admin_required
 def warehouse_sheet_save(key):
@@ -969,6 +1071,9 @@ def warehouse_sheet_save(key):
         # #50 快递副本（warehouse_au_dahuo）允许编辑表头；其余目录不发 headers，沿用原文件
         if isinstance(sec_data.get('headers'), list):
             base['headers'] = sec_data['headers']
+        # 每列的计价公式选择（''=手动填写；'15'/'30'/'100'/'500'=按对应公式自动算价）
+        if isinstance(sec_data.get('col_formulas'), list):
+            base['col_formulas'] = sec_data['col_formulas']
         new_sections.append(base)
     data['sections'] = new_sections
 
@@ -1110,17 +1215,18 @@ def warehouse_settings_save():
 
     gst_rate = _num(body.get('gst_rate'), raw.get('gst_rate', 10))
     key = body.get('key')
+    valid_keys = _wh_index_keys(dirname)
 
-    # 分月参数保存：{key, month, unit_price, sea_unit_price, exchange_rate, fuel_rate}
-    if key in _WH_SHEET_KEYS and body.get('month') is not None:
+    # 分月参数保存：{key, month, unit_price, sea_unit_price, tail_per, tail_op, exchange_rate, fuel_rate}
+    if key in valid_keys and body.get('month') is not None:
         month = str(int(_num(body.get('month'), datetime.now().month)))
         rec = dict(monthly.get(key, {}).get(month) or {})
-        for field in ('unit_price', 'hk_unit_price', 'sea_unit_price', 'exchange_rate', 'fuel_rate'):
+        for field in ('unit_price', 'hk_unit_price', 'sea_unit_price', 'tail_per', 'tail_op', 'exchange_rate', 'fuel_rate'):
             if field in body:
                 rec[field] = _num(body.get(field), rec.get(field, 0))
         monthly.setdefault(key, {})[month] = rec
     # 兼容旧调用：{key, fuel_rate}（写入当前月燃油率）
-    elif key in _WH_SHEET_KEYS and 'fuel_rate' in body:
+    elif key in valid_keys and 'fuel_rate' in body:
         month = cur_month
         rec = dict(monthly.get(key, {}).get(month) or {})
         rec['fuel_rate'] = _num(body.get('fuel_rate'), rec.get('fuel_rate', 20))
