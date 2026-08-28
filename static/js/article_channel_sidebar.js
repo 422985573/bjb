@@ -63,20 +63,58 @@
     return String(html).replace(/<p[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '');
   }
 
+  // 「选用公式」的重量档常量与算价（与后台编辑器 wseCalcCell 一致）
+  var WH_FORMULA_W = { '15': 15, '30': 30, '100': 100, '500': 500 };
+  // 尾程列定位：表头含「尾程操作费」→op，含「尾程运费」→per（原始列序，隐藏与否不影响读取）
+  function whTailCols(headers) {
+    var res = { per: -1, op: -1 };
+    (headers || []).forEach(function (hd, ci) {
+      var k = String(hd == null ? '' : hd).replace(/\s+/g, '');
+      if (res.op < 0 && k.indexOf('尾程操作费') >= 0) res.op = ci;
+      else if (res.per < 0 && k.indexOf('尾程运费') >= 0) res.per = ci;
+    });
+    return res;
+  }
+  function whRowNum(row, ci) {
+    if (ci < 0 || !row) return 0;
+    var n = parseFloat(row[ci]);
+    return isNaN(n) ? 0 : n;
+  }
+  // Wkg 单价 = 【头程费用×W + (尾程运费×W + 尾程操作费) × 汇率 × (1+燃油率/100)】 / W
+  function whCalcFormula(w, head, rate, fuel, per, op) {
+    if (!(w > 0) || !(rate > 0)) return null;
+    var tail = (per * w + op) * rate * (1 + fuel / 100);
+    return (head * w + tail) / w;
+  }
+
   // 渲染单个 price_table section 为 HTML（含合并单元格无关，海外仓表简单，逐行输出）
-  function renderWhTable(sec) {
+  // key 用于取月度全局参数（头程/汇率/燃油）以计算「选用公式」的重量档单价列。
+  function renderWhTable(sec, key) {
     var rows = sec.rows || [];
     var headers = sec.headers || [];
     if (!rows.length && !headers.length) return '';
-    // 隐藏「Minimum Charge / 最低收费」列（仅前台展示隐藏，原始数据不动）
+    // 隐藏「Minimum Charge / 最低收费」列，以及后台标记为「前台隐藏」（col_hidden）的列——仅前台展示隐藏，原始数据不动
+    var colHidden = sec.col_hidden || [];
     var keep = [];
     for (var ci = 0; ci < headers.length; ci++) {
       var hk = String(headers[ci] == null ? '' : headers[ci]).replace(/\s+/g, '').toLowerCase();
       if (hk.indexOf('minimum') >= 0 || hk.indexOf('最低') >= 0) continue;
+      if (colHidden[ci]) continue;
       keep.push(ci);
     }
     if (!keep.length) { for (var ck = 0; ck < headers.length; ck++) keep.push(ck); }
     var pick = function (row) { return keep.map(function (i) { return row[i]; }); };
+    // 「选用公式」的重量档列（col_formulas: '' | '15'|'30'|'100'|'500'），按各行自有尾程列算价
+    var fmap = {};
+    (sec.col_formulas || []).forEach(function (fk, ci) {
+      var w = WH_FORMULA_W[String(fk)];
+      if (w) fmap[ci] = w;
+    });
+    var hasFormula = Object.keys(fmap).length > 0;
+    var fTail = hasFormula ? whTailCols(headers) : null;
+    var fHead = hasFormula ? whMonthParam(key, 'unit_price', 0) : 0;
+    var fRate = hasFormula ? whMonthParam(key, 'exchange_rate', 0) : 0;
+    var fFuel = hasFormula ? whMonthParam(key, 'fuel_rate', 0) : 0;
     var h = '<div class="wh-table-wrap"><table class="wh-table"><thead><tr>';
     pick(headers).forEach(function (th) { h += '<th>' + esc(th) + '</th>'; });
     h += '</tr></thead><tbody>';
@@ -88,7 +126,20 @@
         return;
       }
       h += '<tr>';
-      pick(row).forEach(function (c) { h += '<td>' + esc(c) + '</td>'; });
+      if (hasFormula) {
+        var per = whRowNum(row, fTail.per);
+        var op = whRowNum(row, fTail.op);
+        keep.forEach(function (ci) {
+          if (fmap[ci] != null) {
+            var v = whCalcFormula(fmap[ci], fHead, fRate, fFuel, per, op);
+            h += '<td>' + (v == null ? '' : v.toFixed(2)) + '</td>';
+          } else {
+            h += '<td>' + esc(row[ci]) + '</td>';
+          }
+        });
+      } else {
+        pick(row).forEach(function (c) { h += '<td>' + esc(c) + '</td>'; });
+      }
       h += '</tr>';
     });
     h += '</tbody></table></div>';
@@ -108,7 +159,7 @@
     (data.sections || []).forEach(function (sec) {
       if (sec.type === 'price_table') {
         if (sec.title) html += '<div class="wh-card-section-title">' + esc(sec.title) + '</div>';
-        html += renderWhTable(sec);
+        html += renderWhTable(sec, key);
       } else if (sec.type === 'richtext') {
         if (sec.title) html += '<div class="wh-card-section-title">' + esc(sec.title) + '</div>';
         html += '<div class="wh-richtext">' + whRichtextToHtml(sec.html || '') + '</div>';

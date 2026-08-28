@@ -2505,6 +2505,7 @@
         <script>
         (function () {
           // 内嵌 iframe 保存标题后同步父页侧栏文案；并按内容自适应高度。
+          window.__whReadyKeys = window.__whReadyKeys || {};
           window.addEventListener('message', function (ev) {
             var d = ev.data || {};
             if (d.type === 'wse-renamed' && d.key) {
@@ -2512,6 +2513,7 @@
               if (frame) frame.setAttribute('title', '编辑 ' + d.name);
             }
             if (d.type === 'wse-embed-height' && d.key && d.height) {
+              window.__whReadyKeys[d.key] = true;   // 该表 iframe 已加载运行，纳入「保存信息」统一保存
               var f = document.querySelector('.dahuo-wh-frame[data-wh-key="' + d.key + '"]');
               if (f) f.style.height = Math.max(360, d.height) + 'px';
             }
@@ -2739,6 +2741,45 @@ document.addEventListener('DOMContentLoaded', function() {
 window.addEventListener('load', function() { equalizeFbaRows(); });
 
 // 一键保存：文章信息 + 所有模块（优先调用统一后端接口，失败时自动降级为逐模块保存）
+// 「保存信息」时一并保存已加载的内嵌快递价格表 iframe（#50 独立副本）。
+// 仅向已上报过高度的 iframe（即已加载运行、可能有未保存改动的表）发保存请求，
+// 等其回报结果后再提示；无内嵌表（其它文章）时立即返回，不影响原有保存流程。
+function saveEmbeddedWarehouseSheets() {
+    var frames = Array.prototype.slice.call(document.querySelectorAll('.dahuo-wh-frame')).filter(function (f) {
+        var k = f.getAttribute('data-wh-key');
+        return k && window.__whReadyKeys && window.__whReadyKeys[k];
+    });
+    if (!frames.length) return Promise.resolve({ ok: true, failures: [] });
+    return new Promise(function (resolve) {
+        var expected = {}, failures = [], acked = 0, total = 0, done = false;
+        function finish() {
+            if (done) return;
+            done = true;
+            window.removeEventListener('message', onMsg);
+            resolve({ ok: failures.length === 0, failures: failures });
+        }
+        function onMsg(ev) {
+            var d = ev.data || {};
+            if (d.type !== 'wse-embed-saved' || !d.token || !(d.token in expected)) return;
+            delete expected[d.token];
+            acked++;
+            if (d.success === false) failures.push(d.key);
+            if (acked >= total) finish();
+        }
+        window.addEventListener('message', onMsg);
+        frames.forEach(function (f, i) {
+            var key = f.getAttribute('data-wh-key') || String(i);
+            var token = 'wsesave-' + i + '-' + key;
+            expected[token] = key;
+            total++;
+            try { f.contentWindow.postMessage({ type: 'wse-embed-save', token: token }, '*'); }
+            catch (e) { delete expected[token]; total--; }
+        });
+        if (total === 0) return finish();
+        setTimeout(finish, 25000);   // 大表保存留足时间；超时按已保存处理，避免卡住提示
+    });
+}
+
 async function saveAll() {
     syncAllRichTextEditors();
     const saveButton = document.querySelector('.article-actions-sidebar .module-btn');
@@ -2845,7 +2886,13 @@ async function saveAll() {
             }
         }
         
-        alert('文章信息和所有模块已保存！');
+        // 5. 一并保存已加载的内嵌快递价格表（列增删/改名/公式/隐藏等结构改动随「保存信息」落库）
+        var whRes = await saveEmbeddedWarehouseSheets();
+        if (!whRes.ok) {
+            alert('文章信息已保存；但部分快递价格表保存失败（' + (whRes.failures.join('、') || '未知') + '），请到对应表点「保存全部」重试。');
+        } else {
+            alert('文章信息和所有模块已保存！');
+        }
     } catch (error) {
         console.error('保存失败:', error);
         alert('保存失败: ' + (error.message || '请重试'));

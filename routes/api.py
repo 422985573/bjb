@@ -1074,6 +1074,9 @@ def warehouse_sheet_save(key):
         # 每列的计价公式选择（''=手动填写；'15'/'30'/'100'/'500'=按对应公式自动算价）
         if isinstance(sec_data.get('col_formulas'), list):
             base['col_formulas'] = sec_data['col_formulas']
+        # 每列是否在前台文章页隐藏（true=隐藏；仅前台展示，数据与算价不受影响）
+        if isinstance(sec_data.get('col_hidden'), list):
+            base['col_hidden'] = [bool(x) for x in sec_data['col_hidden']]
         new_sections.append(base)
     data['sections'] = new_sections
 

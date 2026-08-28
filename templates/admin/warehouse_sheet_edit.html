@@ -478,7 +478,17 @@ body.wse-dahuo-edit .wse-table tbody td > input[type="text"]:focus {
     color: #334155; padding: 7px 8px; font-size: 12px; cursor: pointer;
 }
 .wse-colmgr-formula:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.wse-colmgr-eye {
+    background: #eef2f7; border: 1px solid #d5dbe3; border-radius: 4px;
+    color: #334155; padding: 6px 9px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.wse-colmgr-eye:hover { border-color: #94a3b8; }
+.wse-colmgr-eye.on { background: #fff7ed; border-color: #fb923c; color: #c2410c; }
 .wse-colmgr-hidden-tag { font-size: 11px; color: #f59e0b; }
+.wse-colmgr-pill--fixed { background: #f1f5f9; border: 1px dashed #94a3b8; border-radius: 6px; padding: 4px 6px; }
+.wse-colmgr-pill--fixed .wse-colmgr-input { background: #e2e8f0; color: #475569; cursor: not-allowed; }
+.wse-colmgr-lock { font-size: 12px; }
+.wse-colmgr-fixed-tag { font-size: 11px; color: #64748b; background: #e2e8f0; border-radius: 3px; padding: 2px 6px; white-space: nowrap; }
 .wse-colmgr-del {
     background: #ef4444; color: #fff; border: none; border-radius: 4px;
     width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 1;
@@ -709,12 +719,6 @@ body { background: #fff; }
                 <div class="wse-sp-group"><label>头程费用(元/kg)</label>
                     <input id="wseUnit" type="number" step="0.01">
                 </div>
-                <div class="wse-sp-group"><label>尾程运费单价(AUD/kg)</label>
-                    <input id="wseTailPer" type="number" step="0.0001">
-                </div>
-                <div class="wse-sp-group"><label>尾程操作费(AUD)</label>
-                    <input id="wseTailOp" type="number" step="0.01">
-                </div>
                 {% else %}
                 <div class="wse-sp-group"><label>头程运输费用单价(元/kg)</label>
                     <input id="wseUnit" type="number" step="0.01">
@@ -786,6 +790,8 @@ function wseGoBack(e) {
         }
         sheetData = res.data;
         (sheetData.sections || []).forEach(function(s, i) { s._oidx = i; });
+        // #50 快递副本：确保每个价格表都含两固定尾程列（尾程操作费AUD / 尾程运费Per /1 KG）
+        if (EDIT_HEADERS) (sheetData.sections || []).forEach(function(s) { wseEnsureTailCols(s); });
         var note = document.getElementById('wseResultNote');
         // 兼容旧数据：优先 result_note，回退到旧的空运备注/海运备注
         if (note) note.value = sheetData.result_note || sheetData.result_note_air || sheetData.result_note_sea || '';
@@ -1119,11 +1125,15 @@ function wseGoBack(e) {
     return groups;
   }
 
-  // 表头单元格：#50 快递副本可编辑（写回 sec.headers），其余目录保持只读文本。
+  // 表头单元格：#50 快递副本可编辑（写回 sec.headers），其余目录保持只读文本。固定尾程列表头锁定。
   function wseThCell(headers, hi, si, hiddenCls) {
     var cls = hiddenCls ? (' class="' + hiddenCls + '"') : '';
     var val = (headers && headers[hi] != null) ? String(headers[hi]) : '';
     if (EDIT_HEADERS) {
+      if (wseTailRole(val)) {
+        return '<th' + cls + '><input type="text" class="wse-th-input" value="' + escAttr(val) +
+          '" readonly title="固定列，不可改名"></th>';
+      }
       return '<th' + cls + '><input type="text" class="wse-th-input" value="' + escAttr(val) +
         '" data-header-si="' + si + '" data-hi="' + hi + '" oninput="wseSetHeader(this)" title="表头可编辑"></th>';
     }
@@ -1162,12 +1172,25 @@ function wseGoBack(e) {
     var hidden = wseHiddenColSet(headers);
     var h = '<div class="wse-colmgr" data-si="' + si + '">';
     h += '<h4 class="wse-colmgr-title">💰 费用项目</h4>';
-    h += '<p class="wse-colmgr-hint">费用列可随时用「+ 添加费用项目」增加、用 × 删除（可删到 0 列再添加）。每列可选「公式」：选中后该列单价按公式自动算价、只读、无需手填；选「手动填写」则照常手动录入。拖动 ⋮⋮ 可改列顺序。</p>';
+    h += '<p class="wse-colmgr-hint">费用列可随时用「+ 添加费用项目」增加、用 × 删除（可删到 0 列再添加）。每列可选「公式」：选中后该列单价按公式自动算价、只读、无需手填；选「手动填写」则照常手动录入。点「👁 前台」可切换该列在文章页是否展示（隐藏后仅前台不显示，数据与算价不受影响）。拖动 ⋮⋮ 可改列顺序。<b>「尾程操作费AUD / 尾程运费Per /1 KG」为固定列，不可删除或改名（供公式列取值算价），可用 👁 隐藏。</b></p>';
     h += '<div class="wse-colmgr-pills">';
     var colFormulas = sec.col_formulas || [];
+    var colHidden = sec.col_hidden || [];
     for (var ci = 0; ci < n; ci++) {
       var name = headers[ci] != null ? String(headers[ci]) : '';
       var curFk = colFormulas[ci] != null ? String(colFormulas[ci]) : '';
+      var isFeHidden = !!colHidden[ci];
+      var tailRole = wseTailRole(name);
+      if (tailRole) {
+        // 固定尾程列：不可拖动/改名/删除/选公式，仅保留前台显隐切换
+        h += '<div class="wse-colmgr-pill wse-colmgr-pill--fixed" data-si="' + si + '" data-ci="' + ci + '">';
+        h += '<span class="wse-colmgr-lock" title="系统固定列">🔒</span>';
+        h += '<input type="text" class="wse-colmgr-input" value="' + escAttr(name) + '" readonly title="固定列，不可改名">';
+        h += '<span class="wse-colmgr-fixed-tag" title="固定尾程列，供公式列取值算价">固定列</span>';
+        h += '<button type="button" class="wse-colmgr-eye' + (isFeHidden ? ' on' : '') + '" onclick="wseColHidden(' + si + ',' + ci + ')" title="前台文章页是否展示此列">' + (isFeHidden ? '🙈 前台隐藏' : '👁 前台显示') + '</button>';
+        h += '</div>';
+        continue;
+      }
       h += '<div class="wse-colmgr-pill" draggable="true" data-si="' + si + '" data-ci="' + ci + '">';
       h += '<span class="wse-colmgr-drag" title="拖动可调整列顺序">⋮⋮</span>';
       h += '<input type="text" class="wse-colmgr-input" value="' + escAttr(name) + '" data-si="' + si + '" data-ci="' + ci + '" onchange="wseColRename(this)" placeholder="列名">';
@@ -1177,7 +1200,8 @@ function wseGoBack(e) {
         h += '<option value="' + f.key + '"' + (curFk === f.key ? ' selected' : '') + '>' + f.label + '</option>';
       });
       h += '</select>';
-      if (hidden[ci]) h += '<span class="wse-colmgr-hidden-tag" title="前台展示时隐藏">隐</span>';
+      h += '<button type="button" class="wse-colmgr-eye' + (isFeHidden ? ' on' : '') + '" onclick="wseColHidden(' + si + ',' + ci + ')" title="前台文章页是否展示此列">' + (isFeHidden ? '🙈 前台隐藏' : '👁 前台显示') + '</button>';
+      if (hidden[ci]) h += '<span class="wse-colmgr-hidden-tag" title="编辑器与前台均隐藏（系统列）">隐</span>';
       h += '<button type="button" class="wse-colmgr-del" onclick="wseColDelete(' + si + ',' + ci + ')" title="删除此费用列">&times;</button>';
       h += '</div>';
     }
@@ -1224,8 +1248,28 @@ function wseGoBack(e) {
     var ci = parseInt(sel.dataset.ci, 10);
     var sec = sheetData.sections[si];
     if (!sec) return;
+    if (wseTailRole(sec.headers && sec.headers[ci])) return;   // 固定尾程列不参与公式
     var cf = wseEnsureColFormulas(sec);
     cf[ci] = sel.value || '';
+    rerenderSection(si);
+  };
+
+  // 补齐 col_hidden 到与 headers 等长（缺项按不隐藏 false）
+  function wseEnsureColHidden(sec) {
+    if (!sec) return [];
+    var n = Math.max(wseMaxCols(sec), (sec.headers || []).length);
+    sec.col_hidden = sec.col_hidden || [];
+    while (sec.col_hidden.length < n) sec.col_hidden.push(false);
+    return sec.col_hidden;
+  }
+
+  // 切换某列在前台文章页是否隐藏（仅前台展示，编辑器与算价不受影响）
+  window.wseColHidden = function(si, ci) {
+    syncInputsToData();
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    var ch = wseEnsureColHidden(sec);
+    ch[ci] = !ch[ci];
     rerenderSection(si);
   };
 
@@ -1239,6 +1283,7 @@ function wseGoBack(e) {
     sec.headers.push('新列');
     (sec.rows || []).forEach(function(r) { while (r.length < cols) r.push(''); r.push(''); });
     wseEnsureColFormulas(sec);   // 新列默认手动填写 ''
+    wseEnsureColHidden(sec);     // 新列默认前台显示 false
     rerenderSection(si);
   };
 
@@ -1246,11 +1291,14 @@ function wseGoBack(e) {
     syncInputsToData();
     var sec = sheetData.sections[si];
     if (!sec) return;
+    if (wseTailRole(sec.headers && sec.headers[ci])) { alert('「尾程操作费AUD / 尾程运费Per /1 KG」为固定列，不可删除。'); return; }
     var nm = (sec.headers && sec.headers[ci] != null) ? String(sec.headers[ci]) : ('第' + (ci + 1) + '列');
     if (!confirm('确认删除「' + (nm || ('第' + (ci + 1) + '列')) + '」整列？该列所有数据会一并删除，保存后不可恢复。')) return;
     wseEnsureColFormulas(sec);
+    wseEnsureColHidden(sec);
     if (sec.headers && ci < sec.headers.length) sec.headers.splice(ci, 1);
     if (ci < sec.col_formulas.length) sec.col_formulas.splice(ci, 1);
+    if (ci < sec.col_hidden.length) sec.col_hidden.splice(ci, 1);
     (sec.rows || []).forEach(function(r) { if (ci < r.length) r.splice(ci, 1); });
     rerenderSection(si);
   };
@@ -1266,6 +1314,9 @@ function wseGoBack(e) {
     var cf = wseEnsureColFormulas(sec);
     var fMoved = cf.splice(from, 1)[0];
     cf.splice(to, 0, fMoved);
+    var ch = wseEnsureColHidden(sec);
+    var chMoved = ch.splice(from, 1)[0];
+    ch.splice(to, 0, chMoved);
     (sec.rows || []).forEach(function(r) {
       while (r.length < cols) r.push('');
       var m = r.splice(from, 1)[0];
@@ -1330,37 +1381,181 @@ function wseGoBack(e) {
   function wseSecHasFormula(sec) {
     return Object.keys(wseFormulaMap(sec)).length > 0;
   }
-  // 读取月度全局参数（头程费用/尾程运费单价/尾程操作费/汇率/燃油率），实时取输入框当前值
+  // 定位该段的尾程列：{ per: 尾程运费列索引, op: 尾程操作费列索引 }（找不到为 null）
+  function wseTailColsMap(sec) {
+    var res = { per: null, op: null };
+    if (!sec) return res;
+    (sec.headers || []).forEach(function(hd, ci) {
+      var k = String(hd == null ? '' : hd).replace(/\s+/g, '');
+      if (res.op == null && k.indexOf('尾程操作费') >= 0) res.op = ci;
+      else if (res.per == null && k.indexOf('尾程运费') >= 0) res.per = ci;
+    });
+    return res;
+  }
+  // 固定尾程列：这两列是系统固定列，不能删除/改名/选公式（保证按列名可靠取值算价）
+  var WSE_TAIL_OP_NAME  = '尾程操作费AUD';
+  var WSE_TAIL_PER_NAME = '尾程运费Per /1 KG';
+  // 判断某表头是否为固定尾程列：'op'（操作费）/ 'per'（运费）/ null（普通列）
+  function wseTailRole(hd) {
+    var k = String(hd == null ? '' : hd).replace(/\s+/g, '');
+    if (k.indexOf('尾程操作费') >= 0) return 'op';
+    if (k.indexOf('尾程运费') >= 0) return 'per';
+    return null;
+  }
+  // 找一列可「收编」为固定尾程列的源列（保留其原有数据后改名）：
+  //   op（尾程操作费）← 「首重」列；per（尾程运费）← 「Per /1 KG / Per/1KG / 单价」列。
+  //   已是尾程角色的列跳过，避免重复收编。返回列下标，找不到返回 -1。
+  function wseFindAdoptCol(headers, role) {
+    for (var i = 0; i < (headers || []).length; i++) {
+      if (wseTailRole(headers[i])) continue;
+      var k = String(headers[i] == null ? '' : headers[i]).replace(/\s+/g, '').toLowerCase();
+      if (role === 'op' && k.indexOf('首重') >= 0) return i;
+      if (role === 'per' && ((k.indexOf('per') >= 0 && k.indexOf('kg') >= 0) || k.indexOf('单价') >= 0)) return i;
+    }
+    return -1;
+  }
+  // 从段中「摘出」若干列（含表头/公式/隐藏/各行单元格），返回 {原下标: 列对象}
+  function wsePullCols(sec, indices) {
+    var pulled = {};
+    indices.slice().sort(function(a, b){ return b - a; }).forEach(function(i) {
+      pulled[i] = {
+        header:  sec.headers[i],
+        formula: sec.col_formulas[i],
+        hidden:  sec.col_hidden[i],
+        cells:   (sec.rows || []).map(function(r) { return r[i]; })
+      };
+      sec.headers.splice(i, 1);
+      sec.col_formulas.splice(i, 1);
+      sec.col_hidden.splice(i, 1);
+      (sec.rows || []).forEach(function(r) { if (i < r.length) r.splice(i, 1); });
+    });
+    return pulled;
+  }
+  // 在下标 at 处插入一列（保留其原有各行数据）
+  function wseInsertColAt(sec, at, col) {
+    sec.headers.splice(at, 0, col.header);
+    sec.col_formulas.splice(at, 0, col.formula == null ? '' : col.formula);
+    sec.col_hidden.splice(at, 0, !!col.hidden);
+    (sec.rows || []).forEach(function(r, ri) {
+      while (r.length < at) r.push('');
+      var v = col.cells && col.cells[ri];
+      r.splice(at, 0, v == null ? '' : v);
+    });
+  }
+  // 确保该 price_table 段含两固定尾程列，且位于 Zone 列之后（op 在前、per 在后）。
+  //   收编现有「首重/Per /1 KG」列（改名保留数据），无可收编源才新增空列；丢弃无数据的空尾程列。
+  function wseEnsureTailCols(sec) {
+    if (!EDIT_HEADERS || !sec || sec.type !== 'price_table') return;
+    sec.headers = sec.headers || [];
+    wseEnsureColFormulas(sec);
+    wseEnsureColHidden(sec);
+    var cols = wseMaxCols(sec);
+    (sec.rows || []).forEach(function(r) { while (r.length < cols) r.push(''); });
+
+    function cellHasData(v) {
+      var u = wseCellValue(v);
+      return u != null && String(u).trim() !== '';
+    }
+    function colHasData(ci) {
+      return (sec.rows || []).some(function(r) { return cellHasData(r[ci]); });
+    }
+    function findRole(role) {
+      for (var i = 0; i < sec.headers.length; i++) if (wseTailRole(sec.headers[i]) === role) return i;
+      return -1;
+    }
+    function hasZoneCol() {
+      for (var i = 0; i < sec.headers.length; i++) {
+        var zk = String(sec.headers[i] == null ? '' : sec.headers[i]).replace(/\s+/g, '').toLowerCase();
+        if (zk.indexOf('zone') >= 0 || zk.indexOf('分区') >= 0) return true;
+      }
+      return false;
+    }
+    // 仅对「快递重量价格表」（含 Zone 列，或已收编过的尾程列）启用固定尾程列；
+    // 附加费/说明等其它 price_table 不加尾程列。
+    if (!hasZoneCol() && findRole('op') < 0 && findRole('per') < 0) return;
+
+    // 1) 丢弃「无数据」的固定尾程列（多为旧逻辑自动追加的空列），以便用有数据的源列收编
+    for (var d = sec.headers.length - 1; d >= 0; d--) {
+      if (wseTailRole(sec.headers[d]) && !colHasData(d)) {
+        sec.headers.splice(d, 1);
+        sec.col_formulas.splice(d, 1);
+        sec.col_hidden.splice(d, 1);
+        (sec.rows || []).forEach(function(r) { if (d < r.length) r.splice(d, 1); });
+      }
+    }
+
+    // 2) 收编：缺失的固定尾程列改名自现有「首重」(op) / 「Per /1 KG」(per) 列，保留其数据
+    var opIdx = findRole('op');
+    if (opIdx < 0) { var s1 = wseFindAdoptCol(sec.headers, 'op'); if (s1 >= 0) { sec.headers[s1] = WSE_TAIL_OP_NAME; opIdx = s1; } }
+    var perIdx = findRole('per');
+    if (perIdx < 0) { var s2 = wseFindAdoptCol(sec.headers, 'per'); if (s2 >= 0) { sec.headers[s2] = WSE_TAIL_PER_NAME; perIdx = s2; } }
+
+    // 3) 摘出两固定尾程列（不存在则用空列占位）
+    var pullIdx = [];
+    if (opIdx >= 0) pullIdx.push(opIdx);
+    if (perIdx >= 0) pullIdx.push(perIdx);
+    var pulled = wsePullCols(sec, pullIdx);
+    var opCol  = opIdx  >= 0 ? pulled[opIdx]  : { header: WSE_TAIL_OP_NAME,  formula: '', hidden: false, cells: [] };
+    var perCol = perIdx >= 0 ? pulled[perIdx] : { header: WSE_TAIL_PER_NAME, formula: '', hidden: false, cells: [] };
+    opCol.header  = WSE_TAIL_OP_NAME;
+    perCol.header = WSE_TAIL_PER_NAME;
+    opCol.formula = ''; perCol.formula = '';   // 固定尾程列本身不选公式
+
+    // 4) 定位 Zone 列，插到其后（无 Zone 列则放在首列之后）
+    var zoneAt = -1;
+    for (var z = 0; z < sec.headers.length; z++) {
+      var zk = String(sec.headers[z] == null ? '' : sec.headers[z]).replace(/\s+/g, '').toLowerCase();
+      if (zk.indexOf('zone') >= 0 || zk.indexOf('分区') >= 0) { zoneAt = z; break; }
+    }
+    var at = zoneAt >= 0 ? zoneAt + 1 : Math.min(1, sec.headers.length);
+
+    // 5) op 在前、per 在后
+    wseInsertColAt(sec, at, opCol);
+    wseInsertColAt(sec, at + 1, perCol);
+  }
+  // 取某行某列的数值（空/非数字按 0）
+  function wseRowNum(sec, ri, ci) {
+    if (ci == null || !sec || !sec.rows || !sec.rows[ri]) return 0;
+    var v = wseCellValue(sec.rows[ri][ci]);
+    var n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
+  // 读取月度全局参数（头程费用/汇率/燃油率）；尾程改为按行取「尾程运费/尾程操作费」列
   function wseReadMonthlyParams() {
     var f = function(id){ var e = document.getElementById(id); var n = e ? parseFloat(e.value) : NaN; return isNaN(n) ? 0 : n; };
-    return { head: f('wseUnit'), rate: f('wseRate'), fuel: f('wseFuel'), tailPer: f('wseTailPer'), tailOp: f('wseTailOp') };
+    return { head: f('wseUnit'), rate: f('wseRate'), fuel: f('wseFuel') };
   }
-  // 单档计算：返回 number|null（缺汇率 → null 显占位）。尾程运费单价/操作费为月度全局参数。
-  function wseCalcCell(w, p) {
+  // 单档计算：返回 number|null（缺汇率 → null 显占位）。per/op 为该行的尾程运费单价/尾程操作费。
+  function wseCalcCell(w, p, per, op) {
     if (!(w > 0) || !(p.rate > 0)) return null;
-    var per = p.tailPer || 0;
-    var op  = p.tailOp || 0;
+    per = per || 0; op = op || 0;
     var tail  = (per * w + op) * p.rate * (1 + p.fuel / 100);   // 尾程 = (尾程运费单价×W + 尾程操作费) × 汇率 × (1+燃油率%)
     var total = p.head * w + tail;                               // 总价 = 头程费用×W + 尾程
     return total / w;                                            // 单价 = 总价 ÷ W
   }
-  // 计算单元格 HTML（只读，非 input）
-  function wseCalcCellHtml(w, params, si, ri, hiddenCls) {
-    var v = wseCalcCell(w, params);
+  // 计算单元格 HTML（只读，非 input）。tail={per,op} 为该段尾程列索引。
+  function wseCalcCellHtml(w, params, si, ri, hiddenCls, sec, tail) {
+    var per = wseRowNum(sec, ri, tail ? tail.per : null);
+    var op  = wseRowNum(sec, ri, tail ? tail.op : null);
+    var v = wseCalcCell(w, params, per, op);
     var inner = (v == null) ? '<span class="wse-calc-need">填参数</span>' : v.toFixed(2);
     var cls = 'wse-calc-cell' + (hiddenCls ? ' ' + hiddenCls : '');
     return '<td class="' + cls + '" data-si="' + si + '" data-ri="' + ri + '" data-wkg="' + w + '">' + inner + '</td>';
   }
-  // 实时重算某段所有计算单元格（用当前月度全局参数，不整段重渲染）
+  // 实时重算某段所有计算单元格（用当前月度全局参数 + 各行尾程列，不整段重渲染）
   function wseRecalcSection(si) {
     var el = document.querySelector('.wse-section[data-si="' + si + '"]');
     if (!el) return;
     var sec = sheetData.sections[si];
     if (!sec || !wseSecHasFormula(sec)) return;
     var params = wseReadMonthlyParams();
+    var tail = wseTailColsMap(sec);
     el.querySelectorAll('.wse-calc-cell[data-wkg]').forEach(function(td) {
       var w = parseFloat(td.getAttribute('data-wkg'));
-      var v = wseCalcCell(w, params);
+      var ri = parseInt(td.getAttribute('data-ri'), 10);
+      var per = wseRowNum(sec, ri, tail.per);
+      var op  = wseRowNum(sec, ri, tail.op);
+      var v = wseCalcCell(w, params, per, op);
       td.innerHTML = (v == null) ? '<span class="wse-calc-need">填参数</span>' : v.toFixed(2);
     });
   }
@@ -1383,6 +1578,7 @@ function wseGoBack(e) {
     // 选用了公式的费用列 → 只读自动算价（仅快递副本目录启用）
     var wcolMap = wseFormulaMap(sec);
     var calcParams = Object.keys(wcolMap).length ? wseReadMonthlyParams() : null;
+    var tailCols = Object.keys(wcolMap).length ? wseTailColsMap(sec) : null;
 
     // #50 快递副本：列管理面板放在表格上方（增删/改名/拖动排序列）
     var h = renderColManager(sec, si);
@@ -1408,7 +1604,7 @@ function wseGoBack(e) {
           }
           for (var ci = 1; ci < cols; ci++) {
             if (wcolMap[ci] != null) {
-              h += wseCalcCellHtml(wcolMap[ci], calcParams, si, ri, hiddenCols[ci] ? 'wse-col-hidden' : '');
+              h += wseCalcCellHtml(wcolMap[ci], calcParams, si, ri, hiddenCols[ci] ? 'wse-col-hidden' : '', sec, tailCols);
               continue;
             }
             var val = ci < row.length ? wseCellValue(row[ci]) : '';
@@ -1427,7 +1623,7 @@ function wseGoBack(e) {
         h += '<tr data-ri="' + ri + '">';
         for (var ci = 0; ci < cols; ci++) {
           if (wcolMap[ci] != null) {
-            h += wseCalcCellHtml(wcolMap[ci], calcParams, si, ri, hiddenCols[ci] ? 'wse-col-hidden' : '');
+            h += wseCalcCellHtml(wcolMap[ci], calcParams, si, ri, hiddenCols[ci] ? 'wse-col-hidden' : '', sec, tailCols);
             continue;
           }
           var val = ci < row.length ? wseCellValue(row[ci]) : '';
@@ -1846,7 +2042,7 @@ function wseGoBack(e) {
       inp.removeEventListener('change', onInputChange);
       inp.addEventListener('change', onInputChange);
     });
-    // 尾程运费/操作费已是月度全局参数，实时重算由月度参数面板的输入触发（见月度参数 IIFE）。
+    // 头程/汇率/燃油为月度全局参数（面板输入触发重算）；尾程为各行自有列，改动在 onInputChange 里触发本行重算。
     bindColManagerDrag();
   }
 
@@ -1877,6 +2073,28 @@ function wseGoBack(e) {
     } else {
       row[ci] = v;
     }
+    // 若本段含公式列，且改动的是本行尾程列（运费/操作费），实时重算本行的计算单元格。
+    if (sec.type === 'price_table' && wseSecHasFormula(sec)) {
+      var tail = wseTailColsMap(sec);
+      if (ci === tail.per || ci === tail.op) wseRecalcRow(si, ri);
+    }
+  }
+
+  // 重算某段中某一行的计算单元格（用当前月度全局参数 + 本行尾程列）
+  function wseRecalcRow(si, ri) {
+    var el = document.querySelector('.wse-section[data-si="' + si + '"]');
+    if (!el) return;
+    var sec = sheetData.sections[si];
+    if (!sec || !wseSecHasFormula(sec)) return;
+    var params = wseReadMonthlyParams();
+    var tail = wseTailColsMap(sec);
+    var per = wseRowNum(sec, ri, tail.per);
+    var op  = wseRowNum(sec, ri, tail.op);
+    el.querySelectorAll('.wse-calc-cell[data-wkg][data-ri="' + ri + '"]').forEach(function(td) {
+      var w = parseFloat(td.getAttribute('data-wkg'));
+      var v = wseCalcCell(w, params, per, op);
+      td.innerHTML = (v == null) ? '<span class="wse-calc-need">填参数</span>' : v.toFixed(2);
+    });
   }
 
   window.wseAddRow = function(si) {
@@ -2042,6 +2260,7 @@ function wseGoBack(e) {
       if (EDIT_HEADERS && sec.headers) out.headers = sec.headers;
       // 每列的计价公式选择（''=手动填写）
       if (EDIT_HEADERS && sec.col_formulas) out.col_formulas = sec.col_formulas;
+      if (EDIT_HEADERS && sec.col_hidden) out.col_hidden = sec.col_hidden;
       return out;
     });
 
@@ -2059,7 +2278,7 @@ function wseGoBack(e) {
       payload.panel_note_html = sheetData.panel_note_html || '';
     }
 
-    fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY) + '/save', {
+    var wseSavePromise = fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY) + '/save', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)
@@ -2070,7 +2289,7 @@ function wseGoBack(e) {
           saveBtn.disabled = false;
           result.className = 'wse-result error';
           result.textContent = res.message || '内容保存失败';
-          return;
+          return false;
         }
         // 磁盘 sections 已按本次提交顺序重建，重新对齐 _oidx，
         // 使后续删除/保存的索引引用保持正确（无需刷新页面）。
@@ -2080,18 +2299,22 @@ function wseGoBack(e) {
         if (typeof window.wseSaveSettings === 'function') { jobs.push(window.wseSaveSettings()); }
         if (typeof window.wseSaveInfo === 'function') { jobs.push(window.wseSaveInfo()); }
         if (typeof window.wseSaveExtra === 'function') { jobs.push(window.wseSaveExtra()); }
-        Promise.all(jobs).then(function(rets) {
+        return Promise.all(jobs).then(function(rets) {
           saveBtn.disabled = false;
           var ok = rets.every(function(v) { return v !== false; });
           result.className = 'wse-result ' + (ok ? 'ok' : 'error');
           result.textContent = ok ? '已全部保存' : '部分内容保存失败，请检查提示';
+          return ok;
         });
       })
       .catch(function() {
         saveBtn.disabled = false;
         result.className = 'wse-result error';
         result.textContent = '网络错误';
+        return false;
       });
+
+    return wseSavePromise;
   };
 
   function esc(v) {
@@ -2105,6 +2328,22 @@ function wseGoBack(e) {
 
   {% if is_embed %}
   // 内嵌模式（文章编辑器 iframe 同页编辑）。
+  // 父页「保存信息」会向本 iframe 请求保存本表；保存完成后回报结果，实现一键统一保存。
+  window.addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (d.type !== 'wse-embed-save') return;
+    var token = d.token;
+    function reply(ok) {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({type: 'wse-embed-saved', key: SHEET_KEY, token: token, success: ok !== false}, '*');
+        }
+      } catch (e) {}
+    }
+    try {
+      Promise.resolve(window.wseDoSave()).then(reply, function () { reply(false); });
+    } catch (e) { reply(false); }
+  });
   // 向父页上报内容高度，避免 iframe 内出现二级滚动条。
   (function () {
     var last = 0;
@@ -2181,8 +2420,6 @@ function wseGoBack(e) {
       el('wseUnit').value = unit;
       if (el('wseHkUnit')) el('wseHkUnit').value = s.hk_unit_price != null ? s.hk_unit_price : '';
       if (el('wseSeaUnit')) el('wseSeaUnit').value = s.sea_unit_price != null ? s.sea_unit_price : '';
-      if (el('wseTailPer')) el('wseTailPer').value = s.tail_per != null ? s.tail_per : '';
-      if (el('wseTailOp')) el('wseTailOp').value = s.tail_op != null ? s.tail_op : '';
       el('wseRate').value = s.exchange_rate != null ? s.exchange_rate : '';
       el('wseFuel').value = s.fuel_rate != null ? s.fuel_rate : '';
     }
@@ -2202,8 +2439,8 @@ function wseGoBack(e) {
 
     monthSel.addEventListener('change', function () { fill(parseInt(monthSel.value)); if (typeof wseRecalcAll === 'function') wseRecalcAll(); });
 
-    // 头程费用/尾程运费单价/尾程操作费/汇率/燃油率改动 → 实时重算所有含重量档列的价格段
-    ['wseUnit', 'wseTailPer', 'wseTailOp', 'wseRate', 'wseFuel'].forEach(function (id) {
+    // 头程费用/汇率/燃油率改动 → 实时重算所有含重量档列的价格段（尾程改为按行取「尾程运费/尾程操作费」列，编辑对应行时另行触发）
+    ['wseUnit', 'wseRate', 'wseFuel'].forEach(function (id) {
       var e = el(id);
       if (e) e.addEventListener('input', function () { if (typeof wseRecalcAll === 'function') wseRecalcAll(); });
     });
@@ -2216,8 +2453,6 @@ function wseGoBack(e) {
         unit_price: el('wseUnit').value,
         hk_unit_price: el('wseHkUnit') ? el('wseHkUnit').value : '',
         sea_unit_price: el('wseSeaUnit') ? el('wseSeaUnit').value : '',
-        tail_per: el('wseTailPer') ? el('wseTailPer').value : '',
-        tail_op: el('wseTailOp') ? el('wseTailOp').value : '',
         exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value
       };
       return fetch('/api/warehouse-settings/save', {
