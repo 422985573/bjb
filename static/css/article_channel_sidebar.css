@@ -159,10 +159,15 @@
 }
 .wh-card-error { color: #ef4444; padding: 10px 0; font-size: 13px; }
 
-/* 海外仓小表：表头不 sticky（40-52 行无需），避免与渠道 sticky 表头冲突 */
+/* 快递价格表：折叠为约 10 行高的滚动小框，右侧内翻滚动条 */
+.csb-page .wh-card .wh-table-wrap {
+    max-height: 372px; overflow-y: auto; overflow-x: auto;
+    border: 1px solid #e5e7eb; border-radius: 6px;
+}
 .csb-page .wh-card .wh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+/* 表头在小框内 sticky（仅在该滚动框内生效，不与渠道 sticky 表头冲突） */
 .csb-page .wh-card .wh-table th {
-    position: static; background: var(--primary, #2563eb); color: #fff; font-weight: 600;
+    position: sticky; top: 0; z-index: 2; background: var(--primary, #2563eb); color: #fff; font-weight: 600;
     padding: 8px 10px; border: 1px solid var(--primary, #2563eb); text-align: center;
 }
 .csb-page .wh-card .wh-table td { padding: 6px 10px; border: 1px solid #e5e7eb; text-align: center; }
