@@ -717,18 +717,18 @@ body { background: #fff; }
                 </div>
                 {% if data_dir %}
                 <div class="wse-sp-group"><label>头程费用(元/kg)</label>
-                    <input id="wseUnit" type="number" step="0.01">
+                    <input id="wseUnit" type="text" inputmode="decimal" autocomplete="off">
                 </div>
                 {% else %}
                 <div class="wse-sp-group"><label>头程运输费用单价(元/kg)</label>
-                    <input id="wseUnit" type="number" step="0.01">
+                    <input id="wseUnit" type="text" inputmode="decimal" autocomplete="off">
                 </div>
                 {% endif %}
                 <div class="wse-sp-group"><label>澳币换算人民币汇率</label>
-                    <input id="wseRate" type="number" step="0.0001">
+                    <input id="wseRate" type="text" inputmode="decimal" autocomplete="off">
                 </div>
                 <div class="wse-sp-group"><label>澳洲邮政燃油费率(%)</label>
-                    <input id="wseFuel" type="number" step="0.01">
+                    <input id="wseFuel" type="text" inputmode="decimal" autocomplete="off">
                 </div>
                 <span class="wse-sp-msg" id="wseSettingsMsg"></span>
             </div>
@@ -1012,9 +1012,10 @@ function wseGoBack(e) {
       h += '<option value="all">所有价格列</option>';
       var seen = {};
       var hiddenColsAdj = wseHiddenColSet(headers);
+      var fmapAdj = wseFormulaMap(sec);   // 公式列（15/30/100/500KG 等）自动算价，不参与调价
       for (var ci = 0; ci < headers.length; ci++) {
         var hName = headers[ci];
-        if (!hName || seen[hName] || hiddenColsAdj[ci]) continue;
+        if (!hName || seen[hName] || hiddenColsAdj[ci] || fmapAdj[ci] != null) continue;
         var hasNum = false;
         rows.forEach(function(row) { if (hasNum) return; var v = ci < row.length ? row[ci] : ''; if (v !== '' && v !== null) { var n = parseFloat(v); if (!isNaN(n) && String(n) === String(v).toString().trim()) hasNum = true; } });
         if (hasNum) { seen[hName] = true; h += '<option value="' + escAttr(hName) + '">' + esc(hName) + '</option>'; }
@@ -2212,14 +2213,15 @@ function wseGoBack(e) {
     var factor = 1 + pct / 100;
     var count = 0;
     var headers = sec.headers || [];
+    var fmap = wseFormulaMap(sec);   // 公式列（kg 档）按尾程操作费/尾程运费自动算价，不直接调价，避免覆盖算价结果
     var targetCols = {};
     if (colName === 'all') {
       var hiddenAll = wseHiddenColSet(headers);
       var maxc = headers.length || 999;
-      for (var ci = 0; ci < maxc; ci++) { if (!hiddenAll[ci]) targetCols[ci] = true; }
+      for (var ci = 0; ci < maxc; ci++) { if (!hiddenAll[ci] && fmap[ci] == null) targetCols[ci] = true; }
     } else {
       for (var ci = 0; ci < headers.length; ci++) {
-        if (headers[ci] === colName) targetCols[ci] = true;
+        if (headers[ci] === colName && fmap[ci] == null) targetCols[ci] = true;
       }
     }
     (sec.rows || []).forEach(function(row) {
@@ -2440,9 +2442,15 @@ function wseGoBack(e) {
     monthSel.addEventListener('change', function () { fill(parseInt(monthSel.value)); if (typeof wseRecalcAll === 'function') wseRecalcAll(); });
 
     // 头程费用/汇率/燃油率改动 → 实时重算所有含重量档列的价格段（尾程改为按行取「尾程运费/尾程操作费」列，编辑对应行时另行触发）
+    // 用防抖：连续输入（尤其小数点）时不每键重算整表，避免大表卡顿导致按键丢失。
+    var _wseRecalcTimer = null;
+    function wseDebouncedRecalc() {
+      if (_wseRecalcTimer) clearTimeout(_wseRecalcTimer);
+      _wseRecalcTimer = setTimeout(function () { if (typeof wseRecalcAll === 'function') wseRecalcAll(); }, 200);
+    }
     ['wseUnit', 'wseRate', 'wseFuel'].forEach(function (id) {
       var e = el(id);
-      if (e) e.addEventListener('input', function () { if (typeof wseRecalcAll === 'function') wseRecalcAll(); });
+      if (e) e.addEventListener('input', wseDebouncedRecalc);
     });
 
     // 供「保存全部」统一调用：保存当前月度参数（本表本月），返回 Promise。

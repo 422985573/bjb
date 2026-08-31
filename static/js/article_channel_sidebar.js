@@ -11,6 +11,9 @@
 
   var MAX_CODES = 50;
   var WH_KEYS = ['allied', 'border', 'tfm', 'toll'];
+  // 需求：四个快递（海外仓）查询结果不展示「最终全程运费总价」表，仅保留价格表命中行高亮。
+  // 如需恢复运费总价表渲染，把此开关改回 true 即可。
+  var WH_SHOW_QUOTE = false;
   var whMaps = {};   // { key: postcode_zone_map }
   var whData = {};   // { key: 完整 sheet data（含 sections，用于运费总价计算） }
   var whReady = {};  // { key: true } 渲染完成
@@ -99,6 +102,8 @@
     for (var ci = 0; ci < headers.length; ci++) {
       var hk = String(headers[ci] == null ? '' : headers[ci]).replace(/\s+/g, '').toLowerCase();
       if (hk.indexOf('minimum') >= 0 || hk.indexOf('最低') >= 0) continue;
+      // 前台价格表不展示「尾程操作费AUD / 尾程运费Per /1 KG」两列（仅供公式列取值算价，算价按原始行读取不受影响）
+      if (hk.indexOf('尾程操作费') >= 0 || hk.indexOf('尾程运费') >= 0) continue;
       if (colHidden[ci]) continue;
       keep.push(ci);
     }
@@ -361,6 +366,8 @@
 
   function renderWhQuote(key, codes) {
     var host = $('wh-quote-' + key);
+    // 四个快递（海外仓）查询结果不展示「最终全程运费总价」表：清空已有内容并跳过渲染。
+    if (!WH_SHOW_QUOTE) { if (host) host.innerHTML = ''; return; }
     if (!host) {
       var card = $('wh-card-' + key);
       if (!card) return;

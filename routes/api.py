@@ -1037,6 +1037,37 @@ def warehouse_sheet_delete(key):
     return jsonify({'success': True})
 
 
+@api_bp.route('/warehouse-sheets/reorder', methods=['POST'])
+@admin_required
+def warehouse_sheets_reorder():
+    """按前端给定的 key 顺序重排 _index.json（未列出的条目如 mulu 保持在末尾、原相对顺序）。"""
+    body = request.json or {}
+    dirname = body.get('dir') or 'warehouse_au_dahuo'
+    keys = body.get('keys') or []
+    if not isinstance(keys, list):
+        return jsonify({'success': False, 'message': 'keys 必须为数组'}), 400
+
+    index_path = _wh_index_path(dirname)
+    if not os.path.isfile(index_path):
+        return jsonify({'success': False, 'message': '目录文件不存在'}), 404
+
+    with open(index_path, 'r', encoding='utf-8') as f:
+        index = json.load(f)
+
+    by_key = {e.get('key'): e for e in index if isinstance(e, dict) and e.get('key')}
+    ordered = [by_key[k] for k in keys if k in by_key]
+    used = {k for k in keys if k in by_key}
+    rest = [e for e in index if not (isinstance(e, dict) and e.get('key') in used)]
+    new_index = ordered + rest
+
+    with open(index_path, 'w', encoding='utf-8') as f:
+        json.dump(new_index, f, ensure_ascii=False, indent=2)
+
+    _load_all_postcode_maps.cache_clear()
+    _logger.info('warehouse sheets reorder dir=%s keys=%s', dirname, keys)
+    return jsonify({'success': True})
+
+
 @api_bp.route('/warehouse-sheet/<key>/save', methods=['POST'])
 @admin_required
 def warehouse_sheet_save(key):

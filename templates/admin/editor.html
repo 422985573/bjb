@@ -2159,11 +2159,12 @@
         </div>
 
         {% if dahuo_wh_sheets %}
-        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <div id="dahuoSheetList" data-dir="{{ dahuo_wh_dir or 'warehouse_au_dahuo' }}" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
             <div class="module-list-item-title" style="display:block; padding:2px 4px 6px; font-weight:600; color:#0f172a; cursor:default;">尾程快递运输（下方同页编辑）</div>
             {% for s in dahuo_wh_sheets %}
-            <div class="module-list-item" style="cursor:default;">
-                <a href="#dahuoWhCard-{{ s.key }}" style="display:contents; text-decoration:none; color:inherit;">
+            <div class="module-list-item dahuo-sheet-item" draggable="true" data-wh-key="{{ s.key }}">
+                <span class="dahuo-sheet-drag" title="拖动排序">⋮⋮</span>
+                <a href="#dahuoWhCard-{{ s.key }}" style="display:contents; text-decoration:none; color:inherit;" onclick="return scrollToDahuoCard('{{ s.key }}')">
                     <span class="module-list-item-icon">🏬</span>
                     <span class="module-list-item-title">{{ s.name }}</span>
                 </a>
@@ -2456,7 +2457,7 @@
             {% endfor %}
         </div>
         {% if dahuo_wh_sheets %}
-        <section id="dahuoWhSection" class="dahuo-wh-section">
+        <section id="dahuoWhSection" class="dahuo-wh-section" data-edit-tpl="{{ url_for('admin.warehouse_sheet_edit', key='__KEY__') }}?dir={{ dahuo_wh_dir or 'warehouse_au_dahuo' }}&embed=1">
             <div class="dahuo-wh-head">
                 <h2>尾程快递运输（独立副本，编辑不影响海外仓文章）</h2>
                 <p>下方每张表可直接编辑：顶部改<strong>标题</strong>与<strong>燃油费率</strong>，表格改数据，点该表的「保存全部」即保存。运费总价 = max(首重+Per/1KG×计费重, Minimum)×(1+燃油率)×(1+10%GST)，GST 固定 10%。</p>
@@ -2472,7 +2473,9 @@
             {% endfor %}
         </section>
         <style>
-        .dahuo-wh-section { margin-top: 26px; padding-top: 18px; border-top: 2px solid var(--border); }
+        /* flex 列 + order 驱动卡片顺序：拖拽排序时只改 CSS order，不移动 iframe DOM（避免重载丢失编辑） */
+        .dahuo-wh-section { margin-top: 26px; padding-top: 18px; border-top: 2px solid var(--border); display: flex; flex-direction: column; }
+        .dahuo-wh-head { order: -1; }
         .dahuo-wh-head h2 { font-size: 17px; color: #0f172a; margin: 0 0 6px; }
         .dahuo-wh-head p { font-size: 12px; color: var(--text-light); margin: 0 0 14px; line-height: 1.6; }
         .dahuo-sheet-copy-btn, .dahuo-sheet-del-btn {
@@ -2490,6 +2493,18 @@
             border: 1px solid var(--primary);
         }
         .dahuo-sheet-copy-btn:hover { background: var(--primary); color: #fff; }
+        .dahuo-sheet-drag {
+            flex-shrink: 0;
+            cursor: grab;
+            user-select: none;
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+        .dahuo-sheet-drag:hover { color: var(--primary); background: #eef2f7; }
+        .dahuo-sheet-drag:active { cursor: grabbing; }
         .dahuo-sheet-del-btn {
             background: #fff;
             color: #ef4444;
@@ -6483,9 +6498,163 @@ async function copyDahuoSheet(key, name) {
         });
         const data = await res.json();
         if (!data.success) { alert('复制失败：' + (data.message || '未知错误')); return; }
-        alert(`已复制为「${data.name}」（key: ${data.key}）\n刷新页面后可在下方编辑。`);
+        // 直接把新副本插入侧栏列表与下方编辑区，无需刷新
+        appendDahuoSheet(data.key, data.name);
     } catch (e) {
         alert('网络错误：' + e.message);
+    }
+}
+
+// 点击侧栏项：把目标编辑卡片滚到吸顶导航正下方（吸顶 nav 约 60px；iframe 固定高，位置可确定）
+function scrollToDahuoCard(key) {
+    const card = document.getElementById('dahuoWhCard-' + key);
+    if (!card) return true;   // 找不到则退回原生锚点跳转
+    const nav = document.querySelector('.main-nav');
+    const offset = (nav ? nav.getBoundingClientRect().height : 60) + 10;
+    const y = card.getBoundingClientRect().top + window.pageYOffset - offset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+    return false;
+}
+
+// 侧栏列表当前的 key 顺序
+function getDahuoOrder() {
+    return Array.from(document.querySelectorAll('#dahuoSheetList [data-wh-key]'))
+        .map(function (el) { return el.getAttribute('data-wh-key'); });
+}
+
+// 把新顺序写回 _index.json（前端已即时更新，持久化失败仅告警）
+async function persistDahuoOrder() {
+    const list = document.getElementById('dahuoSheetList');
+    const dir = (list && list.getAttribute('data-dir')) || 'warehouse_au_dahuo';
+    try {
+        const res = await fetch('/api/warehouse-sheets/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dir: dir, keys: getDahuoOrder() })
+        });
+        const data = await res.json();
+        if (!data.success) console.warn('保存排序失败：' + (data.message || '未知错误'));
+    } catch (e) {
+        console.warn('保存排序网络错误：' + e.message);
+    }
+}
+
+// 让下方编辑卡片的视觉顺序跟随侧栏（只改 CSS order，不移动 iframe DOM → 不触发重载/丢编辑）
+function applyDahuoCardOrder() {
+    getDahuoOrder().forEach(function (key, i) {
+        const card = document.getElementById('dahuoWhCard-' + key);
+        if (card) card.style.order = String(i + 1);
+    });
+}
+
+// 侧栏拖拽排序（与右侧「费用项目」列拖拽一致：拖 ⋮⋮ 手柄换位）
+// 事件委托绑定在列表容器上，复制后动态新增的条目自动可拖，无需重复绑定。
+// 松手后：① 用 CSS order 同步下方编辑卡片顺序（不移动 iframe，避免重载丢编辑）；② 落库到 _index.json。
+function bindDahuoListDrag() {
+    const list = document.getElementById('dahuoSheetList');
+    if (!list || list._dahuoDragBound) return;
+    list._dahuoDragBound = true;
+    let src = null;
+    let moved = false;
+
+    list.addEventListener('dragstart', function (e) {
+        const item = e.target.closest && e.target.closest('.dahuo-sheet-item[data-wh-key]');
+        if (!item || !list.contains(item)) return;
+        src = item;
+        moved = false;
+        e.dataTransfer.effectAllowed = 'move';
+        // 拖 <a>（display:contents）时禁止把链接当作被拖内容
+        try { e.dataTransfer.setData('text/plain', item.getAttribute('data-wh-key')); } catch (err) {}
+        item.classList.add('dragging');
+    });
+
+    list.addEventListener('dragend', function () {
+        if (src) src.classList.remove('dragging');
+        list.querySelectorAll('.drag-over').forEach(function (el) { el.classList.remove('drag-over'); });
+        src = null;
+        if (moved) { applyDahuoCardOrder(); persistDahuoOrder(); }   // 顺序真的变了才同步右侧 + 落库
+    });
+
+    list.addEventListener('dragover', function (e) {
+        if (!src) return;
+        const item = e.target.closest && e.target.closest('.dahuo-sheet-item[data-wh-key]');
+        if (!item || item === src) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = item.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > rect.height / 2;
+        list.querySelectorAll('.drag-over').forEach(function (el) { el.classList.remove('drag-over'); });
+        item.classList.add('drag-over');
+        // 实时换位（sortable 体验）
+        if (after) list.insertBefore(src, item.nextSibling);
+        else list.insertBefore(src, item);
+        moved = true;
+    });
+
+    list.addEventListener('drop', function (e) { if (src) e.preventDefault(); });
+}
+
+document.addEventListener('DOMContentLoaded', bindDahuoListDrag);
+
+function _mkEl(tag, cls, txt) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = txt;
+    return e;
+}
+
+// 复制成功后把新副本动态插入侧栏列表 + 下方编辑区（顺序与后端追加到 _index.json 末尾一致）
+function appendDahuoSheet(key, name) {
+    const list = document.getElementById('dahuoSheetList');
+    if (list) {
+        const item = _mkEl('div', 'module-list-item dahuo-sheet-item');
+        item.setAttribute('draggable', 'true');
+        item.setAttribute('data-wh-key', key);
+
+        const drag = _mkEl('span', 'dahuo-sheet-drag', '⋮⋮');
+        drag.title = '拖动排序';
+        item.appendChild(drag);
+
+        const a = document.createElement('a');
+        a.href = '#dahuoWhCard-' + key;
+        a.style.cssText = 'display:contents; text-decoration:none; color:inherit;';
+        a.addEventListener('click', function (e) { e.preventDefault(); scrollToDahuoCard(key); });
+        a.appendChild(_mkEl('span', 'module-list-item-icon', '🏬'));
+        a.appendChild(_mkEl('span', 'module-list-item-title', name));
+        item.appendChild(a);
+
+        const cp = _mkEl('button', 'dahuo-sheet-copy-btn', '复制');
+        cp.type = 'button';
+        cp.title = '复制此价格表（仅后台）';
+        cp.addEventListener('click', function () { copyDahuoSheet(key, name); });
+        item.appendChild(cp);
+
+        // 副本一律可删（原始 4 张表由后端保护，不会走到这里）
+        const del = _mkEl('button', 'dahuo-sheet-del-btn', '删除');
+        del.type = 'button';
+        del.title = '删除此副本';
+        del.addEventListener('click', function () { deleteDahuoSheet(key, name); });
+        item.appendChild(del);
+
+        list.appendChild(item);
+        item.scrollIntoView({ block: 'nearest' });
+    }
+
+    const section = document.getElementById('dahuoWhSection');
+    if (section) {
+        const tpl = section.getAttribute('data-edit-tpl') || '';
+        const card = _mkEl('div', 'dahuo-wh-card');
+        card.id = 'dahuoWhCard-' + key;
+        card.setAttribute('data-wh-key', key);
+        const iframe = document.createElement('iframe');
+        iframe.className = 'dahuo-wh-frame';
+        iframe.setAttribute('data-wh-key', key);
+        iframe.src = tpl.replace('__KEY__', encodeURIComponent(key));
+        iframe.title = '编辑 ' + name;
+        iframe.loading = 'lazy';
+        card.appendChild(iframe);
+        section.appendChild(card);
+        applyDahuoCardOrder();   // 让新副本的 CSS order 与侧栏一致
     }
 }
 
