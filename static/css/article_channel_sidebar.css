@@ -151,11 +151,12 @@
 .wh-card-title { background: var(--primary, #2563eb); color: #FFD700; font-size: 18px; font-weight: 800; text-align: center; padding: 12px 16px; margin: 0; }
 .wh-card-result { font-size: 13px; font-weight: 600; color: #2563eb; min-height: 0; margin-bottom: 10px; }
 .wh-card-result:empty { display: none; }
-/* 分区/表标题：蓝底金字横条，与上方卡派渠道 .channel-title + .channel-name-highlight 一致 */
+/* 分区/表标题：模块标题用主蓝，模块内子表标题用浅蓝以区分层级 */
 .wh-card-section-title {
-    background: var(--primary, #2563eb); color: #FFD700;
+    background: #dbeafe; color: #1d4ed8;
     font-size: 15px; font-weight: 800; text-align: center;
     padding: 12px 16px; margin: 0;
+    border-bottom: 1px solid #bfdbfe;
 }
 .wh-card-error { color: #ef4444; padding: 10px 0; font-size: 13px; }
 
@@ -167,8 +168,8 @@
 .csb-page .wh-card .wh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 /* 表头在小框内 sticky（仅在该滚动框内生效，不与渠道 sticky 表头冲突） */
 .csb-page .wh-card .wh-table th {
-    position: sticky; top: 0; z-index: 2; background: var(--primary, #2563eb); color: #fff; font-weight: 600;
-    padding: 8px 10px; border: 1px solid var(--primary, #2563eb); text-align: center;
+    position: sticky; top: 0; z-index: 2; background: #eff6ff; color: #1e40af; font-weight: 700;
+    padding: 8px 10px; border: 1px solid #bfdbfe; text-align: center;
 }
 .csb-page .wh-card .wh-table td { padding: 6px 10px; border: 1px solid #e5e7eb; text-align: center; }
 .csb-page .wh-card .wh-table tbody tr.wh-group-row td { background: #f8fafc; font-weight: 700; text-align: left; color: #334155; }

@@ -574,11 +574,73 @@
   // 初始化
   // ============================================================
 
+  // 按 _index.json 动态重建海外仓卡片 + 渠道目录（含后台复制的副本）。返回是否成功重建。
+  // 模板里预置了 4 张原始表作为兜底；索引拉取成功则用真实列表覆盖，副本随之出现。
+  function buildWhListFromIndex(sheets) {
+    var inline = $('whInline');
+    if (!inline || !sheets || !sheets.length) return false;
+    inline.innerHTML = '';
+    sheets.forEach(function (s) {
+      if (!s || !s.key) return;
+      var d = document.createElement('div');
+      d.className = 'wh-card';
+      d.id = 'wh-card-' + s.key;
+      d.setAttribute('data-wh-key', s.key);
+      inline.appendChild(d);
+    });
+    var navList = document.getElementById('csbWhNavList');
+    if (navList) {
+      navList.innerHTML = '';
+      sheets.forEach(function (s) {
+        if (!s || !s.key) return;
+        var li = document.createElement('li');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'channel-nav-link csb-wh-nav-item';
+        btn.setAttribute('data-scroll-target', '#wh-card-' + s.key);
+        btn.textContent = s.name || s.key;   // 卡片加载后 renderWhCard 会再同步一次名称
+        li.appendChild(btn);
+        navList.appendChild(li);
+      });
+    }
+    WH_KEYS = sheets.map(function (s) { return s.key; }).filter(Boolean);
+    return true;
+  }
+
+  // 渠道目录项点击 → 平滑定位到对应卡片（幂等绑定，动态重建后可重复调用）
+  function wireWhNav() {
+    document.querySelectorAll('.csb-wh-nav-item[data-scroll-target]').forEach(function (btn) {
+      if (btn._whNavBound) return;
+      btn._whNavBound = true;
+      btn.addEventListener('click', function () {
+        var target = document.querySelector(btn.getAttribute('data-scroll-target'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.querySelectorAll('.csb-wh-nav-item.active').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        // 移动端点选后收起浮动抽屉（与渠道目录一致）
+        var panel = $('channelNavPanel');
+        if (panel && window.matchMedia('(max-width: 768px)').matches) panel.removeAttribute('open');
+      });
+    });
+  }
+
   function init() {
-    // 页面加载即拉 4 张海外仓表 + 运费参数（燃油率）
-    loadWarehouseTables();
     var inlineEl = $('whInline');
     var whDir = (inlineEl && inlineEl.getAttribute('data-wh-dir')) || 'warehouse_au_dahuo';
+
+    // 先按索引动态构建卡片 + 目录（含副本），完成后再拉取各表数据并绑定目录点击。
+    // 索引拉取失败则沿用模板里硬编码的 4 张原始表，保证向后兼容不白屏。
+    fetch('/api/warehouse-sheets?dir=' + encodeURIComponent(whDir))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.success && Array.isArray(res.data) && res.data.length) buildWhListFromIndex(res.data);
+      })
+      .catch(function () {})
+      .then(function () {
+        loadWarehouseTables();
+        wireWhNav();
+      });
+
     fetch('/api/warehouse-settings?dir=' + encodeURIComponent(whDir))
       .then(function (r) { return r.json(); })
       .then(function (res) { if (res && res.success && res.data) whSettings = res.data; })
@@ -641,19 +703,6 @@
         clearBatch();
       });
     }
-
-    // 海外仓目录项：滚动定位到对应卡片（不再切视图）
-    document.querySelectorAll('.csb-wh-nav-item[data-scroll-target]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var target = document.querySelector(btn.getAttribute('data-scroll-target'));
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        document.querySelectorAll('.csb-wh-nav-item.active').forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        // 移动端点选后收起浮动抽屉（与渠道目录一致）
-        var panel = $('channelNavPanel');
-        if (panel && window.matchMedia('(max-width: 768px)').matches) panel.removeAttribute('open');
-      });
-    });
   }
 
   if (document.readyState === 'loading') {
