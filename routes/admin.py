@@ -166,11 +166,15 @@ def article_edit(article_id):
         if cat_name == '新大货快递报价文章':
             dahuo_index = os.path.join(config._BASE_DIR, 'data', 'warehouse_au_dahuo', '_index.json')
             if os.path.isfile(dahuo_index):
+                from routes.api import _wh_reconcile_index
                 with open(dahuo_index, 'r', encoding='utf-8') as f:
-                    dahuo_wh_sheets = [
-                        {'key': s['key'], 'name': s['name']}
-                        for s in json.load(f) if s.get('key') != 'mulu'
-                    ]
+                    _idx = json.load(f)
+                # 补录磁盘上有文件却漏收录的孤儿副本，保证后台侧栏与磁盘一致
+                _idx = _wh_reconcile_index(_idx, 'warehouse_au_dahuo')
+                dahuo_wh_sheets = [
+                    {'key': s['key'], 'name': s['name']}
+                    for s in _idx if s.get('key') != 'mulu'
+                ]
         return render_template('admin/editor.html', article=article, categories=categories, modules=modules,
                               back_url=url_for('admin.articles'), fixed_category_id=None, fixed_category_name=None,
                               dahuo_wh_sheets=dahuo_wh_sheets, dahuo_wh_dir='warehouse_au_dahuo')

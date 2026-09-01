@@ -811,6 +811,46 @@ def _wh_rebuild_index(dirname=None):
     return index
 
 
+def _wh_reconcile_index(index, dirname=None):
+    """把「磁盘上有 {key}.json、但 _index.json 未收录」的孤儿 sheet 合并进现有索引。
+
+    删除接口会同时删文件与索引项，因此磁盘上存在却不在索引里的文件必是意外遗漏
+    （多为旧版复制接口只写文件未写索引所致），补录是安全的、不会复活被删表。
+    有新增时落盘并返回合并后的索引；无孤儿则原样返回。"""
+    d = _wh_dir(dirname)
+    if not os.path.isdir(d):
+        return index
+    have = {e.get('key') for e in index if isinstance(e, dict) and e.get('key')}
+    try:
+        files = os.listdir(d)
+    except OSError:
+        return index
+    orphans = sorted(fn[:-5] for fn in files
+                     if fn.endswith('.json') and not fn.startswith('_')
+                     and fn[:-5] not in have)
+    if not orphans:
+        return index
+    added = []
+    for k in orphans:
+        try:
+            with open(_wh_sheet_path(k, dirname), 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except (ValueError, OSError):
+            continue
+        row_count = sum(len(sec.get('rows') or []) for sec in data.get('sections') or [])
+        index.append({'key': k, 'name': data.get('name') or k,
+                      'row_count': row_count, 'is_large': bool(data.get('is_large'))})
+        added.append(k)
+    if added:
+        try:
+            with open(_wh_index_path(dirname), 'w', encoding='utf-8') as f:
+                json.dump(index, f, ensure_ascii=False, indent=2)
+        except OSError:
+            pass  # 目录只读也不影响本次返回
+        _logger.info('warehouse _index.json reconciled dir=%s added=%s', dirname, added)
+    return index
+
+
 @api_bp.route('/warehouse-sheets')
 def warehouse_sheets_index():
     dirname = request.args.get('dir')
@@ -818,6 +858,8 @@ def warehouse_sheets_index():
     if os.path.isfile(path):
         with open(path, 'r', encoding='utf-8') as f:
             index = json.load(f)
+        # 补录磁盘上有文件却漏收录的孤儿副本（旧版复制接口只写文件未写索引所致）
+        index = _wh_reconcile_index(index, dirname)
     else:
         # _index.json 缺失（常见于线上）→ 用现有 sheet 文件自愈重建
         index = _wh_rebuild_index(dirname)
