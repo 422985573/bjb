@@ -770,13 +770,59 @@ def _wh_index_keys(dirname=None):
         return list(_WH_SHEET_KEYS)
 
 
+def _wh_rebuild_index(dirname=None):
+    """当 _index.json 缺失时，扫描目录内 {key}.json 重建索引并落盘后返回。
+
+    线上服务器按「去掉服务器数据库git存储」策略自管 data/，_index.json 是较新的
+    产物（仅 复制/排序/保存 时写入，多在本地跑过），服务器可能只有各 sheet 文件而无
+    _index.json。每个 sheet 文件自带 name/sections，可据此恢复（含改过的自定义名）。
+    找不到任何 sheet 文件时返回 None。"""
+    d = _wh_dir(dirname)
+    if not os.path.isdir(d):
+        return None
+    try:
+        files = os.listdir(d)
+    except OSError:
+        return None
+    # 原始 4 表按固定顺序在前，其余副本按文件名排序在后
+    others = sorted(fn[:-5] for fn in files
+                    if fn.endswith('.json') and not fn.startswith('_')
+                    and fn[:-5] not in _WH_SHEET_KEYS)
+    keys = [k for k in _WH_SHEET_KEYS if os.path.isfile(_wh_sheet_path(k, dirname))] + others
+    index = []
+    for k in keys:
+        try:
+            with open(_wh_sheet_path(k, dirname), 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except (ValueError, OSError):
+            continue
+        sections = data.get('sections') or []
+        row_count = sum(len(sec.get('rows') or []) for sec in sections)
+        index.append({'key': k, 'name': data.get('name') or k,
+                      'row_count': row_count, 'is_large': bool(data.get('is_large'))})
+    if not index:
+        return None
+    try:
+        with open(_wh_index_path(dirname), 'w', encoding='utf-8') as f:
+            json.dump(index, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass  # 目录只读也不影响本次返回
+    _logger.info('warehouse _index.json rebuilt dir=%s keys=%s', dirname, keys)
+    return index
+
+
 @api_bp.route('/warehouse-sheets')
 def warehouse_sheets_index():
-    path = _wh_index_path(request.args.get('dir'))
-    if not os.path.isfile(path):
-        return jsonify({'success': False, 'message': '数据未初始化'}), 404
-    with open(path, 'r', encoding='utf-8') as f:
-        index = json.load(f)
+    dirname = request.args.get('dir')
+    path = _wh_index_path(dirname)
+    if os.path.isfile(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            index = json.load(f)
+    else:
+        # _index.json 缺失（常见于线上）→ 用现有 sheet 文件自愈重建
+        index = _wh_rebuild_index(dirname)
+        if index is None:
+            return jsonify({'success': False, 'message': '数据未初始化'}), 404
     index = [s for s in index if s.get('key') != 'mulu']
     return jsonify({'success': True, 'data': index})
 
@@ -1048,11 +1094,13 @@ def warehouse_sheets_reorder():
         return jsonify({'success': False, 'message': 'keys 必须为数组'}), 400
 
     index_path = _wh_index_path(dirname)
-    if not os.path.isfile(index_path):
-        return jsonify({'success': False, 'message': '目录文件不存在'}), 404
-
-    with open(index_path, 'r', encoding='utf-8') as f:
-        index = json.load(f)
+    if os.path.isfile(index_path):
+        with open(index_path, 'r', encoding='utf-8') as f:
+            index = json.load(f)
+    else:
+        index = _wh_rebuild_index(dirname)  # _index.json 缺失时先按现有 sheet 文件重建
+        if index is None:
+            return jsonify({'success': False, 'message': '目录文件不存在'}), 404
 
     by_key = {e.get('key'): e for e in index if isinstance(e, dict) and e.get('key')}
     ordered = [by_key[k] for k in keys if k in by_key]
