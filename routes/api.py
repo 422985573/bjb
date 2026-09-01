@@ -754,7 +754,9 @@ def _wh_index_path(dirname=None):
 
 
 def _wh_sheet_path(key, dirname=None):
-    safe = re.sub(r'[^a-zA-Z0-9_]', '', key)
+    # 保留中文等 unicode 文件名，仅剔除路径分隔符/穿越/控制字符以防目录穿越。
+    # 旧实现 re.sub(r'[^a-zA-Z0-9_]','') 会把中文 key 抹成空串，导致这类表读/删/存全部 404。
+    safe = re.sub(r'[\x00-\x1f/\\]', '', str(key)).replace('..', '')
     return os.path.join(_wh_dir(dirname), f'{safe}.json')
 
 
