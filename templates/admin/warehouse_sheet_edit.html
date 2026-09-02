@@ -720,8 +720,11 @@ body { background: #fff; }
                     <input id="wseUnit" type="text" inputmode="decimal" autocomplete="off">
                 </div>
                 {% else %}
-                <div class="wse-sp-group"><label>头程运输费用单价(元/kg)</label>
+                <div class="wse-sp-group"><label>空运头程运输费用单价(元/kg)</label>
                     <input id="wseUnit" type="text" inputmode="decimal" autocomplete="off">
+                </div>
+                <div class="wse-sp-group"><label>海运头程运输费用单价(元/kg)</label>
+                    <input id="wseSeaUnit" type="text" inputmode="decimal" autocomplete="off">
                 </div>
                 {% endif %}
                 <div class="wse-sp-group"><label>澳币换算人民币汇率</label>
@@ -732,12 +735,27 @@ body { background: #fff; }
                 </div>
                 <span class="wse-sp-msg" id="wseSettingsMsg"></span>
             </div>
+            {% if article %}
+            <div class="wse-sp-row" style="margin-top:12px;">
+                <div class="wse-sp-group" style="flex:1;">
+                    <label>空运备注（显示在空运报价结果表底部，留空则用默认文案）</label>
+                    <input id="wseResultNoteAir" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
+                </div>
+            </div>
+            <div class="wse-sp-row" style="margin-top:12px;">
+                <div class="wse-sp-group" style="flex:1;">
+                    <label>海运备注（显示在海运报价结果表底部，留空则用默认文案）</label>
+                    <input id="wseResultNoteSea" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
+                </div>
+            </div>
+            {% else %}
             <div class="wse-sp-row" style="margin-top:12px;">
                 <div class="wse-sp-group" style="flex:1;">
                     <label>备注（显示在报价结果表底部，留空则用默认文案）</label>
                     <input id="wseResultNote" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
                 </div>
             </div>
+            {% endif %}
             <div class="wse-sp-row" style="margin-top:12px;">
                 <div class="wse-sp-group" style="flex:1;">
                     <label>文章内容备注（显示在月度参数面板下方、价格表上方，支持加粗/改色）</label>
@@ -795,6 +813,11 @@ function wseGoBack(e) {
         var note = document.getElementById('wseResultNote');
         // 兼容旧数据：优先 result_note，回退到旧的空运备注/海运备注
         if (note) note.value = sheetData.result_note || sheetData.result_note_air || sheetData.result_note_sea || '';
+        // 虚拟小包：空运/海运备注各一条（存于 sheet 的 result_note_air / result_note_sea）
+        var noteAir = document.getElementById('wseResultNoteAir');
+        if (noteAir) noteAir.value = sheetData.result_note_air || '';
+        var noteSea = document.getElementById('wseResultNoteSea');
+        if (noteSea) noteSea.value = sheetData.result_note_sea || '';
         initPanelNoteEditor();
         render();
       })
@@ -2274,6 +2297,10 @@ function wseGoBack(e) {
     if (DATA_DIR) payload.dir = DATA_DIR;
     var note = document.getElementById('wseResultNote');
     if (note) payload.result_note = note.value;
+    var noteAir = document.getElementById('wseResultNoteAir');
+    if (noteAir) payload.result_note_air = noteAir.value;
+    var noteSea = document.getElementById('wseResultNoteSea');
+    if (noteSea) payload.result_note_sea = noteSea.value;
     if (panelNoteEditor) {
       payload.panel_note_html = cleanRichtextHtml(panelNoteEditor.getHtml());
     } else {
@@ -2501,7 +2528,8 @@ function wseGoBack(e) {
 
   function fill(month) {
     var s = data[String(month)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
-    el('wseUnit').value = s.unit_price != null ? s.unit_price : (s.sea_unit_price || 0);
+    el('wseUnit').value = s.unit_price != null ? s.unit_price : 0;
+    if (el('wseSeaUnit')) el('wseSeaUnit').value = s.sea_unit_price != null ? s.sea_unit_price : 0;
     el('wseRate').value = s.exchange_rate;
     el('wseFuel').value = s.fuel_rate;
   }
@@ -2518,7 +2546,7 @@ function wseGoBack(e) {
   // 供“保存全部”统一调用：保存当前月度参数，返回 Promise。
   window.wseSaveSettings = function () {
     var month = parseInt(monthSel.value);
-    var item = { month: month, unit_price: el('wseUnit').value, sea_unit_price: el('wseUnit').value, exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value };
+    var item = { month: month, unit_price: el('wseUnit').value, sea_unit_price: el('wseSeaUnit') ? el('wseSeaUnit').value : el('wseUnit').value, exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value };
     return fetch('/api/xiaobao-settings/save', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: [item] })
     }).then(function (r) { return r.json(); }).then(function (res) {

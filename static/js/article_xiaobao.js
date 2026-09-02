@@ -292,7 +292,7 @@
   // ---- init / load ----
   function init() {
     fetchSettings();
-    fetch(API_INDEX)
+    fetch(API_INDEX, { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res.success || !res.data || !res.data.length) {
@@ -308,7 +308,7 @@
   }
 
   function fetchSettings() {
-    fetch(API_SETTINGS).then(function (r) { return r.json(); }).then(function (res) {
+    fetch(API_SETTINGS, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (res) {
       if (res.success) { settingsData = res.data || {}; if (currentData) renderContent(); }
     }).catch(function () {});
   }
@@ -317,7 +317,7 @@
     currentKey = key;
     var content = $('#whContent');
     content.innerHTML = '<div class="wh-loading"><div class="wh-spinner"></div><span>加载中...</span></div>';
-    fetch(API_SHEET + encodeURIComponent(key))
+    fetch(API_SHEET + encodeURIComponent(key), { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res.success) { content.innerHTML = '<p style="color:#ef4444;padding:20px;">加载失败</p>'; return; }
