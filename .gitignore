@@ -44,3 +44,6 @@ uploads/
 *.pid
 gunicorn.pid
 data/*
+
+# 数据备份包（scripts/backup_data.py 产物）
+backups/
