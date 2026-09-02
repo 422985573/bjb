@@ -761,15 +761,30 @@ def _wh_sheet_path(key, dirname=None):
 
 
 def _wh_index_keys(dirname=None):
-    """该目录 _index.json 中的全部 sheet key（含副本）。读失败回退 4 张原始表。"""
+    """该目录 _index.json 中的全部 sheet key（含副本）。
+
+    线上服务器可能缺失/滞后 _index.json（见 _wh_rebuild_index 注释），仅凭索引会漏掉
+    磁盘上真实存在的副本 sheet，导致「保存月度参数」时 key 校验不过而静默丢弃。故这里
+    并入磁盘上所有 {key}.json（非下划线开头）文件名，确保真实存在的表都被视为合法。"""
     path = _wh_index_path(dirname)
+    keys = []
     try:
         with open(path, 'r', encoding='utf-8') as f:
             idx = json.load(f)
         keys = [e.get('key') for e in idx if isinstance(e, dict) and e.get('key')]
-        return keys or list(_WH_SHEET_KEYS)
     except (ValueError, OSError):
-        return list(_WH_SHEET_KEYS)
+        keys = []
+    # 并入磁盘上的孤儿 sheet 文件（索引缺失或未收录也不遗漏）
+    d = _wh_dir(dirname)
+    try:
+        for fn in os.listdir(d):
+            if fn.endswith('.json') and not fn.startswith('_'):
+                k = fn[:-5]
+                if k not in keys:
+                    keys.append(k)
+    except OSError:
+        pass
+    return keys or list(_WH_SHEET_KEYS)
 
 
 def _wh_rebuild_index(dirname=None):
@@ -1342,6 +1357,11 @@ def warehouse_settings_save():
     gst_rate = _num(body.get('gst_rate'), raw.get('gst_rate', 10))
     key = body.get('key')
     valid_keys = _wh_index_keys(dirname)
+
+    # 提交了 key 却不在合法表内：直接报错，避免「静默丢弃却返回成功」（刷新后数据消失的根因）
+    if key is not None and key not in valid_keys:
+        _logger.warning('warehouse settings save rejected: unknown key=%s dir=%s', key, dirname)
+        return jsonify({'success': False, 'message': '未找到该价格表（key=%s），参数未保存' % key}), 400
 
     # 分月参数保存：{key, month, unit_price, sea_unit_price, tail_per, tail_op, exchange_rate, fuel_rate}
     if key in valid_keys and body.get('month') is not None:
