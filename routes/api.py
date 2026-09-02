@@ -1194,7 +1194,7 @@ def warehouse_sheet_save(key):
         # #50 快递副本（warehouse_au_dahuo）允许编辑表头；其余目录不发 headers，沿用原文件
         if isinstance(sec_data.get('headers'), list):
             base['headers'] = sec_data['headers']
-        # 每列的计价公式选择（''=手动填写；'15'/'30'/'100'/'500'=按对应公式自动算价）
+        # 每列的计价公式选择（''=手动填写；'15'/'30'/'70'/'100'/'500'=按对应公式自动算价）
         if isinstance(sec_data.get('col_formulas'), list):
             base['col_formulas'] = sec_data['col_formulas']
         # 每列是否在前台文章页隐藏（true=隐藏；仅前台展示，数据与算价不受影响）

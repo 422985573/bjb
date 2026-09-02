@@ -617,7 +617,7 @@ body.wse-dahuo-edit .wse-table tbody td > input[type="text"]:focus {
     margin-top: 16px; padding-top: 14px; border-top: 1px dashed #e2e8f0;
 }
 .wse-sp-title { font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 10px; }
-/* 重量档只读计算单元格（15/30/100/500KG，按公式自动算价） */
+/* 重量档只读计算单元格（15/30/70/100/500KG，按公式自动算价） */
 .wse-table td.wse-calc-cell {
     text-align: right; padding: 8px 12px; color: #0f172a;
     font-variant-numeric: tabular-nums; font-weight: 600;
@@ -1035,7 +1035,7 @@ function wseGoBack(e) {
       h += '<option value="all">所有价格列</option>';
       var seen = {};
       var hiddenColsAdj = wseHiddenColSet(headers);
-      var fmapAdj = wseFormulaMap(sec);   // 公式列（15/30/100/500KG 等）自动算价，不参与调价
+      var fmapAdj = wseFormulaMap(sec);   // 公式列（15/30/70/100/500KG 等）自动算价，不参与调价
       for (var ci = 0; ci < headers.length; ci++) {
         var hName = headers[ci];
         if (!hName || seen[hName] || hiddenColsAdj[ci] || fmapAdj[ci] != null) continue;
@@ -1215,8 +1215,8 @@ function wseGoBack(e) {
         h += '</div>';
         continue;
       }
-      h += '<div class="wse-colmgr-pill" draggable="true" data-si="' + si + '" data-ci="' + ci + '">';
-      h += '<span class="wse-colmgr-drag" title="拖动可调整列顺序">⋮⋮</span>';
+      h += '<div class="wse-colmgr-pill" draggable="false" data-si="' + si + '" data-ci="' + ci + '">';
+      h += '<span class="wse-colmgr-drag" title="按住此处拖动可调整列顺序">⋮⋮</span>';
       h += '<input type="text" class="wse-colmgr-input" value="' + escAttr(name) + '" data-si="' + si + '" data-ci="' + ci + '" onchange="wseColRename(this)" placeholder="列名">';
       h += '<select class="wse-colmgr-formula" data-si="' + si + '" data-ci="' + ci + '" onchange="wseColFormula(this)" title="选择该列的计价公式">';
       h += '<option value=""' + (curFk === '' ? ' selected' : '') + '>手动填写</option>';
@@ -1353,12 +1353,20 @@ function wseGoBack(e) {
   var colDragSrc = null;
   function bindColManagerDrag() {
     document.querySelectorAll('.wse-colmgr-pill').forEach(function(pill) {
+      // 仅「按住 ⋮⋮ 手柄」才允许拖动：手柄按下时临时打开 draggable，松开/拖完再关闭。
+      // 这样在列名 input 内按住拖选文字不会误触发列排序。
+      var grip = pill.querySelector('.wse-colmgr-drag');
+      if (grip) {
+        grip.addEventListener('mousedown', function() { pill.setAttribute('draggable', 'true'); });
+        grip.addEventListener('mouseup', function() { pill.setAttribute('draggable', 'false'); });
+      }
       pill.addEventListener('dragstart', function(e) {
         colDragSrc = { si: parseInt(pill.dataset.si, 10), ci: parseInt(pill.dataset.ci, 10) };
         e.dataTransfer.effectAllowed = 'move';
         pill.classList.add('dragging');
       });
       pill.addEventListener('dragend', function() {
+        pill.setAttribute('draggable', 'false');
         pill.classList.remove('dragging');
         document.querySelectorAll('.wse-colmgr-pill.drag-over').forEach(function(p) { p.classList.remove('drag-over'); });
       });
@@ -1385,6 +1393,7 @@ function wseGoBack(e) {
   var WSE_FORMULAS = [
     { key: '15',  label: '15kg 公式',  w: 15  },
     { key: '30',  label: '30kg 公式',  w: 30  },
+    { key: '70',  label: '70kg 公式',  w: 70  },
     { key: '100', label: '100kg 公式', w: 100 },
     { key: '500', label: '500kg 公式', w: 500 }
   ];

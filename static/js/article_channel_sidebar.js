@@ -67,7 +67,7 @@
   }
 
   // 「选用公式」的重量档常量与算价（与后台编辑器 wseCalcCell 一致）
-  var WH_FORMULA_W = { '15': 15, '30': 30, '100': 100, '500': 500 };
+  var WH_FORMULA_W = { '15': 15, '30': 30, '70': 70, '100': 100, '500': 500 };
   // 尾程列定位：表头含「尾程操作费」→op，含「尾程运费」→per（原始列序，隐藏与否不影响读取）
   function whTailCols(headers) {
     var res = { per: -1, op: -1 };
@@ -109,7 +109,7 @@
     }
     if (!keep.length) { for (var ck = 0; ck < headers.length; ck++) keep.push(ck); }
     var pick = function (row) { return keep.map(function (i) { return row[i]; }); };
-    // 「选用公式」的重量档列（col_formulas: '' | '15'|'30'|'100'|'500'），按各行自有尾程列算价
+    // 「选用公式」的重量档列（col_formulas: '' | '15'|'30'|'70'|'100'|'500'），按各行自有尾程列算价
     var fmap = {};
     (sec.col_formulas || []).forEach(function (fk, ci) {
       var w = WH_FORMULA_W[String(fk)];
