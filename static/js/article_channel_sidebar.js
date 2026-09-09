@@ -120,10 +120,36 @@
     var fHead = hasFormula ? whMonthParam(key, 'unit_price', 0) : 0;
     var fRate = hasFormula ? whMonthParam(key, 'exchange_rate', 0) : 0;
     var fFuel = hasFormula ? whMonthParam(key, 'fuel_rate', 0) : 0;
+    // 前台展示排序：整行按「15kg」列从低到高排（其余列随该行一起移动）。仅前台显示排序，后台数据与编辑不变。
+    // 15kg 通常是公式列（col_formulas==='15'），按算出的单价排；否则按该列数字排。
+    // 含州名分组行的表不排（避免打乱分组）；空/无法算价的行沉底并保持原相对次序（稳定排序）。
+    var col15 = -1, col15IsFormula = false;
+    (sec.col_formulas || []).forEach(function (fk, ci) { if (col15 < 0 && String(fk) === '15') { col15 = ci; col15IsFormula = true; } });
+    if (col15 < 0) {
+      for (var h15 = 0; h15 < headers.length; h15++) {
+        if (String(headers[h15] == null ? '' : headers[h15]).replace(/\s+/g, '').toLowerCase() === '15kg') { col15 = h15; break; }
+      }
+    }
+    var hasGroupRow = rows.some(function (row) {
+      var filled = row.filter(function (c) { return c !== '' && c !== null && c !== undefined; });
+      return row.length >= 3 && filled.length === 1 && (row[0] !== '' && row[0] != null);
+    });
+    var displayRows = rows;
+    if (col15 >= 0 && !hasGroupRow) {
+      var key15 = function (row) {
+        var v;
+        if (col15IsFormula) v = whCalcFormula(15, fHead, fRate, fFuel, whRowNum(row, fTail.per), whRowNum(row, fTail.op));
+        else { v = parseFloat(row[col15]); if (isNaN(v)) v = null; }
+        return (v == null) ? Infinity : v;
+      };
+      displayRows = rows.map(function (row, i) { return { row: row, i: i, k: key15(row) }; })
+        .sort(function (a, b) { return (a.k - b.k) || (a.i - b.i); })
+        .map(function (o) { return o.row; });
+    }
     var h = '<div class="wh-table-wrap"><table class="wh-table"><thead><tr>';
     pick(headers).forEach(function (th) { h += '<th>' + esc(th) + '</th>'; });
     h += '</tr></thead><tbody>';
-    rows.forEach(function (row) {
+    displayRows.forEach(function (row) {
       // 州名分组行（只有首格有值，其余空）：整行合并展示（按原始行判定）
       var filled = row.filter(function (c) { return c !== '' && c !== null && c !== undefined; });
       if (row.length >= 3 && filled.length === 1 && (row[0] !== '' && row[0] != null)) {
