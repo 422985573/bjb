@@ -688,6 +688,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 10px 12px 14px;
+    overscroll-behavior: contain;
 }
 .channel-nav-export {
     display: flex;
