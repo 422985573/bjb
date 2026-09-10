@@ -241,6 +241,25 @@
     background: #fee2e2;
     border-color: #dc2626;
 }
+/* 该块前台显隐切换按钮（点击即保存）；已隐藏时高亮为琥珀色，整块淡化提示 */
+.wse-section-hide-btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.wse-section-hide-btn:hover { background: #f1f5f9; }
+.wse-section-hide-btn:disabled { opacity: .6; cursor: default; }
+.wse-section-hidden .wse-section-hide-btn {
+    background: #f59e0b; color: #fff; border-color: #f59e0b;
+}
+.wse-section-hidden .wse-section-title-input { color: #94a3b8; }
 .wse-section-move {
     position: absolute;
     right: 16px;
@@ -748,13 +767,6 @@ body { background: #fff; }
                     <input id="wseResultNoteSea" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
                 </div>
             </div>
-            {% else %}
-            <div class="wse-sp-row" style="margin-top:12px;">
-                <div class="wse-sp-group" style="flex:1;">
-                    <label>备注（显示在报价结果表底部，留空则用默认文案）</label>
-                    <input id="wseResultNote" type="text" style="width:100%;max-width:640px;" placeholder="选择服务则代表已完整阅读渠道说明和费用详解。">
-                </div>
-            </div>
             {% endif %}
             <div class="wse-sp-row" style="margin-top:12px;">
                 <div class="wse-sp-group" style="flex:1;">
@@ -945,12 +957,38 @@ function wseGoBack(e) {
 
   function renderSectionTitle(sec, si) {
     var t = sec.title || '';
-    var h = '<div class="wse-section-head">';
+    var hidden = !!sec.hidden;
+    var h = '<div class="wse-section-head' + (hidden ? ' wse-section-hidden' : '') + '">';
     h += '<input type="text" class="wse-section-title-input" value="' + escAttr(String(t)) + '" data-title-si="' + si + '" placeholder="标题（留空则不显示）" onchange="wseTitleChange(this)">';
+    h += '<button type="button" class="wse-section-hide-btn" onclick="wseToggleSectionHidden(' + si + ', this)" title="切换该块在文章前台的显示/隐藏（点击即保存到数据，无需再点保存文章）">' + (hidden ? '前台已隐藏' : '前台显示') + '</button>';
     h += '<button type="button" class="wse-section-del-btn" onclick="wseDelSection(' + si + ')" title="删除整个块">删除此块</button>';
     h += '</div>';
     return h;
   }
+
+  // 切换该块前台显隐并立即落盘（按 _oidx 定位磁盘 section，不影响其它未保存编辑）
+  window.wseToggleSectionHidden = function(si, btn) {
+    var sec = sheetData.sections[si];
+    if (!sec) return;
+    if (sec._oidx == null) { alert('这是新增的块，请先点「保存」后再设置前台隐藏。'); return; }
+    var willHide = !sec.hidden;
+    btn.disabled = true;
+    fetch(API_SHEET_BASE + encodeURIComponent(SHEET_KEY) + '/section-hidden', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({dir: DATA_DIR, oidx: sec._oidx, hidden: willHide})
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        btn.disabled = false;
+        if (!res || !res.success) { alert('操作失败：' + ((res && res.message) || '未知错误')); return; }
+        sec.hidden = res.hidden;
+        btn.textContent = res.hidden ? '前台已隐藏' : '前台显示';
+        var head = btn.closest('.wse-section-head');
+        if (head) head.classList.toggle('wse-section-hidden', res.hidden);
+      })
+      .catch(function() { btn.disabled = false; alert('网络错误，请重试'); });
+  };
 
   // 生成吸附在块右下角的上移/下移按钮
   function renderSectionMove(si) {

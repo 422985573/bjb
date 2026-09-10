@@ -1334,6 +1334,41 @@ def warehouse_sheet_save(key):
     return jsonify({'success': True})
 
 
+@api_bp.route('/warehouse-sheet/<key>/section-hidden', methods=['POST'])
+@admin_required
+def warehouse_sheet_section_hidden(key):
+    """切换价格表内「某个块(section)」在文章前台的显示/隐藏，并立即落盘（无需整体保存文章）。
+    按 section 索引 oidx 定位（编辑器里 _oidx 始终等于磁盘顺序）。仅前台隐藏，不影响后台数据。"""
+    body = request.json or {}
+    dirname = body.get('dir')
+    want_hidden = bool(body.get('hidden'))
+    try:
+        oidx = int(body.get('oidx'))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': '参数错误'}), 400
+
+    path = _wh_sheet_path(key, dirname)
+    if not os.path.isfile(path):
+        return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
+    try:
+        with data_dir_lock(_wh_dir(dirname)):
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            sections = data.get('sections') or []
+            if not (0 <= oidx < len(sections)) or not isinstance(sections[oidx], dict):
+                return jsonify({'success': False, 'message': '未找到该块（如是新增块，请先保存）'}), 400
+            if want_hidden:
+                sections[oidx]['hidden'] = True
+            else:
+                sections[oidx].pop('hidden', None)
+            atomic_write_json(path, data, indent=2)
+    except Exception:
+        _logger.exception('warehouse section-hidden failed key=%s oidx=%s', key, body.get('oidx'))
+        return jsonify({'success': False, 'message': '操作失败，请重试'}), 500
+    _logger.info('warehouse section-hidden key=%s oidx=%s hidden=%s', key, oidx, want_hidden)
+    return jsonify({'success': True, 'oidx': oidx, 'hidden': want_hidden})
+
+
 # 海外仓运费总价参数：GST 固定 10%；燃油率**按表(key)独立**存于 _settings.json。
 # 结构：{"gst_rate":10, "fuel_rates":{"allied":20,"border":20,"tfm":20,"toll":20}}
 # 兼容旧结构 {"fuel_rate":20,...}：作为各表默认。

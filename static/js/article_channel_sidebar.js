@@ -188,6 +188,7 @@
     }
     html += '<div class="wh-card-result" id="wh-result-' + key + '"></div>';
     (data.sections || []).forEach(function (sec) {
+      if (sec && sec.hidden) return;   // 后台设为「前台隐藏」的块：文章前台不展示
       if (sec.type === 'price_table') {
         if (sec.title) html += '<div class="wh-card-section-title">' + esc(sec.title) + '</div>';
         html += renderWhTable(sec, key);
