@@ -14,7 +14,7 @@ import config
 import db
 import models
 from services import postcode as postcode_svc
-from util import admin_required
+from util import admin_required, atomic_write_json, data_dir_lock
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -820,8 +820,8 @@ def _wh_rebuild_index(dirname=None):
     if not index:
         return None
     try:
-        with open(_wh_index_path(dirname), 'w', encoding='utf-8') as f:
-            json.dump(index, f, ensure_ascii=False, indent=2)
+        with data_dir_lock(d):
+            atomic_write_json(_wh_index_path(dirname), index, indent=2)
     except OSError:
         pass  # 目录只读也不影响本次返回
     _logger.info('warehouse _index.json rebuilt dir=%s keys=%s', dirname, keys)
@@ -860,8 +860,8 @@ def _wh_reconcile_index(index, dirname=None):
         added.append(k)
     if added:
         try:
-            with open(_wh_index_path(dirname), 'w', encoding='utf-8') as f:
-                json.dump(index, f, ensure_ascii=False, indent=2)
+            with data_dir_lock(d):
+                atomic_write_json(_wh_index_path(dirname), index, indent=2)
         except OSError:
             pass  # 目录只读也不影响本次返回
         _logger.info('warehouse _index.json reconciled dir=%s added=%s', dirname, added)
@@ -978,31 +978,35 @@ def warehouse_adjust_price():
     if not os.path.isfile(path):
         return jsonify({'success': False, 'message': f'sheet "{sheet_key}" 不存在'}), 404
 
-    with open(path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        with data_dir_lock(os.path.dirname(path)):
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
-    factor = 1 + pct / 100.0
-    adjusted = 0
+            factor = 1 + pct / 100.0
+            adjusted = 0
 
-    for sec in data.get('sections', []):
-        if sec.get('type') == 'zone_table':
-            continue
-        for row in sec.get('rows', []):
-            for ci, cell in enumerate(row):
-                if cell == '' or cell is None:
+            for sec in data.get('sections', []):
+                if sec.get('type') == 'zone_table':
                     continue
-                try:
-                    num = float(cell)
-                except (ValueError, TypeError):
-                    continue
-                new_val = round(num * factor, 2)
-                if new_val == int(new_val):
-                    new_val = int(new_val)
-                row[ci] = new_val
-                adjusted += 1
+                for row in sec.get('rows', []):
+                    for ci, cell in enumerate(row):
+                        if cell == '' or cell is None:
+                            continue
+                        try:
+                            num = float(cell)
+                        except (ValueError, TypeError):
+                            continue
+                        new_val = round(num * factor, 2)
+                        if new_val == int(new_val):
+                            new_val = int(new_val)
+                        row[ci] = new_val
+                        adjusted += 1
 
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
+            atomic_write_json(path, data, compact=True)
+    except Exception:
+        _logger.exception('warehouse adjust price failed sheet=%s', sheet_key)
+        return jsonify({'success': False, 'message': '调价失败，数据未更改，请重试'}), 500
 
     _load_all_postcode_maps.cache_clear()
     _logger.info('warehouse adjust price sheet=%s pct=%s adjusted=%s', sheet_key, pct, adjusted)
@@ -1027,25 +1031,28 @@ def warehouse_sheet_rename(key):
     if not os.path.isfile(sheet_path):
         return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
 
-    with open(sheet_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    data['name'] = name
-    with open(sheet_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        with data_dir_lock(_wh_dir(dirname)):
+            with open(sheet_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            data['name'] = name
+            atomic_write_json(sheet_path, data, indent=2)
 
-    # 同步 _index.json 里的 name
-    index_path = _wh_index_path(dirname)
-    if os.path.isfile(index_path):
-        with open(index_path, 'r', encoding='utf-8') as f:
-            index = json.load(f)
-        changed = False
-        for entry in index:
-            if entry.get('key') == safe_key:
-                entry['name'] = name
-                changed = True
-        if changed:
-            with open(index_path, 'w', encoding='utf-8') as f:
-                json.dump(index, f, ensure_ascii=False, indent=2)
+            # 同步 _index.json 里的 name
+            index_path = _wh_index_path(dirname)
+            if os.path.isfile(index_path):
+                with open(index_path, 'r', encoding='utf-8') as f:
+                    index = json.load(f)
+                changed = False
+                for entry in index:
+                    if entry.get('key') == safe_key:
+                        entry['name'] = name
+                        changed = True
+                if changed:
+                    atomic_write_json(index_path, index, indent=2)
+    except Exception:
+        _logger.exception('warehouse sheet rename failed key=%s dir=%s', key, dirname)
+        return jsonify({'success': False, 'message': '重命名失败，数据未更改，请重试'}), 500
 
     _load_all_postcode_maps.cache_clear()
     _logger.info('warehouse sheet rename key=%s dir=%s name=%s', key, dirname, name)
@@ -1068,39 +1075,42 @@ def warehouse_sheet_copy(key):
     if not os.path.isfile(index_path):
         return jsonify({'success': False, 'message': '目录文件不存在'}), 404
 
-    with open(sheet_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    with open(index_path, 'r', encoding='utf-8') as f:
-        index = json.load(f)
+    try:
+        with data_dir_lock(_wh_dir(dirname)):
+            with open(sheet_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            with open(index_path, 'r', encoding='utf-8') as f:
+                index = json.load(f)
 
-    existing_keys = {e['key'] for e in index}
-    # 找一个未占用的新 key
-    candidate = key + '_copy'
-    suffix = 2
-    while candidate in existing_keys:
-        candidate = f'{key}_copy{suffix}'
-        suffix += 1
+            existing_keys = {e['key'] for e in index}
+            # 找一个未占用的新 key
+            candidate = key + '_copy'
+            suffix = 2
+            while candidate in existing_keys:
+                candidate = f'{key}_copy{suffix}'
+                suffix += 1
 
-    new_name = data.get('name', key) + ' 副本'
-    if suffix > 2:
-        new_name = data.get('name', key) + f' 副本{suffix - 1}'
+            new_name = data.get('name', key) + ' 副本'
+            if suffix > 2:
+                new_name = data.get('name', key) + f' 副本{suffix - 1}'
 
-    new_data = dict(data)
-    new_data['key'] = candidate
-    new_data['name'] = new_name
-    # 副本不带搜索缓存字段（重建时会重新生成）
-    new_data.pop('postcode_zone_map', None)
+            new_data = dict(data)
+            new_data['key'] = candidate
+            new_data['name'] = new_name
+            # 副本不带搜索缓存字段（重建时会重新生成）
+            new_data.pop('postcode_zone_map', None)
 
-    new_path = _wh_sheet_path(candidate, dirname)
-    with open(new_path, 'w', encoding='utf-8') as f:
-        json.dump(new_data, f, ensure_ascii=False, indent=2)
+            new_path = _wh_sheet_path(candidate, dirname)
+            atomic_write_json(new_path, new_data, indent=2)
 
-    # 统计行数（与 _index.json 保持一致的格式）
-    row_count = sum(len(sec.get('rows') or []) for sec in new_data.get('sections') or [])
-    index.append({'key': candidate, 'name': new_name, 'row_count': row_count,
-                  'is_large': data.get('is_large', False)})
-    with open(index_path, 'w', encoding='utf-8') as f:
-        json.dump(index, f, ensure_ascii=False, indent=2)
+            # 统计行数（与 _index.json 保持一致的格式）
+            row_count = sum(len(sec.get('rows') or []) for sec in new_data.get('sections') or [])
+            index.append({'key': candidate, 'name': new_name, 'row_count': row_count,
+                          'is_large': data.get('is_large', False)})
+            atomic_write_json(index_path, index, indent=2)
+    except Exception:
+        _logger.exception('warehouse sheet copy failed src=%s dir=%s', key, dirname)
+        return jsonify({'success': False, 'message': '复制失败，数据未更改，请重试'}), 500
 
     _load_all_postcode_maps.cache_clear()
     _logger.info('warehouse sheet copy src=%s new=%s dir=%s', key, candidate, dirname)
@@ -1129,13 +1139,16 @@ def warehouse_sheet_delete(key):
     if not os.path.isfile(index_path):
         return jsonify({'success': False, 'message': '目录文件不存在'}), 404
 
-    os.remove(sheet_path)
-
-    with open(index_path, 'r', encoding='utf-8') as f:
-        index = json.load(f)
-    index = [e for e in index if e.get('key') != key]
-    with open(index_path, 'w', encoding='utf-8') as f:
-        json.dump(index, f, ensure_ascii=False, indent=2)
+    try:
+        with data_dir_lock(_wh_dir(dirname)):
+            os.remove(sheet_path)
+            with open(index_path, 'r', encoding='utf-8') as f:
+                index = json.load(f)
+            index = [e for e in index if e.get('key') != key]
+            atomic_write_json(index_path, index, indent=2)
+    except Exception:
+        _logger.exception('warehouse sheet delete failed key=%s dir=%s', key, dirname)
+        return jsonify({'success': False, 'message': '删除失败，请重试'}), 500
 
     _load_all_postcode_maps.cache_clear()
     _logger.info('warehouse sheet delete key=%s dir=%s', key, dirname)
@@ -1152,23 +1165,27 @@ def warehouse_sheets_reorder():
     if not isinstance(keys, list):
         return jsonify({'success': False, 'message': 'keys 必须为数组'}), 400
 
-    index_path = _wh_index_path(dirname)
-    if os.path.isfile(index_path):
-        with open(index_path, 'r', encoding='utf-8') as f:
-            index = json.load(f)
-    else:
-        index = _wh_rebuild_index(dirname)  # _index.json 缺失时先按现有 sheet 文件重建
-        if index is None:
-            return jsonify({'success': False, 'message': '目录文件不存在'}), 404
+    try:
+        with data_dir_lock(_wh_dir(dirname)):
+            index_path = _wh_index_path(dirname)
+            if os.path.isfile(index_path):
+                with open(index_path, 'r', encoding='utf-8') as f:
+                    index = json.load(f)
+            else:
+                index = _wh_rebuild_index(dirname)  # _index.json 缺失时先按现有 sheet 文件重建
+                if index is None:
+                    return jsonify({'success': False, 'message': '目录文件不存在'}), 404
 
-    by_key = {e.get('key'): e for e in index if isinstance(e, dict) and e.get('key')}
-    ordered = [by_key[k] for k in keys if k in by_key]
-    used = {k for k in keys if k in by_key}
-    rest = [e for e in index if not (isinstance(e, dict) and e.get('key') in used)]
-    new_index = ordered + rest
+            by_key = {e.get('key'): e for e in index if isinstance(e, dict) and e.get('key')}
+            ordered = [by_key[k] for k in keys if k in by_key]
+            used = {k for k in keys if k in by_key}
+            rest = [e for e in index if not (isinstance(e, dict) and e.get('key') in used)]
+            new_index = ordered + rest
 
-    with open(index_path, 'w', encoding='utf-8') as f:
-        json.dump(new_index, f, ensure_ascii=False, indent=2)
+            atomic_write_json(index_path, new_index, indent=2)
+    except Exception:
+        _logger.exception('warehouse sheets reorder failed dir=%s', dirname)
+        return jsonify({'success': False, 'message': '排序保存失败，数据未更改，请重试'}), 500
 
     _load_all_postcode_maps.cache_clear()
     _logger.info('warehouse sheets reorder dir=%s keys=%s', dirname, keys)
@@ -1184,53 +1201,57 @@ def warehouse_sheet_save(key):
     if not os.path.isfile(path):
         return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
 
-    with open(path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-
     sections = body.get('sections')
     if not isinstance(sections, list):
         return jsonify({'success': False, 'message': '参数错误'}), 400
 
-    orig_sections = data.get('sections', [])
-    new_sections = []
-    for sec_data in sections:
-        oidx = sec_data.get('_oidx')
-        if isinstance(oidx, int) and 0 <= oidx < len(orig_sections):
-            base = dict(orig_sections[oidx])
-        else:
-            base = {}
-        if sec_data.get('type') == 'richtext':
-            base['type'] = 'richtext'
-            base['html'] = sec_data.get('html', '')
-        if 'rows' in sec_data:
-            base['rows'] = sec_data['rows']
-        if 'title' in sec_data:
-            base['title'] = sec_data['title']
-        # #50 快递副本（warehouse_au_dahuo）允许编辑表头；其余目录不发 headers，沿用原文件
-        if isinstance(sec_data.get('headers'), list):
-            base['headers'] = sec_data['headers']
-        # 每列的计价公式选择（''=手动填写；'15'/'30'/'70'/'100'/'500'=按对应公式自动算价）
-        if isinstance(sec_data.get('col_formulas'), list):
-            base['col_formulas'] = sec_data['col_formulas']
-        # 每列是否在前台文章页隐藏（true=隐藏；仅前台展示，数据与算价不受影响）
-        if isinstance(sec_data.get('col_hidden'), list):
-            base['col_hidden'] = [bool(x) for x in sec_data['col_hidden']]
-        new_sections.append(base)
-    data['sections'] = new_sections
+    try:
+        with data_dir_lock(os.path.dirname(path)):
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
-    # 价格表下方的备注（免责声明），单条，留空则前台用默认文案
-    if 'result_note' in body:
-        data['result_note'] = (body.get('result_note') or '').strip()
-        # 清理旧的空运/海运双备注字段，避免残留
-        data.pop('result_note_air', None)
-        data.pop('result_note_sea', None)
+            orig_sections = data.get('sections', [])
+            new_sections = []
+            for sec_data in sections:
+                oidx = sec_data.get('_oidx')
+                if isinstance(oidx, int) and 0 <= oidx < len(orig_sections):
+                    base = dict(orig_sections[oidx])
+                else:
+                    base = {}
+                if sec_data.get('type') == 'richtext':
+                    base['type'] = 'richtext'
+                    base['html'] = sec_data.get('html', '')
+                if 'rows' in sec_data:
+                    base['rows'] = sec_data['rows']
+                if 'title' in sec_data:
+                    base['title'] = sec_data['title']
+                # #50 快递副本（warehouse_au_dahuo）允许编辑表头；其余目录不发 headers，沿用原文件
+                if isinstance(sec_data.get('headers'), list):
+                    base['headers'] = sec_data['headers']
+                # 每列的计价公式选择（''=手动填写；'15'/'30'/'70'/'100'/'500'=按对应公式自动算价）
+                if isinstance(sec_data.get('col_formulas'), list):
+                    base['col_formulas'] = sec_data['col_formulas']
+                # 每列是否在前台文章页隐藏（true=隐藏；仅前台展示，数据与算价不受影响）
+                if isinstance(sec_data.get('col_hidden'), list):
+                    base['col_hidden'] = [bool(x) for x in sec_data['col_hidden']]
+                new_sections.append(base)
+            data['sections'] = new_sections
 
-    # 月度参数面板下方的富文本备注（支持加粗/改色）
-    if 'panel_note_html' in body:
-        data['panel_note_html'] = body.get('panel_note_html') or ''
+            # 价格表下方的备注（免责声明），单条，留空则前台用默认文案
+            if 'result_note' in body:
+                data['result_note'] = (body.get('result_note') or '').strip()
+                # 清理旧的空运/海运双备注字段，避免残留
+                data.pop('result_note_air', None)
+                data.pop('result_note_sea', None)
 
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+            # 月度参数面板下方的富文本备注（支持加粗/改色）
+            if 'panel_note_html' in body:
+                data['panel_note_html'] = body.get('panel_note_html') or ''
+
+            atomic_write_json(path, data, indent=2)
+    except Exception:
+        _logger.exception('warehouse sheet save failed key=%s', key)
+        return jsonify({'success': False, 'message': '保存失败，数据未更改，请重试'}), 500
 
     _load_all_postcode_maps.cache_clear()
     _logger.info('warehouse sheet save key=%s', key)
@@ -1332,57 +1353,61 @@ def warehouse_settings_save():
         except (ValueError, TypeError):
             return default
 
-    # 读磁盘原始结构（保留其它表/其它月），只改本次提交部分
+    # 读磁盘原始结构（保留其它表/其它月），只改本次提交部分。
+    # 整段「读→改→写」在目录锁内串行执行，避免并发保存互相覆盖（lost update）。
     path = _wh_settings_path(dirname)
-    raw = {}
-    if os.path.isfile(path):
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                raw = json.load(f) or {}
-        except (ValueError, OSError):
+    try:
+        with data_dir_lock(_wh_dir(dirname)):
             raw = {}
-    if not isinstance(raw, dict):
-        raw = {}
-    monthly = raw.get('monthly')
-    if not isinstance(monthly, dict):
-        monthly = {}
-    # 旧 fuel_rates 一次性迁移进 monthly 当前月，避免升级后燃油率丢失
-    legacy_fr = raw.get('fuel_rates') if isinstance(raw.get('fuel_rates'), dict) else {}
-    cur_month = str(datetime.now().month)
-    for k in _WH_SHEET_KEYS:
-        monthly.setdefault(k, {})
-        if k in legacy_fr and cur_month not in monthly[k]:
-            monthly[k][cur_month] = {'fuel_rate': _num(legacy_fr[k], 20)}
+            if os.path.isfile(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        raw = json.load(f) or {}
+                except (ValueError, OSError):
+                    raw = {}
+            if not isinstance(raw, dict):
+                raw = {}
+            monthly = raw.get('monthly')
+            if not isinstance(monthly, dict):
+                monthly = {}
+            # 旧 fuel_rates 一次性迁移进 monthly 当前月，避免升级后燃油率丢失
+            legacy_fr = raw.get('fuel_rates') if isinstance(raw.get('fuel_rates'), dict) else {}
+            cur_month = str(datetime.now().month)
+            for k in _WH_SHEET_KEYS:
+                monthly.setdefault(k, {})
+                if k in legacy_fr and cur_month not in monthly[k]:
+                    monthly[k][cur_month] = {'fuel_rate': _num(legacy_fr[k], 20)}
 
-    gst_rate = _num(body.get('gst_rate'), raw.get('gst_rate', 10))
-    key = body.get('key')
-    valid_keys = _wh_index_keys(dirname)
+            gst_rate = _num(body.get('gst_rate'), raw.get('gst_rate', 10))
+            key = body.get('key')
+            valid_keys = _wh_index_keys(dirname)
 
-    # 提交了 key 却不在合法表内：直接报错，避免「静默丢弃却返回成功」（刷新后数据消失的根因）
-    if key is not None and key not in valid_keys:
-        _logger.warning('warehouse settings save rejected: unknown key=%s dir=%s', key, dirname)
-        return jsonify({'success': False, 'message': '未找到该价格表（key=%s），参数未保存' % key}), 400
+            # 提交了 key 却不在合法表内：直接报错，避免「静默丢弃却返回成功」（刷新后数据消失的根因）
+            if key is not None and key not in valid_keys:
+                _logger.warning('warehouse settings save rejected: unknown key=%s dir=%s', key, dirname)
+                return jsonify({'success': False, 'message': '未找到该价格表（key=%s），参数未保存' % key}), 400
 
-    # 分月参数保存：{key, month, unit_price, sea_unit_price, tail_per, tail_op, exchange_rate, fuel_rate}
-    if key in valid_keys and body.get('month') is not None:
-        month = str(int(_num(body.get('month'), datetime.now().month)))
-        rec = dict(monthly.get(key, {}).get(month) or {})
-        for field in ('unit_price', 'hk_unit_price', 'sea_unit_price', 'tail_per', 'tail_op', 'exchange_rate', 'fuel_rate'):
-            if field in body:
-                rec[field] = _num(body.get(field), rec.get(field, 0))
-        monthly.setdefault(key, {})[month] = rec
-    # 兼容旧调用：{key, fuel_rate}（写入当前月燃油率）
-    elif key in valid_keys and 'fuel_rate' in body:
-        month = cur_month
-        rec = dict(monthly.get(key, {}).get(month) or {})
-        rec['fuel_rate'] = _num(body.get('fuel_rate'), rec.get('fuel_rate', 20))
-        monthly.setdefault(key, {})[month] = rec
+            # 分月参数保存：{key, month, unit_price, sea_unit_price, tail_per, tail_op, exchange_rate, fuel_rate}
+            if key in valid_keys and body.get('month') is not None:
+                month = str(int(_num(body.get('month'), datetime.now().month)))
+                rec = dict(monthly.get(key, {}).get(month) or {})
+                for field in ('unit_price', 'hk_unit_price', 'sea_unit_price', 'tail_per', 'tail_op', 'exchange_rate', 'fuel_rate'):
+                    if field in body:
+                        rec[field] = _num(body.get(field), rec.get(field, 0))
+                monthly.setdefault(key, {})[month] = rec
+            # 兼容旧调用：{key, fuel_rate}（写入当前月燃油率）
+            elif key in valid_keys and 'fuel_rate' in body:
+                month = cur_month
+                rec = dict(monthly.get(key, {}).get(month) or {})
+                rec['fuel_rate'] = _num(body.get('fuel_rate'), rec.get('fuel_rate', 20))
+                monthly.setdefault(key, {})[month] = rec
 
-    data = {'gst_rate': gst_rate, 'monthly': monthly}
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    _logger.info('warehouse settings save dir=%s key=%s month=%s', dirname, key, body.get('month'))
+            data = {'gst_rate': gst_rate, 'monthly': monthly}
+            atomic_write_json(path, data, indent=2)
+    except Exception:
+        _logger.exception('warehouse settings save failed dir=%s key=%s', dirname, body.get('key'))
+        return jsonify({'success': False, 'message': '保存失败，数据未更改，请重试'}), 500
+    _logger.info('warehouse settings save dir=%s key=%s month=%s', dirname, body.get('key'), body.get('month'))
     return jsonify({'success': True, 'data': _read_wh_settings(dirname)})
 
 
@@ -1428,44 +1453,48 @@ def xiaobao_sheet_save(key):
     if not os.path.isfile(path):
         return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
 
-    with open(path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-
     body = request.json or {}
     sections = body.get('sections')
     if not isinstance(sections, list):
         return jsonify({'success': False, 'message': '参数错误'}), 400
 
-    orig_sections = data.get('sections', [])
-    new_sections = []
-    for sec_data in sections:
-        oidx = sec_data.get('_oidx')
-        if isinstance(oidx, int) and 0 <= oidx < len(orig_sections):
-            base = dict(orig_sections[oidx])
-        else:
-            base = {}
-        if sec_data.get('type') == 'richtext':
-            base['type'] = 'richtext'
-            base['html'] = sec_data.get('html', '')
-        if 'rows' in sec_data:
-            base['rows'] = sec_data['rows']
-        if 'title' in sec_data:
-            base['title'] = sec_data['title']
-        new_sections.append(base)
-    data['sections'] = new_sections
+    try:
+        with data_dir_lock(os.path.dirname(path)):
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
-    # 价格表下方的备注（免责声明），空运/海运各一条，留空则前台用默认文案
-    if 'result_note_air' in body:
-        data['result_note_air'] = (body.get('result_note_air') or '').strip()
-    if 'result_note_sea' in body:
-        data['result_note_sea'] = (body.get('result_note_sea') or '').strip()
+            orig_sections = data.get('sections', [])
+            new_sections = []
+            for sec_data in sections:
+                oidx = sec_data.get('_oidx')
+                if isinstance(oidx, int) and 0 <= oidx < len(orig_sections):
+                    base = dict(orig_sections[oidx])
+                else:
+                    base = {}
+                if sec_data.get('type') == 'richtext':
+                    base['type'] = 'richtext'
+                    base['html'] = sec_data.get('html', '')
+                if 'rows' in sec_data:
+                    base['rows'] = sec_data['rows']
+                if 'title' in sec_data:
+                    base['title'] = sec_data['title']
+                new_sections.append(base)
+            data['sections'] = new_sections
 
-    # 月度参数面板下方的富文本备注（支持加粗/改色），与 section 的 html 同样处理
-    if 'panel_note_html' in body:
-        data['panel_note_html'] = body.get('panel_note_html') or ''
+            # 价格表下方的备注（免责声明），空运/海运各一条，留空则前台用默认文案
+            if 'result_note_air' in body:
+                data['result_note_air'] = (body.get('result_note_air') or '').strip()
+            if 'result_note_sea' in body:
+                data['result_note_sea'] = (body.get('result_note_sea') or '').strip()
 
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+            # 月度参数面板下方的富文本备注（支持加粗/改色），与 section 的 html 同样处理
+            if 'panel_note_html' in body:
+                data['panel_note_html'] = body.get('panel_note_html') or ''
+
+            atomic_write_json(path, data, indent=2)
+    except Exception:
+        _logger.exception('xiaobao sheet save failed key=%s', key)
+        return jsonify({'success': False, 'message': '保存失败，数据未更改，请重试'}), 500
 
     _logger.info('xiaobao sheet save key=%s', key)
     return jsonify({'success': True})
@@ -1493,31 +1522,35 @@ def xiaobao_adjust_price():
     if not os.path.isfile(path):
         return jsonify({'success': False, 'message': f'sheet "{sheet_key}" 不存在'}), 404
 
-    with open(path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        with data_dir_lock(os.path.dirname(path)):
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
-    factor = 1 + pct / 100.0
-    adjusted = 0
+            factor = 1 + pct / 100.0
+            adjusted = 0
 
-    for sec in data.get('sections', []):
-        if sec.get('type') == 'zone_table':
-            continue
-        for row in sec.get('rows', []):
-            for ci, cell in enumerate(row):
-                if cell == '' or cell is None:
+            for sec in data.get('sections', []):
+                if sec.get('type') == 'zone_table':
                     continue
-                try:
-                    num = float(cell)
-                except (ValueError, TypeError):
-                    continue
-                new_val = round(num * factor, 2)
-                if new_val == int(new_val):
-                    new_val = int(new_val)
-                row[ci] = new_val
-                adjusted += 1
+                for row in sec.get('rows', []):
+                    for ci, cell in enumerate(row):
+                        if cell == '' or cell is None:
+                            continue
+                        try:
+                            num = float(cell)
+                        except (ValueError, TypeError):
+                            continue
+                        new_val = round(num * factor, 2)
+                        if new_val == int(new_val):
+                            new_val = int(new_val)
+                        row[ci] = new_val
+                        adjusted += 1
 
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
+            atomic_write_json(path, data, compact=True)
+    except Exception:
+        _logger.exception('xiaobao adjust price failed sheet=%s', sheet_key)
+        return jsonify({'success': False, 'message': '调价失败，数据未更改，请重试'}), 500
 
     _logger.info('xiaobao adjust price sheet=%s pct=%s adjusted=%s', sheet_key, pct, adjusted)
     return jsonify({'success': True, 'adjusted_count': adjusted})

@@ -8,7 +8,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, abort
 import config
 import db
 import models
-from util import admin_required
+from util import admin_required, atomic_write_json, data_dir_lock
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -297,22 +297,21 @@ def _xiaobao_sync_sheet_name(title):
     index_path = os.path.join(base, '_index.json')
     if not os.path.isfile(index_path):
         return
-    with open(index_path, 'r', encoding='utf-8') as f:
-        index = json.load(f)
-    if not index:
-        return
-    index[0]['name'] = title
-    with open(index_path, 'w', encoding='utf-8') as f:
-        json.dump(index, f, ensure_ascii=False, indent=2)
+    with data_dir_lock(base):
+        with open(index_path, 'r', encoding='utf-8') as f:
+            index = json.load(f)
+        if not index:
+            return
+        index[0]['name'] = title
+        atomic_write_json(index_path, index, indent=2)
 
-    safe_key = re.sub(r'[^a-zA-Z0-9_]', '', index[0].get('key', ''))
-    sheet_path = os.path.join(base, f'{safe_key}.json')
-    if safe_key and os.path.isfile(sheet_path):
-        with open(sheet_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        data['name'] = title
-        with open(sheet_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        safe_key = re.sub(r'[^a-zA-Z0-9_]', '', index[0].get('key', ''))
+        sheet_path = os.path.join(base, f'{safe_key}.json')
+        if safe_key and os.path.isfile(sheet_path):
+            with open(sheet_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            data['name'] = title
+            atomic_write_json(sheet_path, data, indent=2)
 
 
 @admin_bp.route('/article/<int:article_id>/xiaobao-editor', methods=['GET', 'POST'])

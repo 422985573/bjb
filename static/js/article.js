@@ -359,12 +359,19 @@ function setupGlobalSearchClearButton() {
         clearBtn.hidden = !hasValue;
     };
 
+    // 清空邮编时收起渠道目录（点击输入框的叉 / Esc 清空都收起）
+    const collapseChannelNav = function() {
+        const navPanel = document.getElementById('channelNavPanel');
+        if (navPanel) navPanel.removeAttribute('open');
+    };
+
     clearBtn.addEventListener('click', function() {
         input.value = '';
         syncClearBtn();
         if (typeof window.globalSearchPostcode === 'function') {
             window.globalSearchPostcode();
         }
+        collapseChannelNav();
         input.focus();
     });
 
@@ -395,6 +402,7 @@ function setupGlobalSearchClearButton() {
             if (typeof window.globalSearchPostcode === 'function') {
                 window.globalSearchPostcode();
             }
+            collapseChannelNav();
         }
     });
 
@@ -689,8 +697,10 @@ function setupChannelNavigator() {
             }
             if (!isHidden) visibleCount++;
         });
-        // 搜索有结果时自动展开目录；清空搜索时显示全部
-        if (visibleCount > 0 && visibleCount < modules.length) {
+        // 顶部查询命中渠道时自动展开目录：命中 ≥1 个渠道即展开（含全部命中）。
+        // 未输入邮编 / 无渠道命中（只有快递报价表）时不自动展开；
+        // 清空邮编（hasQuery=false）不改变展开态，故点击输入框的叉清空后目录保持不关。
+        if (hasQuery && visibleCount > 0) {
             panel.setAttribute('open', '');
         }
     };
@@ -1551,7 +1561,8 @@ async function globalSearchPostcode() {
         resultSpan.textContent = '查询中...';
     }
 
-    // 按邮编匹配渠道表：匹配才高亮，不匹配不高亮（兼容所有渠道类型）
+    // 按邮编匹配渠道表：只展示「邮编精确命中该表某行」的渠道，未命中的渠道整块隐藏、
+    // 目录也不列出（搜索时只展示有结果的）。不做「有服务就展示全部渠道」的兜底。
     function renderMatchedRowsForCode(code) {
         unmergeAllChannelTables();
         document.querySelectorAll('.module-channel').forEach(module => {
