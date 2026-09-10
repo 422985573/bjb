@@ -229,6 +229,16 @@
     });
   }
 
+  // 同步「渠道目录」里该快递报价表的目录项显示：卡片被搜索隐藏时，目录项也隐藏，
+  // 避免出现「目录里一大堆、点了却定位到隐藏卡片没反应」。
+  function setWhNavHidden(key, hidden) {
+    var navItem = document.querySelector('.csb-wh-nav-item[data-scroll-target="#wh-card-' + key + '"]');
+    if (!navItem) return;
+    var li = navItem.closest('li') || navItem;
+    li.classList.toggle('hidden-in-nav', hidden);
+    navItem.classList.toggle('hidden-in-nav', hidden);
+  }
+
   // 对单张海外仓卡按邮编集合查询/高亮；返回是否命中
   function searchWarehouseInlineOne(key, codes) {
     var card = $('wh-card-' + key);
@@ -241,6 +251,7 @@
 
     if (!codes || !codes.length) {
       card.classList.remove('hidden-by-search');
+      setWhNavHidden(key, false);   // 清空搜索：目录项恢复显示
       if (resultEl) resultEl.textContent = '';
       var q0 = $('wh-quote-' + key);
       if (q0) q0.innerHTML = '';
@@ -257,6 +268,7 @@
 
     if (!zones.length) {
       card.classList.add('hidden-by-search');
+      setWhNavHidden(key, true);   // 该邮编无对应分区：卡片与目录项一起隐藏
       if (resultEl) resultEl.textContent = '未找到该邮编对应分区';
       var q1 = $('wh-quote-' + key);
       if (q1) q1.innerHTML = '';
@@ -264,6 +276,7 @@
     }
 
     card.classList.remove('hidden-by-search');
+    setWhNavHidden(key, false);   // 命中：确保目录项显示
     var matchers = zones.map(makeZoneMatcher);
     // 查询后只展示命中行，其余行隐藏（避免整表几百行太长）
     card.querySelectorAll('.wh-table tbody tr').forEach(function (tr) {
