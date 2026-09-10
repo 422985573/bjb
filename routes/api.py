@@ -1097,8 +1097,8 @@ def warehouse_sheet_copy(key):
             new_data = dict(data)
             new_data['key'] = candidate
             new_data['name'] = new_name
-            # 副本不带搜索缓存字段（重建时会重新生成）
-            new_data.pop('postcode_zone_map', None)
+            # 副本保留源表的 postcode_zone_map / postcode_zone_maps：副本与源表分区相同（仅头程不同），
+            # 保留才能按邮编搜到副本。历史上这里曾 pop 掉且未重建，导致副本对任何邮编都搜不到。
 
             new_path = _wh_sheet_path(candidate, dirname)
             atomic_write_json(new_path, new_data, indent=2)
