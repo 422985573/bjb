@@ -154,7 +154,7 @@
 /* 分区/表标题：模块标题用主蓝，模块内子表标题用浅蓝以区分层级 */
 .wh-card-section-title {
     background: #dbeafe; color: #1d4ed8;
-    font-size: 15px; font-weight: 800; text-align: center;
+    font-size: 15px; font-weight: 800; text-align: left;
     padding: 12px 16px; margin: 0;
     border-bottom: 1px solid #bfdbfe;
 }
