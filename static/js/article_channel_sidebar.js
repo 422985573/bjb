@@ -617,7 +617,7 @@
   // 模板里预置了 4 张原始表作为兜底；索引拉取成功则用真实列表覆盖，副本随之出现。
   function buildWhListFromIndex(sheets) {
     var inline = $('whInline');
-    if (!inline || !sheets || !sheets.length) return false;
+    if (!inline || !sheets) return false;   // 允许空数组：清空模板里硬编码的兜底卡片（全部隐藏时）
     inline.innerHTML = '';
     sheets.forEach(function (s) {
       if (!s || !s.key) return;
@@ -672,7 +672,11 @@
     fetch('/api/warehouse-sheets?dir=' + encodeURIComponent(whDir))
       .then(function (r) { return r.json(); })
       .then(function (res) {
-        if (res && res.success && Array.isArray(res.data) && res.data.length) buildWhListFromIndex(res.data);
+        if (res && res.success && Array.isArray(res.data)) {
+          // 「前台隐藏」的价格表不在文章展示：不建卡片、不建目录、不拉数据（全部隐藏时清空兜底卡片）
+          var visible = res.data.filter(function (s) { return s && !s.hidden; });
+          buildWhListFromIndex(visible);
+        }
       })
       .catch(function () {})
       .then(function () {

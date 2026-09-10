@@ -23,6 +23,16 @@ _POSTCODE_RETRY_BACKOFF_SECONDS = 0.1
 _logger = logging.getLogger(__name__)
 
 
+@api_bp.after_request
+def _no_store_dynamic_data(resp):
+    """海外仓/小包报价数据来自可编辑的 JSON 文件，禁止浏览器缓存：
+    否则后台改价/复制/补数据后，前台页面刷新仍可能命中旧缓存显示过时数据。"""
+    p = request.path or ''
+    if '/warehouse-' in p or '/xiaobao-' in p:
+        resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
 def _module_content_json_for_db(content):
     """写入 modules.content 前：Excel 栅格规范化；DG v2 将 PS 说明行并入备注。"""
     if isinstance(content, dict):
@@ -753,6 +763,23 @@ def _wh_index_path(dirname=None):
     return os.path.join(_wh_dir(dirname), '_index.json')
 
 
+def _wh_hidden_path(dirname=None):
+    return os.path.join(_wh_dir(dirname), '_hidden.json')
+
+
+def _read_wh_hidden(dirname=None):
+    """返回「前台隐藏」的价格表 key 集合。独立存于 _hidden.json，不受价格表/索引重导影响。"""
+    path = _wh_hidden_path(dirname)
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return set(str(k) for k in data)
+    except (ValueError, OSError):
+        pass
+    return set()
+
+
 def _wh_sheet_path(key, dirname=None):
     # 保留中文等 unicode 文件名，仅剔除路径分隔符/穿越/控制字符以防目录穿越。
     # 旧实现 re.sub(r'[^a-zA-Z0-9_]','') 会把中文 key 抹成空串，导致这类表读/删/存全部 404。
@@ -883,6 +910,10 @@ def warehouse_sheets_index():
         if index is None:
             return jsonify({'success': False, 'message': '数据未初始化'}), 404
     index = [s for s in index if s.get('key') != 'mulu']
+    # 标注「前台隐藏」状态（供前台文章过滤 / 后台按钮回显）
+    hidden = _read_wh_hidden(dirname)
+    for s in index:
+        s['hidden'] = s.get('key') in hidden
     return jsonify({'success': True, 'data': index})
 
 
@@ -937,6 +968,23 @@ def warehouse_sheet_detail(key):
         return jsonify({'success': False, 'message': f'sheet "{key}" 不存在'}), 404
     with open(path, 'r', encoding='utf-8') as f:
         data = json.load(f)
+
+    # 副本兜底：副本（key 含 _copy）与其基础承运商表分区相同（仅头程不同）。复制/重导数据常把
+    # 副本的 postcode_zone_map 清空，导致副本按邮编搜不到。这里在返回前用基础表的映射补上，
+    # 让副本无论存储层是否有映射都能参与搜索（不改磁盘，仅本次响应）。
+    if '_copy' in key and not (data.get('postcode_zone_map') or data.get('postcode_zone_maps')):
+        base_key = key.split('_copy')[0]
+        base_path = _wh_sheet_path(base_key, request.args.get('dir')) if base_key and base_key != key else None
+        if base_path and os.path.isfile(base_path):
+            try:
+                with open(base_path, 'r', encoding='utf-8') as bf:
+                    bdata = json.load(bf)
+                if bdata.get('postcode_zone_map'):
+                    data['postcode_zone_map'] = bdata['postcode_zone_map']
+                if bdata.get('postcode_zone_maps'):
+                    data['postcode_zone_maps'] = bdata['postcode_zone_maps']
+            except (ValueError, OSError):
+                pass
 
     # slim=1：剔除上万行 zone_table，只回 price_table/richtext + postcode_zone_map（供统一搜索页按邮编查分区）。
     if request.args.get('slim'):
@@ -1121,6 +1169,29 @@ def warehouse_sheet_copy(key):
 _WH_PROTECTED_KEYS = {'allied', 'border', 'tfm', 'toll'}
 
 
+@api_bp.route('/warehouse-sheet/<key>/toggle-hidden', methods=['POST'])
+@admin_required
+def warehouse_sheet_toggle_hidden(key):
+    """切换某价格表在 article 前台的显示/隐藏。隐藏仅前台不展示，后台数据与编辑不受影响。
+    隐藏 key 存于该目录 _hidden.json（独立小文件，不受价格表/索引重导影响）。"""
+    body = request.json or {}
+    dirname = body.get('dir')
+    want_hidden = bool(body.get('hidden'))
+    try:
+        with data_dir_lock(_wh_dir(dirname)):
+            hidden = _read_wh_hidden(dirname)
+            if want_hidden:
+                hidden.add(key)
+            else:
+                hidden.discard(key)
+            atomic_write_json(_wh_hidden_path(dirname), sorted(hidden), indent=2)
+    except Exception:
+        _logger.exception('warehouse toggle-hidden failed key=%s dir=%s', key, dirname)
+        return jsonify({'success': False, 'message': '操作失败，请重试'}), 500
+    _logger.info('warehouse toggle-hidden key=%s dir=%s hidden=%s', key, dirname, want_hidden)
+    return jsonify({'success': True, 'key': key, 'hidden': want_hidden})
+
+
 @api_bp.route('/warehouse-sheet/<key>/delete', methods=['POST'])
 @admin_required
 def warehouse_sheet_delete(key):
@@ -1146,6 +1217,11 @@ def warehouse_sheet_delete(key):
                 index = json.load(f)
             index = [e for e in index if e.get('key') != key]
             atomic_write_json(index_path, index, indent=2)
+            # 清掉隐藏名单里的该 key，避免同名副本被重建后意外仍处于隐藏态
+            hidden = _read_wh_hidden(dirname)
+            if key in hidden:
+                hidden.discard(key)
+                atomic_write_json(_wh_hidden_path(dirname), sorted(hidden), indent=2)
     except Exception:
         _logger.exception('warehouse sheet delete failed key=%s dir=%s', key, dirname)
         return jsonify({'success': False, 'message': '删除失败，请重试'}), 500

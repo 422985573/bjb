@@ -2162,12 +2162,15 @@
         <div id="dahuoSheetList" data-dir="{{ dahuo_wh_dir or 'warehouse_au_dahuo' }}" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
             <div class="module-list-item-title" style="display:block; padding:2px 4px 6px; font-weight:600; color:#0f172a; cursor:default;">尾程快递运输（下方同页编辑）</div>
             {% for s in dahuo_wh_sheets %}
-            <div class="module-list-item dahuo-sheet-item" draggable="true" data-wh-key="{{ s.key }}">
+            <div class="module-list-item dahuo-sheet-item{{ ' dahuo-sheet-hidden' if s.hidden else '' }}" draggable="true" data-wh-key="{{ s.key }}">
                 <span class="dahuo-sheet-drag" title="拖动排序">⋮⋮</span>
                 <a href="#dahuoWhCard-{{ s.key }}" style="display:contents; text-decoration:none; color:inherit;" onclick="return scrollToDahuoCard('{{ s.key }}')">
                     <span class="module-list-item-icon">🏬</span>
                     <span class="module-list-item-title">{{ s.name }}</span>
                 </a>
+                <span class="dahuo-sheet-break" aria-hidden="true"></span>
+                <button class="dahuo-sheet-hide-btn" title="切换该价格表在文章前台的显示/隐藏（仅前台，不影响后台数据）"
+                        onclick="toggleDahuoSheetHidden('{{ s.key }}', this)">{{ '前台已隐藏' if s.hidden else '前台显示' }}</button>
                 <button class="dahuo-sheet-copy-btn" title="复制此价格表（仅后台）"
                         onclick="copyDahuoSheet('{{ s.key }}', '{{ s.name }}')">复制</button>
                 {% if s.key not in ('allied', 'border', 'tfm', 'toll') %}
@@ -2478,7 +2481,7 @@
         .dahuo-wh-head { order: -1; }
         .dahuo-wh-head h2 { font-size: 17px; color: #0f172a; margin: 0 0 6px; }
         .dahuo-wh-head p { font-size: 12px; color: var(--text-light); margin: 0 0 14px; line-height: 1.6; }
-        .dahuo-sheet-copy-btn, .dahuo-sheet-del-btn {
+        .dahuo-sheet-copy-btn, .dahuo-sheet-del-btn, .dahuo-sheet-hide-btn {
             flex-shrink: 0;
             border-radius: 4px;
             padding: 2px 8px;
@@ -2487,6 +2490,23 @@
             cursor: pointer;
             transition: background .15s, color .15s;
         }
+        .dahuo-sheet-hide-btn {
+            background: #fff;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+        .dahuo-sheet-hide-btn:hover { background: #f1f5f9; }
+        /* 已隐藏：按钮高亮为琥珀色，整行淡化以示状态 */
+        .dahuo-sheet-hidden .dahuo-sheet-hide-btn {
+            background: #f59e0b; color: #fff; border-color: #f59e0b;
+        }
+        .dahuo-sheet-hidden .module-list-item-title { color: #94a3b8; text-decoration: line-through; }
+        .dahuo-sheet-hidden .module-list-item-icon { opacity: .5; }
+        /* 两行布局：标题独占第一行（全宽、完整可读），三个操作按钮换到第二行靠右，互不遮挡 */
+        .dahuo-sheet-item { flex-wrap: wrap; row-gap: 6px; }
+        .dahuo-sheet-item .module-list-item-title { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; word-break: break-word; }
+        .dahuo-sheet-break { flex-basis: 100%; height: 0; margin: 0; padding: 0; }
+        .dahuo-sheet-item .dahuo-sheet-hide-btn { margin-left: auto; }
         .dahuo-sheet-copy-btn {
             background: #fff;
             color: var(--primary);
@@ -6505,6 +6525,29 @@ async function copyDahuoSheet(key, name) {
     }
 }
 
+// 切换该价格表在文章前台的显示/隐藏（仅前台，不动后台数据）
+async function toggleDahuoSheetHidden(key, btn) {
+    const item = btn.closest('.dahuo-sheet-item');
+    const willHide = !(item && item.classList.contains('dahuo-sheet-hidden'));
+    btn.disabled = true;
+    try {
+        const res = await fetch(`/api/warehouse-sheet/${encodeURIComponent(key)}/toggle-hidden`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dir: 'warehouse_au_dahuo', hidden: willHide })
+        });
+        const data = await res.json();
+        if (!data.success) { alert('操作失败：' + (data.message || '未知错误')); return; }
+        if (item) item.classList.toggle('dahuo-sheet-hidden', data.hidden);
+        btn.textContent = data.hidden ? '前台已隐藏' : '前台显示';
+    } catch (e) {
+        alert('网络错误：' + e.message);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+
 // 点击侧栏项：把目标编辑卡片滚到吸顶导航正下方（吸顶 nav 约 60px；iframe 固定高，位置可确定）
 function scrollToDahuoCard(key) {
     const card = document.getElementById('dahuoWhCard-' + key);
@@ -6603,6 +6646,15 @@ function _mkEl(tag, cls, txt) {
     return e;
 }
 
+// 新副本默认前台显示；生成一个「前台显示/隐藏」切换按钮
+function _mkHideBtn(key) {
+    const b = _mkEl('button', 'dahuo-sheet-hide-btn', '前台显示');
+    b.type = 'button';
+    b.title = '切换该价格表在文章前台的显示/隐藏（仅前台，不影响后台数据）';
+    b.addEventListener('click', function () { toggleDahuoSheetHidden(key, b); });
+    return b;
+}
+
 // 复制成功后把新副本动态插入侧栏列表 + 下方编辑区（顺序与后端追加到 _index.json 末尾一致）
 function appendDahuoSheet(key, name) {
     const list = document.getElementById('dahuoSheetList');
@@ -6627,6 +6679,8 @@ function appendDahuoSheet(key, name) {
         cp.type = 'button';
         cp.title = '复制此价格表（仅后台）';
         cp.addEventListener('click', function () { copyDahuoSheet(key, name); });
+        item.appendChild(_mkEl('span', 'dahuo-sheet-break'));
+        item.appendChild(_mkHideBtn(key));
         item.appendChild(cp);
 
         // 副本一律可删（原始 4 张表由后端保护，不会走到这里）
