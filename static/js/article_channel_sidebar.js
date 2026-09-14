@@ -661,7 +661,10 @@
       if (typeof window.globalSearchPostcode === 'function') window.globalSearchPostcode();
       return;
     }
-    if (isPostcodeText(v)) { closeAddrSuggest(); globalSearchPostcodeDebounced(); return; }
+    if (isPostcodeText(v)) {
+      closeAddrSuggest(); removeTfmAddrDetail();   // 切回邮编查询：上次地址详情一并清掉
+      globalSearchPostcodeDebounced(); return;
+    }
     closeAddrSuggest();
   };
 
@@ -674,7 +677,7 @@
       return;
     }
     if (isPostcodeText(v)) {
-      closeAddrSuggest();
+      closeAddrSuggest(); removeTfmAddrDetail();
       if (typeof window.globalSearchPostcode === 'function') window.globalSearchPostcode();
       return;
     }
