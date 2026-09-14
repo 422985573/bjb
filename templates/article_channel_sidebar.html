@@ -32,15 +32,16 @@
                 <div class="csb-hero-search-row">
                     <img class="csb-hero-icon" src="{{ static_with_version('css/xb.jpg') }}" alt="搜索">
                     <div class="csb-field csb-field--pc">
-                        <span class="csb-field-label">邮编</span>
-                        <input type="text" class="csb-hero-pc" id="globalPostcodeInput" placeholder="输入单个邮编查询报价" maxlength="4" inputmode="numeric" pattern="[0-9]*" enterkeyhint="search" autocomplete="off" oninput="globalSearchPostcodeDebounced()" aria-label="全局邮编搜索">
-                        <button type="button" id="globalSearchClearBtn" class="csb-hero-clear" aria-label="清除邮编" title="清除" hidden>×</button>
+                        <span class="csb-field-label">邮编/地址</span>
+                        <input type="text" class="csb-hero-pc" id="globalPostcodeInput" placeholder="输入邮编或地址查询报价" data-freeform="1" enterkeyhint="search" autocomplete="off" oninput="csbHeroInput()" aria-label="全局邮编或地址搜索">
+                        <button type="button" id="globalSearchClearBtn" class="csb-hero-clear" aria-label="清除" title="清除" hidden>×</button>
+                        <div class="csb-addr-suggest" id="csbAddrSuggest" hidden></div>
                     </div>
                     <button type="button" class="csb-hero-qbtn" id="csbHeroQuery">查询报价</button>
                 </div>
                 <div class="csb-hero-result" id="globalSearchResult" aria-live="polite"></div>
             </div>
-            <div class="csb-hero-tip">顶部支持单个邮编查询</div>
+            <div class="csb-hero-tip">顶部支持邮编或地址查询（地址回车/点按钮弹候选）</div>
             <div class="csb-hero-actions">
                 <a class="csb-link" href="https://www.aubvip.com/" target="_blank" rel="noopener">公司官网</a>
                 <a class="csb-link" href="https://auspost.com.au" target="_blank" rel="noopener">澳邮POST网站</a>

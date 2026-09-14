@@ -200,6 +200,55 @@
 .wh-panel-note :is(p, ul, ol) { margin: 4px 0; }
 .wh-panel-note img { max-width: 100%; height: auto; }
 
+/* border / toll 报价表下方的偏远地区附加费查询结果 */
+.wh-remote-fee:empty { display: none; }
+.wh-remote-block { margin: 12px 0 4px; padding: 10px 14px; background: #fff7ed; border: 1px solid #fed7aa; border-left: 3px solid #fb923c; border-radius: 6px; font-size: 13px; color: #7c2d12; line-height: 1.7; }
+.wh-remote-title { font-weight: 800; color: #c2410c; margin-bottom: 4px; }
+.wh-remote-line { margin: 2px 0; }
+.wh-remote-line b { color: #9a3412; }
+.wh-remote-sub { color: #9a6b4a; }
+.wh-remote-none { color: #64748b; font-weight: 600; }
+
+/* 顶部搜索框地址联想下拉 */
+.csb-field--pc { position: relative; }
+.csb-addr-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 12px 28px rgba(15,23,42,0.16); overflow: hidden; max-height: 320px; overflow-y: auto; }
+.csb-addr-suggest[hidden] { display: none; }
+.csb-addr-hint { padding: 10px 14px; font-size: 13px; color: #64748b; }
+.csb-addr-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; padding: 9px 14px; border: 0; border-bottom: 1px solid #f1f5f9; background: #fff; cursor: pointer; }
+.csb-addr-item:last-child { border-bottom: 0; }
+.csb-addr-item:hover, .csb-addr-item:focus { background: #eff6ff; }
+.csb-addr-primary { font-size: 14px; font-weight: 600; color: #1e293b; }
+.csb-addr-secondary { font-size: 12px; color: #64748b; }
+
+/* TFM 报价表下方的地址详情面板 */
+.tfm-addr-detail:empty { display: none; }
+.tfm-addr-detail { margin: 12px 0 16px; padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 3px solid #2563eb; border-radius: 8px; font-size: 13px; color: #1e293b; line-height: 1.7; }
+.tfm-addr-title { font-weight: 800; color: #1d4ed8; margin-bottom: 6px; }
+.tfm-addr-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.tfm-addr-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.tfm-addr-badge--res { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.tfm-addr-badge--biz { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.tfm-addr-name { font-weight: 600; }
+.tfm-addr-full { margin-top: 4px; font-weight: 600; }
+.tfm-addr-meta { margin-top: 4px; color: #475569; }
+.tfm-addr-fee { margin-top: 8px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #b91c1c; font-weight: 700; }
+.tfm-addr-err { color: #ef4444; }
+.tfm-addr-2col { display: flex; align-items: flex-start; gap: 16px; margin-top: 4px; }
+.tfm-addr-info { flex: 1; min-width: 0; }
+.tfm-addr-photo { flex: none; }
+.tfm-addr-photo img { width: 320px; max-width: 40vw; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; display: block; }
+/* 图片加载占位：加载中显示转圈，加载完成移除 is-loading 后隐藏占位、显示图片 */
+.tfm-addr-photo-loading { display: none; }
+.tfm-addr-photo.is-loading { width: 320px; max-width: 40vw; }
+.tfm-addr-photo.is-loading img { display: none; }
+.tfm-addr-photo.is-loading .tfm-addr-photo-loading { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; aspect-ratio: 4 / 3; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 13px; }
+.tfm-spinner { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: tfm-spin 0.8s linear infinite; }
+@keyframes tfm-spin { to { transform: rotate(360deg); } }
+@media (max-width: 768px) {
+  .tfm-addr-2col { flex-direction: column; }
+  .tfm-addr-photo img, .tfm-addr-photo.is-loading { width: 100%; max-width: 100%; }
+}
+
 /* 隐藏占位面板：仅供 article.js 逻辑运行，不显示 */
 .csb-hidden-panel { display: none !important; }
 

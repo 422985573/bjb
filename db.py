@@ -100,6 +100,33 @@ def init_db():
         )
     ''')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_xiaobao_zones_postcode ON xiaobao_zones(postcode)')
+        # 新大货文章 border/toll 偏远附加费（由 scripts/init_remote_surcharge.py 从两份 xlsx 灌库）
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS border_ras_fee (
+            ras_tier TEXT PRIMARY KEY,
+            parcel_fee REAL NOT NULL DEFAULT 0,
+            bulk_fee REAL NOT NULL DEFAULT 0
+        )
+    ''')
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS border_remote_postcode (
+            postcode TEXT NOT NULL,
+            suburb TEXT NOT NULL DEFAULT '',
+            state TEXT NOT NULL DEFAULT '',
+            zone TEXT NOT NULL DEFAULT '',
+            ras_tier TEXT NOT NULL DEFAULT ''
+        )
+    ''')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_border_remote_postcode ON border_remote_postcode(postcode)')
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS toll_remote_postcode (
+            postcode TEXT NOT NULL,
+            suburb TEXT NOT NULL DEFAULT '',
+            state TEXT NOT NULL DEFAULT '',
+            fee REAL NOT NULL DEFAULT 0
+        )
+    ''')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_toll_remote_postcode ON toll_remote_postcode(postcode)')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS xiaobao_month_settings (
             month INTEGER PRIMARY KEY,

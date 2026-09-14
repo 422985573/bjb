@@ -7,13 +7,15 @@ import os
 import re
 import time
 from datetime import datetime
-from flask import Blueprint, request, jsonify, current_app, send_file
+from flask import Blueprint, request, jsonify, current_app, send_file, Response
 import uuid
 
 import config
 import db
 import models
 from services import postcode as postcode_svc
+from services import remote_surcharge as remote_surcharge_svc
+from services import address_lookup as address_svc
 from util import admin_required, atomic_write_json, data_dir_lock
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -959,6 +961,66 @@ def warehouse_postcode_lookup():
                 if code in wh_map:
                     hits.append({'key': m['key'], 'name': m['name'], 'warehouse': wh_key, 'zone': wh_map[code]})
     return jsonify({'success': True, 'data': hits})
+
+
+_ADDR_PLACE_ID_RE = re.compile(r'^[A-Za-z0-9_=-]{6,512}$')
+
+
+@api_bp.route('/address-autocomplete')
+def address_autocomplete():
+    """地址联想：?q=DORRIGO MOUNTAIN NSW → 透传第三方候选列表（含 session）。"""
+    q = (request.args.get('q') or '').strip()
+    if not (2 <= len(q) <= 120):
+        return jsonify({'success': False, 'message': '请输入 2-120 个字符的地址'}), 400
+    data, err = address_svc.autocomplete(q)
+    if err:
+        return jsonify({'success': False, 'message': '地址服务暂时不可用', 'error': err}), 502
+    return jsonify({'success': True, 'data': data})
+
+
+@api_bp.route('/address-detail/<place_id>')
+def address_detail(place_id):
+    """地址详情：?session=<autocomplete 返回的 session> → 规范地址/住宅商业判定/图片信息。"""
+    if not _ADDR_PLACE_ID_RE.match(place_id or ''):
+        return jsonify({'success': False, 'message': '无效的 placeId'}), 400
+    session = (request.args.get('session') or '').strip() or None
+    data, err = address_svc.detail(place_id, session)
+    if err:
+        return jsonify({'success': False, 'message': '地址服务暂时不可用', 'error': err}), 502
+    return jsonify({'success': True, 'data': data})
+
+
+@api_bp.route('/address-image/<place_id>')
+def address_image(place_id):
+    """建筑图片：流式代理第三方图片二进制（隐藏 API Key）。"""
+    if not _ADDR_PLACE_ID_RE.match(place_id or ''):
+        return jsonify({'success': False, 'message': '无效的 placeId'}), 400
+    try:
+        width = max(64, min(1600, int(request.args.get('width') or 800)))
+    except ValueError:
+        width = 800
+    content, ctype, err = address_svc.image(place_id, width)
+    if err or content is None:
+        return jsonify({'success': False, 'message': '图片不可用', 'error': err}), 502
+    resp = Response(content, mimetype=(ctype or 'image/jpeg'))
+    resp.headers['Cache-Control'] = 'public, max-age=3600'
+    return resp
+
+
+@api_bp.route('/remote-surcharge')
+def remote_surcharge_lookup():
+    """新大货文章 border/toll 偏远附加费查询：?codes=2708,2372（也兼容单个 ?code=）。
+
+    返回 { success, data: { <邮编>: { border: {...}, toll: {...} } } }。
+    """
+    raw = request.args.get('codes') or request.args.get('code') or ''
+    codes = [t for t in re.split(r'[\s,，、;；]+', raw) if t]
+    try:
+        data = remote_surcharge_svc.lookup(codes)
+    except Exception as e:  # 表未建/未灌库等：降级为空结果，不阻断页面
+        _logger.warning('remote-surcharge lookup failed: %s', e)
+        return jsonify({'success': True, 'data': {}})
+    return jsonify({'success': True, 'data': data})
 
 
 @api_bp.route('/warehouse-sheet/<key>')

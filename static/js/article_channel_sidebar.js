@@ -44,6 +44,59 @@
     return digits.length === 4 ? digits : '';
   }
 
+  // ---- 偏远附加费（仅 border / toll 家族，含其 _copy 副本表）----
+  // 承运商家族：border_copy2 → border、toll_copy → toll，其余原样。
+  function whFamily(key) { return String(key || '').replace(/_copy.*$/, ''); }
+  function isRemoteFamily(key) { var f = whFamily(key); return f === 'border' || f === 'toll'; }
+  function fmtFee(n) { var v = Math.round(Number(n) * 100) / 100; return isNaN(v) ? esc(n) : v; }
+
+  var _remoteFeeCache = {};   // codesKey -> Promise({ code: {border, toll} })
+  function fetchRemoteSurcharge(codes) {
+    var ck = codes.join(',');
+    if (_remoteFeeCache[ck]) return _remoteFeeCache[ck];
+    var p = fetch('/api/remote-surcharge?codes=' + encodeURIComponent(ck))
+      .then(function (r) { return r.json(); })
+      .then(function (res) { return (res && res.success && res.data) ? res.data : {}; })
+      .catch(function () { return {}; });
+    _remoteFeeCache[ck] = p;
+    return p;
+  }
+
+  function suburbsHtml(item) {
+    if (!item || !item.suburbs || !item.suburbs.length) return '';
+    var names = item.suburbs.map(esc).join('、');
+    var more = (item.count > item.suburbs.length) ? (' 等' + item.count + '个地区') : '';
+    return '<span class="wh-remote-sub">（' + names + more + '）</span>';
+  }
+
+  // 把某张 border/toll 卡的偏远附加费渲染到 #wh-remote-<key>；无数据显示「无偏远附加费」
+  function renderRemoteFee(key, codes, data) {
+    var host = $('wh-remote-' + key);
+    if (!host) return;
+    var fam = whFamily(key);
+    if (!isRemoteFamily(key) || !codes || !codes.length) { host.innerHTML = ''; return; }
+    var h = '';
+    codes.forEach(function (code) {
+      var rec = (data && data[code]) ? data[code][fam] : null;
+      var lines = '';
+      if (fam === 'border' && rec && rec.has) {
+        lines = rec.tiers.map(function (t) {
+          return '<div class="wh-remote-line"><b>' + esc(t.ras_tier) + '</b>：包裹 ' +
+            fmtFee(t.parcel_fee) + '/票，大宗货物 ' + fmtFee(t.bulk_fee) + '/票' + suburbsHtml(t) + '</div>';
+        }).join('');
+      } else if (fam === 'toll' && rec && rec.has) {
+        lines = rec.groups.map(function (g) {
+          return '<div class="wh-remote-line">偏远费 ' + fmtFee(g.fee) + '/票' + suburbsHtml(g) + '</div>';
+        }).join('');
+      }
+      if (!lines) lines = '<div class="wh-remote-line wh-remote-none">无偏远附加费</div>';
+      h += '<div class="wh-remote-block"><div class="wh-remote-title">偏远地区附加费（' +
+        esc(code) + '）</div>' + lines + '</div>';
+    });
+    host.innerHTML = h;
+  }
+
+
   // ============================================================
   // 海外仓：精简渲染 + 搜索
   // ============================================================
@@ -187,8 +240,17 @@
       html += '<div class="wh-panel-note">' + whRichtextToHtml(data.panel_note_html) + '</div>';
     }
     html += '<div class="wh-card-result" id="wh-result-' + key + '"></div>';
+    // 「价格说明」上方的挂载容器：border/toll→偏远附加费；仅基础 tfm 卡→地址详情。
+    // （放在第一个富文本段之前；找不到富文本则末尾兜底）
+    var preRichtextHtml = '';
+    if (isRemoteFamily(key)) preRichtextHtml = '<div class="wh-remote-fee" id="wh-remote-' + key + '"></div>';
+    else if (key === 'tfm') preRichtextHtml = '<div class="tfm-addr-detail" id="tfmAddressDetail"></div>';
+    var preInserted = false;
     (data.sections || []).forEach(function (sec) {
       if (sec && sec.hidden) return;   // 后台设为「前台隐藏」的块：文章前台不展示
+      if (preRichtextHtml && !preInserted && sec.type === 'richtext') {
+        html += preRichtextHtml; preInserted = true;
+      }
       if (sec.type === 'price_table') {
         if (sec.title) html += '<div class="wh-card-section-title">' + esc(sec.title) + '</div>';
         html += renderWhTable(sec, key);
@@ -197,6 +259,7 @@
         html += '<div class="wh-richtext">' + whRichtextToHtml(sec.html || '') + '</div>';
       }
     });
+    if (preRichtextHtml && !preInserted) html += preRichtextHtml;
     card.innerHTML = html;
     // 同步侧栏目录名称：后台重命名后目录与卡片标题保持一致
     var navItem = document.querySelector('.csb-wh-nav-item[data-scroll-target="#wh-card-' + key + '"]');
@@ -256,6 +319,8 @@
       if (resultEl) resultEl.textContent = '';
       var q0 = $('wh-quote-' + key);
       if (q0) q0.innerHTML = '';
+      var rf0 = $('wh-remote-' + key);
+      if (rf0) { rf0.innerHTML = ''; rf0.removeAttribute('data-codes'); }
       return true;
     }
 
@@ -268,11 +333,15 @@
     });
 
     if (!zones.length) {
-      card.classList.add('hidden-by-search');
-      setWhNavHidden(key, true);   // 该邮编无对应分区：卡片与目录项一起隐藏
-      if (resultEl) resultEl.textContent = '未找到该邮编对应分区';
+      // 基础 tfm 卡若已挂着地址详情，则即使该邮编无 TFM 分区也保持卡片可见（否则地址详情会被一起隐藏）
+      var tfmAddr = (key === 'tfm') && $('tfmAddressDetail') && $('tfmAddressDetail').innerHTML.trim();
+      card.classList.toggle('hidden-by-search', !tfmAddr);
+      setWhNavHidden(key, !tfmAddr);
+      if (resultEl) resultEl.textContent = tfmAddr ? '该邮编无 TFM 分区（仅显示地址详情）' : '未找到该邮编对应分区';
       var q1 = $('wh-quote-' + key);
       if (q1) q1.innerHTML = '';
+      var rf1 = $('wh-remote-' + key);
+      if (rf1) { rf1.innerHTML = ''; rf1.removeAttribute('data-codes'); }
       return false;
     }
 
@@ -294,6 +363,17 @@
     if (resultEl) resultEl.textContent = '分区：' + zoneLabels.join('，') + (missCodes.length ? '（' + missCodes.join('/') + ' 未命中）' : '');
     // 命中后渲染运费总价表（悉尼仓/墨尔本仓各一行）
     renderWhQuote(key, codes);
+    // border / toll（含副本）：查询并展示偏远附加费（异步，带竞态兜底）
+    if (isRemoteFamily(key)) {
+      var rfHost = $('wh-remote-' + key);
+      var ck = codes.join(',');
+      if (rfHost) rfHost.setAttribute('data-codes', ck);
+      fetchRemoteSurcharge(codes).then(function (data) {
+        var h2 = $('wh-remote-' + key);
+        if (!h2 || h2.getAttribute('data-codes') !== ck) return;   // 已被更晚的搜索取代
+        renderRemoteFee(key, codes, data);
+      });
+    }
     return true;
   }
 
@@ -553,10 +633,151 @@
   // ============================================================
 
   // 顶部单查：走 article.js 的 globalSearchPostcode（渠道 + 派送/距离），我们额外并行查海外仓。
-  function afterTopSearch() {
-    var code = oneCode(($('globalPostcodeInput') || {}).value);
+  // explicitCode：地址流解析出的邮编（框里仍留地址文字时用它驱动海外仓卡搜索）。
+  function afterTopSearch(explicitCode) {
+    var code = (typeof explicitCode === 'string' && /^\d{4}$/.test(explicitCode))
+      ? explicitCode : oneCode(($('globalPostcodeInput') || {}).value);
     if (code) searchWarehouseInline([code]);
     else clearWarehouseSearch();
+  }
+
+  // ============================================================
+  // 地址查询（第三方 autocomplete/detail 代理）——仅本页顶部搜索框
+  // ============================================================
+  var _addrSession = '';   // autocomplete 返回的 session；detail 复用以「一次会话计费」
+  var _addrReqToken = 0;   // autocomplete 竞态令牌
+
+  function isPostcodeText(v) { return /^\d{4}$/.test(String(v || '').trim()); }
+  function looksLikeAddress(v) { v = String(v || '').trim(); return v.length >= 2 && /[A-Za-z]/.test(v); }
+  function addrSuggestEl() { return $('csbAddrSuggest'); }
+  function closeAddrSuggest() { var el = addrSuggestEl(); if (el) { el.hidden = true; el.innerHTML = ''; } }
+  function removeTfmAddrDetail() { var el = $('tfmAddressDetail'); if (el) el.innerHTML = ''; }
+
+  // 顶部输入变化（inline oninput）：空→复位；4 位邮编→沿用即时搜；地址→收起下拉、等回车/按钮
+  window.csbHeroInput = function () {
+    var v = ($('globalPostcodeInput') || {}).value || '';
+    if (!v.trim()) {
+      closeAddrSuggest(); removeTfmAddrDetail();
+      if (typeof window.globalSearchPostcode === 'function') window.globalSearchPostcode();
+      return;
+    }
+    if (isPostcodeText(v)) { closeAddrSuggest(); globalSearchPostcodeDebounced(); return; }
+    closeAddrSuggest();
+  };
+
+  // 回车 / 点「查询报价」：邮编→原邮编搜索；地址→拉候选列表
+  function csbHeroSubmit() {
+    var v = (($('globalPostcodeInput') || {}).value || '').trim();
+    if (!v) {
+      closeAddrSuggest(); removeTfmAddrDetail();
+      if (typeof window.globalSearchPostcode === 'function') window.globalSearchPostcode();
+      return;
+    }
+    if (isPostcodeText(v)) {
+      closeAddrSuggest();
+      if (typeof window.globalSearchPostcode === 'function') window.globalSearchPostcode();
+      return;
+    }
+    if (looksLikeAddress(v)) { fetchAddrSuggest(v); return; }
+    closeAddrSuggest();
+  }
+
+  function fetchAddrSuggest(q) {
+    var el = addrSuggestEl(); if (!el) return;
+    var token = ++_addrReqToken;
+    el.hidden = false;
+    el.innerHTML = '<div class="csb-addr-hint">查询中…</div>';
+    fetch('/api/address-autocomplete?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (token !== _addrReqToken) return;
+        if (!res || !res.success || !res.data) { el.innerHTML = '<div class="csb-addr-hint">地址服务暂时不可用</div>'; return; }
+        _addrSession = res.data.session || '';
+        var sugg = res.data.suggestions || [];
+        if (!sugg.length) { el.innerHTML = '<div class="csb-addr-hint">未找到匹配地址</div>'; return; }
+        renderAddrSuggest(sugg);
+      })
+      .catch(function () { if (token === _addrReqToken) el.innerHTML = '<div class="csb-addr-hint">网络错误</div>'; });
+  }
+
+  function renderAddrSuggest(sugg) {
+    var el = addrSuggestEl(); if (!el) return;
+    el.innerHTML = '';
+    sugg.forEach(function (s) {
+      var item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'csb-addr-item';
+      item.innerHTML = '<span class="csb-addr-primary">' + esc(s.primaryText || s.fullText || '') + '</span>' +
+        (s.secondaryText ? '<span class="csb-addr-secondary">' + esc(s.secondaryText) + '</span>' : '');
+      item.addEventListener('click', function () { pickAddress(s); });
+      el.appendChild(item);
+    });
+    el.hidden = false;
+  }
+
+  function pickAddress(s) {
+    closeAddrSuggest();
+    var pid = s && s.placeId; if (!pid) return;
+    var url = '/api/address-detail/' + encodeURIComponent(pid) + (_addrSession ? ('?session=' + encodeURIComponent(_addrSession)) : '');
+    renderTfmAddrDetail({ loading: true });
+    fetch(url).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res || !res.success || !res.data) { renderTfmAddrDetail({ error: true }); return; }
+      var det = res.data;
+      renderTfmAddrDetail({ detail: det, placeId: pid });
+      var pc = det && det.place && det.place.addressParts && det.place.addressParts.postcode;
+      pc = String(pc || '').replace(/[^0-9]/g, '');
+      if (/^\d{4}$/.test(pc) && typeof window.globalSearchPostcode === 'function') {
+        window.globalSearchPostcode(pc);   // 用解析出的邮编跑原有搜索（框里仍保留地址文字）
+      }
+    }).catch(function () { renderTfmAddrDetail({ error: true }); });
+  }
+
+  // TFM 地址详情面板宿主：优先用 renderWhCard 在「价格说明」上方注入的卡内容器 #tfmAddressDetail；
+  // 若卡片尚未渲染出该容器，则兜底在 #wh-card-tfm 后插入一个（保证不丢信息）。
+  function ensureTfmAddrHost() {
+    var host = $('tfmAddressDetail');
+    if (host) return host;
+    host = document.createElement('div');
+    host.id = 'tfmAddressDetail';
+    host.className = 'tfm-addr-detail';
+    var anchor = $('wh-card-tfm');
+    if (anchor) anchor.insertAdjacentElement('afterend', host);
+    else { var inline = $('whInline'); if (inline) inline.appendChild(host); else return null; }
+    return host;
+  }
+
+  function renderTfmAddrDetail(opts) {
+    var host = ensureTfmAddrHost(); if (!host) return;
+    if (opts.loading) { host.innerHTML = '<div class="tfm-addr-title">地址详情（TFM）</div><div class="tfm-addr-body">查询中…</div>'; return; }
+    if (opts.error) { host.innerHTML = '<div class="tfm-addr-title">地址详情（TFM）</div><div class="tfm-addr-body tfm-addr-err">地址详情获取失败，请重试</div>'; return; }
+    var det = opts.detail || {};
+    var place = det.place || {};
+    var parts = place.addressParts || {};
+    var cls = det.classification || {};
+    var addr = place.formattedAddress || (cls.addressValidation && cls.addressValidation.formattedAddress) || '';
+    var isResidential = cls.residentialSurcharge === true || cls.kind === 'residential';
+    var badge = isResidential
+      ? '<span class="tfm-addr-badge tfm-addr-badge--res">住宅地址' + (cls.residentialSurcharge ? '（含住宅附加费）' : '') + '</span>'
+      : '<span class="tfm-addr-badge tfm-addr-badge--biz">商业地址</span>';
+    var meta = [];
+    if (parts.suburb) meta.push('Suburb：' + esc(parts.suburb));
+    if (parts.state) meta.push('State：' + esc(parts.state));
+    if (parts.postcode) meta.push('邮编：' + esc(parts.postcode));
+    var img = (det.image && opts.placeId)
+      ? '<div class="tfm-addr-photo is-loading">'
+        + '<div class="tfm-addr-photo-loading"><span class="tfm-spinner"></span>图片加载中…</div>'
+        + '<img src="/api/address-image/' + encodeURIComponent(opts.placeId) + '?width=640" alt="建筑图片"'
+        + ' onload="this.closest(\'.tfm-addr-photo\').classList.remove(\'is-loading\')"'
+        + ' onerror="this.closest(\'.tfm-addr-photo\').style.display=\'none\'"></div>'
+      : '';
+    var info = '';
+    info += '<div class="tfm-addr-row">' + badge + (place.displayName ? '<span class="tfm-addr-name">' + esc(place.displayName) + '</span>' : '') + '</div>';
+    if (addr) info += '<div class="tfm-addr-full">' + esc(addr) + '</div>';
+    if (meta.length) info += '<div class="tfm-addr-meta">' + meta.join('　') + '</div>';
+    if (isResidential) info += '<div class="tfm-addr-fee">⚠ 私人住宅地址，加收 500/票 私人住宅费</div>';
+    var h = '<div class="tfm-addr-title">地址详情（TFM）</div>';
+    h += '<div class="tfm-addr-2col">' + img + '<div class="tfm-addr-info">' + info + '</div></div>';
+    host.innerHTML = h;
   }
 
   function renderBatchSummary(codes) {
@@ -704,14 +925,15 @@
     // 顶部单查：包裹 article.js 的 globalSearchPostcode，跑完渠道后并行查海外仓。
     var origSearch = window.globalSearchPostcode;
     if (typeof origSearch === 'function') {
-      window.globalSearchPostcode = function () {
+      window.globalSearchPostcode = function (explicitCode) {
         var r = origSearch.apply(this, arguments);
-        // 顶部批量互斥：有顶部值时清空左侧批量框
-        if (oneCode(($('globalPostcodeInput') || {}).value)) {
+        var forced = (typeof explicitCode === 'string' && /^\d{4}$/.test(explicitCode)) ? explicitCode : '';
+        // 顶部批量互斥：有顶部值（或地址流传入的邮编）时清空左侧批量框
+        if (forced || oneCode(($('globalPostcodeInput') || {}).value)) {
           if ($('batchPcInput')) $('batchPcInput').value = '';
           if ($('batchSummary')) $('batchSummary').innerHTML = '';
         }
-        afterTopSearch();
+        afterTopSearch(forced);
         return r;
       };
     }
@@ -728,14 +950,24 @@
       });
     }
 
-    // 顶部 hero「查询报价」按钮：触发一次统一搜索
+    // 顶部 hero「查询报价」按钮 & 输入框回车：邮编/地址分派
     var heroBtn = $('csbHeroQuery');
-    if (heroBtn) {
-      heroBtn.addEventListener('click', function () {
-        if (typeof window.globalSearchPostcode === 'function') window.globalSearchPostcode();
-        else afterTopSearch();
+    if (heroBtn) heroBtn.addEventListener('click', csbHeroSubmit);
+    var heroInput = $('globalPostcodeInput');
+    if (heroInput) {
+      heroInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); csbHeroSubmit(); }
+        else if (e.key === 'Escape') { closeAddrSuggest(); removeTfmAddrDetail(); }
       });
     }
+    // 清除 X：一并收起地址下拉与 TFM 详情面板
+    var heroClear = $('globalSearchClearBtn');
+    if (heroClear) heroClear.addEventListener('click', function () { closeAddrSuggest(); removeTfmAddrDetail(); _addrSession = ''; });
+    // 点击搜索行以外处收起地址下拉（点输入框/查询按钮不收起）
+    document.addEventListener('click', function (e) {
+      var row = document.querySelector('.csb-hero-search-row');
+      if (row && !row.contains(e.target)) closeAddrSuggest();
+    });
 
     // 顶部「清空」按钮：清空所有查询态
     var clearAll = $('csbClearAll');
@@ -743,6 +975,7 @@
       clearAll.addEventListener('click', function () {
         var ti = $('globalPostcodeInput');
         if (ti) ti.value = '';
+        closeAddrSuggest(); removeTfmAddrDetail(); _addrSession = '';
         if (typeof window.globalSearchPostcode === 'function') window.globalSearchPostcode();
         clearBatch();
       });

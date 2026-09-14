@@ -347,7 +347,11 @@ function setupGlobalSearchClearButton() {
     const clearBtn = document.getElementById('globalSearchClearBtn');
     if (!input || !clearBtn) return;
 
+    // data-freeform：该页搜索框允许输入地址（自由文本），跳过「只留 4 位数字」的强制归一。
+    const freeform = !!(input.dataset && input.dataset.freeform);
+
     const normalizeInputValue = function() {
+        if (freeform) return;
         const normalized = extractFourDigitPostcode(input.value);
         if (input.value !== normalized) {
             input.value = normalized;
@@ -380,7 +384,8 @@ function setupGlobalSearchClearButton() {
         syncClearBtn();
     });
     input.addEventListener('beforeinput', function(e) {
-        // 顶部搜索只允许 4 位数字，统一输入行为（含法/全角输入）
+        // 顶部搜索只允许 4 位数字，统一输入行为（含法/全角输入）。freeform 页放行任意文本。
+        if (freeform) return;
         if (e.inputType !== 'insertText' || !e.data) return;
         const incoming = extractFourDigitPostcode(e.data);
         if (!incoming) {
@@ -388,6 +393,7 @@ function setupGlobalSearchClearButton() {
         }
     });
     input.addEventListener('paste', function(e) {
+        if (freeform) { syncClearBtn(); return; }
         const pasted = e.clipboardData ? e.clipboardData.getData('text') : '';
         const normalized = extractFourDigitPostcode(pasted);
         e.preventDefault();
@@ -1520,14 +1526,16 @@ function mergeRemarkColumn(table, colIndex) {
 }
 
 // 全局邮编查询（同一邮编同时查大件/纸箱；根据渠道状态组合显示文案）
-async function globalSearchPostcode() {
+// explicitCode：可选。传入 4 位邮编时用它（用于「框里留地址、按解析出的邮编搜」）；不传则读输入框。
+async function globalSearchPostcode(explicitCode) {
     if (GLOBAL_SEARCH_TIMER) {
         clearTimeout(GLOBAL_SEARCH_TIMER);
         GLOBAL_SEARCH_TIMER = null;
     }
     const mainInput = document.getElementById('globalPostcodeInput');
     const main = (mainInput && mainInput.value.trim()) || '';
-    var postcode = main.length === 4 && /^\d{4}$/.test(main) ? main : '';
+    const forced = (typeof explicitCode === 'string' && /^\d{4}$/.test(explicitCode)) ? explicitCode : '';
+    var postcode = forced || (main.length === 4 && /^\d{4}$/.test(main) ? main : '');
     const resultSpan = document.getElementById('globalSearchResult');
 
     document.querySelectorAll('.channel-table tbody tr').forEach(tr => {
