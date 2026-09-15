@@ -217,8 +217,12 @@
 .csb-addr-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; padding: 9px 14px; border: 0; border-bottom: 1px solid #f1f5f9; background: #fff; cursor: pointer; }
 .csb-addr-item:last-child { border-bottom: 0; }
 .csb-addr-item:hover, .csb-addr-item:focus { background: #eff6ff; }
+.csb-addr-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; width: 100%; }
 .csb-addr-primary { font-size: 14px; font-weight: 600; color: #1e293b; }
+.csb-addr-line2 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .csb-addr-secondary { font-size: 12px; color: #64748b; }
+.csb-addr-pc { flex: none; padding: 1px 8px; border-radius: 6px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.csb-addr-pc.is-empty { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; font-weight: 500; }
 
 /* TFM 报价表下方的地址详情面板 */
 .tfm-addr-detail:empty { display: none; }

@@ -244,7 +244,7 @@
     // （放在第一个富文本段之前；找不到富文本则末尾兜底）
     var preRichtextHtml = '';
     if (isRemoteFamily(key)) preRichtextHtml = '<div class="wh-remote-fee" id="wh-remote-' + key + '"></div>';
-    else if (key === 'tfm') preRichtextHtml = '<div class="tfm-addr-detail" id="tfmAddressDetail"></div>';
+    else if (whFamily(key) === 'tfm') preRichtextHtml = '<div class="tfm-addr-detail" id="tfmAddressDetail-' + key + '"></div>';
     var preInserted = false;
     (data.sections || []).forEach(function (sec) {
       if (sec && sec.hidden) return;   // 后台设为「前台隐藏」的块：文章前台不展示
@@ -333,8 +333,9 @@
     });
 
     if (!zones.length) {
-      // 基础 tfm 卡若已挂着地址详情，则即使该邮编无 TFM 分区也保持卡片可见（否则地址详情会被一起隐藏）
-      var tfmAddr = (key === 'tfm') && $('tfmAddressDetail') && $('tfmAddressDetail').innerHTML.trim();
+      // TFM 家族卡若已挂着地址详情，则即使该邮编无 TFM 分区也保持卡片可见（否则地址详情会被一起隐藏）
+      var tfmHost = (whFamily(key) === 'tfm') ? $('tfmAddressDetail-' + key) : null;
+      var tfmAddr = tfmHost && tfmHost.innerHTML.trim();
       card.classList.toggle('hidden-by-search', !tfmAddr);
       setWhNavHidden(key, !tfmAddr);
       if (resultEl) resultEl.textContent = tfmAddr ? '该邮编无 TFM 分区（仅显示地址详情）' : '未找到该邮编对应分区';
@@ -651,7 +652,9 @@
   function looksLikeAddress(v) { v = String(v || '').trim(); return v.length >= 2 && /[A-Za-z]/.test(v); }
   function addrSuggestEl() { return $('csbAddrSuggest'); }
   function closeAddrSuggest() { var el = addrSuggestEl(); if (el) { el.hidden = true; el.innerHTML = ''; } }
-  function removeTfmAddrDetail() { var el = $('tfmAddressDetail'); if (el) el.innerHTML = ''; }
+  function removeTfmAddrDetail() {
+    document.querySelectorAll('.tfm-addr-detail').forEach(function (el) { el.innerHTML = ''; });
+  }
 
   // 顶部输入变化（inline oninput）：空→复位；4 位邮编→沿用即时搜；地址→收起下拉、等回车/按钮
   window.csbHeroInput = function () {
@@ -688,6 +691,7 @@
   function fetchAddrSuggest(q) {
     var el = addrSuggestEl(); if (!el) return;
     var token = ++_addrReqToken;
+    _detailCache = {};   // 新一轮搜索：清掉上一轮 placeId→detail 缓存（session 已变）
     el.hidden = false;
     el.innerHTML = '<div class="csb-addr-hint">查询中…</div>';
     fetch('/api/address-autocomplete?q=' + encodeURIComponent(q))
@@ -703,17 +707,50 @@
       .catch(function () { if (token === _addrReqToken) el.innerHTML = '<div class="csb-addr-hint">网络错误</div>'; });
   }
 
+  var _detailCache = {};   // placeId -> Promise(detail json | null)，避免预取与点选重复调 detail
+
+  function fetchDetailCached(placeId) {
+    if (!placeId) return Promise.resolve(null);
+    if (_detailCache[placeId]) return _detailCache[placeId];
+    var url = '/api/address-detail/' + encodeURIComponent(placeId) + (_addrSession ? ('?session=' + encodeURIComponent(_addrSession)) : '');
+    var p = fetch(url).then(function (r) { return r.json(); })
+      .then(function (res) { return (res && res.success && res.data) ? res.data : null; })
+      .catch(function () { return null; });
+    _detailCache[placeId] = p;
+    return p;
+  }
+
+  function postcodeOf(det) {
+    var pc = det && det.place && det.place.addressParts && det.place.addressParts.postcode;
+    pc = String(pc || '').replace(/[^0-9]/g, '');
+    return /^\d{4}$/.test(pc) ? pc : '';
+  }
+
   function renderAddrSuggest(sugg) {
     var el = addrSuggestEl(); if (!el) return;
     el.innerHTML = '';
+    var token = _addrReqToken;   // 与本次 autocomplete 绑定，过期结果不回填
     sugg.forEach(function (s) {
       var item = document.createElement('button');
       item.type = 'button';
       item.className = 'csb-addr-item';
-      item.innerHTML = '<span class="csb-addr-primary">' + esc(s.primaryText || s.fullText || '') + '</span>' +
-        (s.secondaryText ? '<span class="csb-addr-secondary">' + esc(s.secondaryText) + '</span>' : '');
+      item.innerHTML = '<span class="csb-addr-text">'
+        + '<span class="csb-addr-primary">' + esc(s.primaryText || s.fullText || '') + '</span>'
+        + '<span class="csb-addr-line2">'
+        + (s.secondaryText ? '<span class="csb-addr-secondary">' + esc(s.secondaryText) + '</span>' : '')
+        + '<span class="csb-addr-pc" data-pc-slot="1">…</span>'
+        + '</span>'
+        + '</span>';
       item.addEventListener('click', function () { pickAddress(s); });
       el.appendChild(item);
+      // 预取邮编填入右侧框（每条各调一次 detail，结果缓存供点选复用）
+      var slot = item.querySelector('[data-pc-slot]');
+      fetchDetailCached(s.placeId).then(function (det) {
+        if (token !== _addrReqToken || !slot) return;   // 已被更晚的搜索取代
+        var pc = postcodeOf(det);
+        slot.textContent = pc || '—';
+        if (!pc) slot.classList.add('is-empty');
+      });
     });
     el.hidden = false;
   }
@@ -721,66 +758,69 @@
   function pickAddress(s) {
     closeAddrSuggest();
     var pid = s && s.placeId; if (!pid) return;
-    var url = '/api/address-detail/' + encodeURIComponent(pid) + (_addrSession ? ('?session=' + encodeURIComponent(_addrSession)) : '');
     renderTfmAddrDetail({ loading: true });
-    fetch(url).then(function (r) { return r.json(); }).then(function (res) {
-      if (!res || !res.success || !res.data) { renderTfmAddrDetail({ error: true }); return; }
-      var det = res.data;
+    fetchDetailCached(pid).then(function (det) {
+      if (!det) { renderTfmAddrDetail({ error: true }); return; }
       renderTfmAddrDetail({ detail: det, placeId: pid });
-      var pc = det && det.place && det.place.addressParts && det.place.addressParts.postcode;
-      pc = String(pc || '').replace(/[^0-9]/g, '');
-      if (/^\d{4}$/.test(pc) && typeof window.globalSearchPostcode === 'function') {
+      var pc = postcodeOf(det);
+      if (pc && typeof window.globalSearchPostcode === 'function') {
         window.globalSearchPostcode(pc);   // 用解析出的邮编跑原有搜索（框里仍保留地址文字）
       }
-    }).catch(function () { renderTfmAddrDetail({ error: true }); });
+    });
   }
 
-  // TFM 地址详情面板宿主：优先用 renderWhCard 在「价格说明」上方注入的卡内容器 #tfmAddressDetail；
-  // 若卡片尚未渲染出该容器，则兜底在 #wh-card-tfm 后插入一个（保证不丢信息）。
-  function ensureTfmAddrHost() {
-    var host = $('tfmAddressDetail');
-    if (host) return host;
-    host = document.createElement('div');
-    host.id = 'tfmAddressDetail';
+  // TFM 地址详情面板宿主集合：renderWhCard 在每张 TFM 家族卡（海运/大陆空运/香港空运）的
+  // 「价格说明」上方各注入一个 .tfm-addr-detail 容器。三张表下面都展示同一份地址详情。
+  function tfmAddrHosts() {
+    var hosts = Array.prototype.slice.call(document.querySelectorAll('.tfm-addr-detail'));
+    if (hosts.length) return hosts;
+    // 兜底：卡片尚未渲染出容器时，在 #wh-card-tfm 后插入一个（保证不丢信息）
+    var host = document.createElement('div');
     host.className = 'tfm-addr-detail';
     var anchor = $('wh-card-tfm');
-    if (anchor) anchor.insertAdjacentElement('afterend', host);
-    else { var inline = $('whInline'); if (inline) inline.appendChild(host); else return null; }
-    return host;
+    if (anchor) { anchor.insertAdjacentElement('afterend', host); return [host]; }
+    var inline = $('whInline');
+    if (inline) { inline.appendChild(host); return [host]; }
+    return [];
   }
 
   function renderTfmAddrDetail(opts) {
-    var host = ensureTfmAddrHost(); if (!host) return;
-    if (opts.loading) { host.innerHTML = '<div class="tfm-addr-title">地址详情（TFM）</div><div class="tfm-addr-body">查询中…</div>'; return; }
-    if (opts.error) { host.innerHTML = '<div class="tfm-addr-title">地址详情（TFM）</div><div class="tfm-addr-body tfm-addr-err">地址详情获取失败，请重试</div>'; return; }
-    var det = opts.detail || {};
-    var place = det.place || {};
-    var parts = place.addressParts || {};
-    var cls = det.classification || {};
-    var addr = place.formattedAddress || (cls.addressValidation && cls.addressValidation.formattedAddress) || '';
-    var isResidential = cls.residentialSurcharge === true || cls.kind === 'residential';
-    var badge = isResidential
-      ? '<span class="tfm-addr-badge tfm-addr-badge--res">住宅地址' + (cls.residentialSurcharge ? '（含住宅附加费）' : '') + '</span>'
-      : '<span class="tfm-addr-badge tfm-addr-badge--biz">商业地址</span>';
-    var meta = [];
-    if (parts.suburb) meta.push('Suburb：' + esc(parts.suburb));
-    if (parts.state) meta.push('State：' + esc(parts.state));
-    if (parts.postcode) meta.push('邮编：' + esc(parts.postcode));
-    var img = (det.image && opts.placeId)
-      ? '<div class="tfm-addr-photo is-loading">'
-        + '<div class="tfm-addr-photo-loading"><span class="tfm-spinner"></span>图片加载中…</div>'
-        + '<img src="/api/address-image/' + encodeURIComponent(opts.placeId) + '?width=640" alt="建筑图片"'
-        + ' onload="this.closest(\'.tfm-addr-photo\').classList.remove(\'is-loading\')"'
-        + ' onerror="this.closest(\'.tfm-addr-photo\').style.display=\'none\'"></div>'
-      : '';
-    var info = '';
-    info += '<div class="tfm-addr-row">' + badge + (place.displayName ? '<span class="tfm-addr-name">' + esc(place.displayName) + '</span>' : '') + '</div>';
-    if (addr) info += '<div class="tfm-addr-full">' + esc(addr) + '</div>';
-    if (meta.length) info += '<div class="tfm-addr-meta">' + meta.join('　') + '</div>';
-    if (isResidential) info += '<div class="tfm-addr-fee">⚠ 私人住宅地址，加收 500/票 私人住宅费</div>';
-    var h = '<div class="tfm-addr-title">地址详情（TFM）</div>';
-    h += '<div class="tfm-addr-2col">' + img + '<div class="tfm-addr-info">' + info + '</div></div>';
-    host.innerHTML = h;
+    var hosts = tfmAddrHosts(); if (!hosts.length) return;
+    var h;
+    if (opts.loading) {
+      h = '<div class="tfm-addr-title">地址详情（TFM）</div><div class="tfm-addr-body">查询中…</div>';
+    } else if (opts.error) {
+      h = '<div class="tfm-addr-title">地址详情（TFM）</div><div class="tfm-addr-body tfm-addr-err">地址详情获取失败，请重试</div>';
+    } else {
+      var det = opts.detail || {};
+      var place = det.place || {};
+      var parts = place.addressParts || {};
+      var cls = det.classification || {};
+      var addr = place.formattedAddress || (cls.addressValidation && cls.addressValidation.formattedAddress) || '';
+      var isResidential = cls.residentialSurcharge === true || cls.kind === 'residential';
+      var badge = isResidential
+        ? '<span class="tfm-addr-badge tfm-addr-badge--res">住宅地址' + (cls.residentialSurcharge ? '（含住宅附加费）' : '') + '</span>'
+        : '<span class="tfm-addr-badge tfm-addr-badge--biz">商业地址</span>';
+      var meta = [];
+      if (parts.suburb) meta.push('Suburb：' + esc(parts.suburb));
+      if (parts.state) meta.push('State：' + esc(parts.state));
+      if (parts.postcode) meta.push('邮编：' + esc(parts.postcode));
+      var img = (det.image && opts.placeId)
+        ? '<div class="tfm-addr-photo is-loading">'
+          + '<div class="tfm-addr-photo-loading"><span class="tfm-spinner"></span>图片加载中…</div>'
+          + '<img src="/api/address-image/' + encodeURIComponent(opts.placeId) + '?width=640" alt="建筑图片"'
+          + ' onload="this.closest(\'.tfm-addr-photo\').classList.remove(\'is-loading\')"'
+          + ' onerror="this.closest(\'.tfm-addr-photo\').style.display=\'none\'"></div>'
+        : '';
+      var info = '';
+      info += '<div class="tfm-addr-row">' + badge + (place.displayName ? '<span class="tfm-addr-name">' + esc(place.displayName) + '</span>' : '') + '</div>';
+      if (addr) info += '<div class="tfm-addr-full">' + esc(addr) + '</div>';
+      if (meta.length) info += '<div class="tfm-addr-meta">' + meta.join('　') + '</div>';
+      if (isResidential) info += '<div class="tfm-addr-fee">⚠ 私人住宅地址，加收 500/票 私人住宅费</div>';
+      h = '<div class="tfm-addr-title">地址详情（TFM）</div>';
+      h += '<div class="tfm-addr-2col">' + img + '<div class="tfm-addr-info">' + info + '</div></div>';
+    }
+    hosts.forEach(function (host) { host.innerHTML = h; });
   }
 
   function renderBatchSummary(codes) {
