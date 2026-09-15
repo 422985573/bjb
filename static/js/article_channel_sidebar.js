@@ -82,11 +82,11 @@
       if (fam === 'border' && rec && rec.has) {
         lines = rec.tiers.map(function (t) {
           return '<div class="wh-remote-line"><b>' + esc(t.ras_tier) + '</b>：包裹 ' +
-            fmtFee(t.parcel_fee) + '/票，大宗货物 ' + fmtFee(t.bulk_fee) + '/票' + suburbsHtml(t) + '</div>';
+            fmtFee(t.parcel_fee) + ' RMB/票，大宗货物 ' + fmtFee(t.bulk_fee) + ' RMB/票' + suburbsHtml(t) + '</div>';
         }).join('');
       } else if (fam === 'toll' && rec && rec.has) {
         lines = rec.groups.map(function (g) {
-          return '<div class="wh-remote-line">偏远费 ' + fmtFee(g.fee) + '/票' + suburbsHtml(g) + '</div>';
+          return '<div class="wh-remote-line">偏远费 ' + fmtFee(g.fee) + ' RMB/票' + suburbsHtml(g) + '</div>';
         }).join('');
       }
       if (!lines) lines = '<div class="wh-remote-line wh-remote-none">无偏远附加费</div>';
@@ -638,8 +638,19 @@
   function afterTopSearch(explicitCode) {
     var code = (typeof explicitCode === 'string' && /^\d{4}$/.test(explicitCode))
       ? explicitCode : oneCode(($('globalPostcodeInput') || {}).value);
-    if (code) searchWarehouseInline([code]);
-    else clearWarehouseSearch();
+    if (code) {
+      searchWarehouseInline([code]);
+      // 有邮编就展开渠道目录：即使无卡派渠道命中，只要目录里还有可见项（含四张快递报价表）就展开，
+      // 方便用户定位。article.js 的 _syncChannelNavWithSearch 只统计渠道卡，这里补上快递报价表卡。
+      requestAnimationFrame(function () {
+        var panel = $('channelNavPanel');
+        if (!panel) return;
+        var hasVisibleNav = !!document.querySelector('.channel-nav-list .channel-nav-link:not(.hidden-in-nav)');
+        if (hasVisibleNav) panel.setAttribute('open', '');
+      });
+    } else {
+      clearWarehouseSearch();
+    }
   }
 
   // ============================================================
@@ -816,7 +827,7 @@
       info += '<div class="tfm-addr-row">' + badge + (place.displayName ? '<span class="tfm-addr-name">' + esc(place.displayName) + '</span>' : '') + '</div>';
       if (addr) info += '<div class="tfm-addr-full">' + esc(addr) + '</div>';
       if (meta.length) info += '<div class="tfm-addr-meta">' + meta.join('　') + '</div>';
-      if (isResidential) info += '<div class="tfm-addr-fee">⚠ 私人住宅地址，加收 500/票 私人住宅费</div>';
+      if (isResidential) info += '<div class="tfm-addr-fee">⚠ 私人住宅地址，加收 500 RMB/票 私人住宅费</div>';
       h = '<div class="tfm-addr-title">地址详情（TFM）</div>';
       h += '<div class="tfm-addr-2col">' + img + '<div class="tfm-addr-info">' + info + '</div></div>';
     }
