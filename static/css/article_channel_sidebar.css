@@ -163,15 +163,15 @@
 /* 快递价格表：折叠为约 10 行高的滚动小框，右侧内翻滚动条 */
 .csb-page .wh-card .wh-table-wrap {
     max-height: 372px; overflow-y: auto; overflow-x: auto;
-    border: 1px solid #e5e7eb; border-radius: 6px;
+    border: 3px solid #64748b; border-radius: 6px;
 }
 .csb-page .wh-card .wh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 /* 表头在小框内 sticky（仅在该滚动框内生效，不与渠道 sticky 表头冲突） */
 .csb-page .wh-card .wh-table th {
     position: sticky; top: 0; z-index: 2; background: #eff6ff; color: #1e40af; font-weight: 700;
-    padding: 8px 10px; border: 3px solid #2563eb; text-align: center;
+    padding: 8px 10px; border: 3px solid #bfdbfe; text-align: center;
 }
-.csb-page .wh-card .wh-table td { padding: 6px 10px; border: 3px solid #64748b; text-align: center; }
+.csb-page .wh-card .wh-table td { padding: 6px 10px; border: 3px solid #e5e7eb; text-align: center; }
 .csb-page .wh-card .wh-table tbody tr.wh-group-row td { background: #f8fafc; font-weight: 700; text-align: left; color: #334155; }
 /* 命中行高亮 */
 .csb-page .wh-card .wh-table tbody tr.wh-hit td { background: #fff7ed; box-shadow: inset 0 0 0 2px #fb923c; }
