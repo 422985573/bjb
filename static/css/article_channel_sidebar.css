@@ -143,12 +143,12 @@
 /* ===== 海外仓价格表内联展示（与渠道表同页顺序展示） ===== */
 .csb-wh-inline { margin-top: 8px; }
 .wh-card {
-    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    background: #fff; border: 3px solid #94a3b8; border-radius: 12px;
     padding: 18px 20px; margin: 18px 0;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.12);
 }
 .wh-card.hidden-by-search { display: none; }
-.wh-card-title { background: var(--primary, #2563eb); color: #FFD700; font-size: 18px; font-weight: 800; text-align: center; padding: 12px 16px; margin: 0; }
+.wh-card-title { background: var(--primary, #2563eb); color: #FFD700; font-size: 18px; font-weight: 800; text-align: center; padding: 12px 16px; margin: 0; border: 3px solid #1e40af; }
 .wh-card-result { font-size: 13px; font-weight: 600; color: #2563eb; min-height: 0; margin-bottom: 10px; }
 .wh-card-result:empty { display: none; }
 /* 分区/表标题：模块标题用主蓝，模块内子表标题用浅蓝以区分层级 */
@@ -156,7 +156,7 @@
     background: #dbeafe; color: #1d4ed8;
     font-size: 15px; font-weight: 800; text-align: left;
     padding: 12px 16px; margin: 0;
-    border-bottom: 1px solid #bfdbfe;
+    border: 2px solid #93c5fd; border-bottom-width: 3px;
 }
 .wh-card-error { color: #ef4444; padding: 10px 0; font-size: 13px; }
 
@@ -169,12 +169,12 @@
 /* 表头在小框内 sticky（仅在该滚动框内生效，不与渠道 sticky 表头冲突） */
 .csb-page .wh-card .wh-table th {
     position: sticky; top: 0; z-index: 2; background: #eff6ff; color: #1e40af; font-weight: 700;
-    padding: 8px 10px; border: 1px solid #bfdbfe; text-align: center;
+    padding: 8px 10px; border: 2px solid #93c5fd; text-align: center;
 }
-.csb-page .wh-card .wh-table td { padding: 6px 10px; border: 1px solid #e5e7eb; text-align: center; }
+.csb-page .wh-card .wh-table td { padding: 6px 10px; border: 2px solid #cbd5e1; text-align: center; }
 .csb-page .wh-card .wh-table tbody tr.wh-group-row td { background: #f8fafc; font-weight: 700; text-align: left; color: #334155; }
 /* 命中行高亮 */
-.csb-page .wh-card .wh-table tbody tr.wh-hit td { background: #fff7ed; box-shadow: inset 0 0 0 1px #fb923c; }
+.csb-page .wh-card .wh-table tbody tr.wh-hit td { background: #fff7ed; box-shadow: inset 0 0 0 2px #fb923c; }
 /* 查询后仅展示命中行，其余行隐藏 */
 .csb-page .wh-card .wh-table tbody tr.wh-row-hidden { display: none; }
 .wh-card .wh-richtext { font-size: 13px; color: #475569; line-height: 1.7; }
@@ -202,7 +202,7 @@
 
 /* border / toll 报价表下方的偏远地区附加费查询结果 */
 .wh-remote-fee:empty { display: none; }
-.wh-remote-block { margin: 12px 0 4px; padding: 10px 14px; background: #fff7ed; border: 1px solid #fed7aa; border-left: 3px solid #fb923c; border-radius: 6px; font-size: 13px; color: #7c2d12; line-height: 1.7; }
+.wh-remote-block { margin: 12px 0 4px; padding: 10px 14px; background: #fff7ed; border: 2px solid #f97316; border-left: 4px solid #ea580c; border-radius: 6px; font-size: 13px; color: #7c2d12; line-height: 1.7; }
 .wh-remote-title { font-weight: 800; color: #c2410c; margin-bottom: 4px; }
 .wh-remote-line { margin: 2px 0; }
 .wh-remote-line b { color: #9a3412; }
