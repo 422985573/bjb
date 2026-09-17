@@ -81,12 +81,12 @@
       var lines = '';
       if (fam === 'border' && rec && rec.has) {
         lines = rec.tiers.map(function (t) {
-          return '<div class="wh-remote-line"><b>' + esc(t.ras_tier) + '</b>：包裹 ' +
-            fmtFee(t.parcel_fee) + ' RMB/票，大宗货物 ' + fmtFee(t.bulk_fee) + ' RMB/票' + suburbsHtml(t) + '</div>';
+          return '<div class="wh-remote-line"><b>' + esc(t.ras_tier) + '</b>：纸箱 ' +
+            fmtFee(t.parcel_fee) + ' RMB/票，木箱木架托盘 ' + fmtFee(t.bulk_fee) + ' RMB/票</div>';
         }).join('');
       } else if (fam === 'toll' && rec && rec.has) {
         lines = rec.groups.map(function (g) {
-          return '<div class="wh-remote-line">偏远费 ' + fmtFee(g.fee) + ' RMB/票' + suburbsHtml(g) + '</div>';
+          return '<div class="wh-remote-line">偏远费 ' + fmtFee(g.fee) + ' RMB/票</div>';
         }).join('');
       }
       if (!lines) lines = '<div class="wh-remote-line wh-remote-none">无偏远附加费</div>';
