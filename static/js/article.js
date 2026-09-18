@@ -1537,6 +1537,24 @@ async function globalSearchPostcode(explicitCode) {
     const forced = (typeof explicitCode === 'string' && /^\d{4}$/.test(explicitCode)) ? explicitCode : '';
     var postcode = forced || (main.length === 4 && /^\d{4}$/.test(main) ? main : '');
     const resultSpan = document.getElementById('globalSearchResult');
+    // 地址查询解析出的邮编（输入框里留的是地址文字）→ 结果行内展示「邮编 XXXX」徽标；
+    // 直接输入 4 位邮编时框里已可见，不再重复展示。
+    function setGlobalSearchResult(message, className) {
+        if (!resultSpan) return;
+        resultSpan.className = className;
+        resultSpan.textContent = '';
+        if (postcode && postcode !== main) {
+            const badge = document.createElement('span');
+            badge.className = 'csb-hero-pc-badge csb-hero-pc-badge--inline';
+            badge.textContent = '邮编 ' + postcode;
+            resultSpan.appendChild(badge);
+        }
+        if (message) {
+            const text = document.createElement('span');
+            text.textContent = message;
+            resultSpan.appendChild(text);
+        }
+    }
 
     document.querySelectorAll('.channel-table tbody tr').forEach(tr => {
         tr.classList.remove('highlight');
@@ -1565,9 +1583,7 @@ async function globalSearchPostcode(explicitCode) {
     // 生成本次查询的 token，防止上一次请求晚返回覆盖结果
     const queryToken = ++GLOBAL_POSTCODE_QUERY_TOKEN;
 
-    if (resultSpan) {
-        resultSpan.textContent = '查询中...';
-    }
+    setGlobalSearchResult('查询中...', 'search-result');
 
     // 按邮编匹配渠道表：只展示「邮编精确命中该表某行」的渠道，未命中的渠道整块隐藏、
     // 目录也不列出（搜索时只展示有结果的）。不做「有服务就展示全部渠道」的兜底。
@@ -1617,10 +1633,7 @@ async function globalSearchPostcode(explicitCode) {
         }
         const evaluateData = evaluate.data;
         if (!evaluateData || !evaluateData.data) {
-            if (resultSpan) {
-                resultSpan.textContent = getPostcodeEvaluateMessage(evaluateData, evaluate.error);
-                resultSpan.className = 'search-result error';
-            }
+            setGlobalSearchResult(getPostcodeEvaluateMessage(evaluateData, evaluate.error), 'search-result error');
             renderMatchedRowsForCode(postcode);
             return;
         }
@@ -1631,24 +1644,15 @@ async function globalSearchPostcode(explicitCode) {
         const distanceText = hasDistance ? ('距离：' + payload.distance + unitText) : '';
 
         if (!hasDistance) {
-            if (resultSpan) {
-                resultSpan.textContent = getPostcodeEvaluateMessage(evaluateData, evaluate.error);
-                resultSpan.className = 'search-result error';
-            }
+            setGlobalSearchResult(getPostcodeEvaluateMessage(evaluateData, evaluate.error), 'search-result error');
             renderMatchedRowsForCode(postcode);
             return;
         }
 
-        if (resultSpan) {
-            resultSpan.textContent = prefix && distanceText ? (prefix + ';' + distanceText) : (prefix || distanceText);
-            resultSpan.className = 'search-result success';
-        }
+        setGlobalSearchResult(prefix && distanceText ? (prefix + ';' + distanceText) : (prefix || distanceText), 'search-result success');
         renderMatchedRowsForCode(postcode);
     } catch (error) {
-        if (resultSpan) {
-            resultSpan.textContent = error && error.name === 'AbortError' ? '网络不佳，请稍后重试' : '查询服务暂时不可用，请稍后再试';
-            resultSpan.className = 'search-result error';
-        }
+        setGlobalSearchResult(error && error.name === 'AbortError' ? '网络不佳，请稍后重试' : '查询服务暂时不可用，请稍后再试', 'search-result error');
     }
 }
 

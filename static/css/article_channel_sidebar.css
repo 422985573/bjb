@@ -40,6 +40,8 @@
 .csb-hero-pc::placeholder { color: #9aa6b8; }
 .csb-hero-pc-badge { flex: none; padding: 3px 12px; border-radius: 999px; background: #2563eb; color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .csb-hero-pc-badge[hidden] { display: none; }
+/* 结果行内的邮编徽标（地址查询解析出的邮编，展示在「距离…」左侧） */
+.csb-hero-pc-badge--inline { display: inline-flex; align-items: center; vertical-align: middle; margin-right: 8px; }
 .csb-hero-clear {
     flex: none; border: none; background: #e2e8f0; color: #64748b;
     width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
