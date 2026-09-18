@@ -665,6 +665,13 @@
   function closeAddrSuggest() { var el = addrSuggestEl(); if (el) { el.hidden = true; el.innerHTML = ''; } }
   function removeTfmAddrDetail() {
     document.querySelectorAll('.tfm-addr-detail').forEach(function (el) { el.innerHTML = ''; });
+    setHeroPcBadge('');   // 地址详情清掉时，搜索框里的邮编徽标一并清除
+  }
+  // 搜索框内显示/清除「解析出的邮编」徽标（地址查询选中后展示）
+  function setHeroPcBadge(pc) {
+    var el = $('csbHeroPcBadge'); if (!el) return;
+    if (pc) { el.textContent = '邮编 ' + pc; el.hidden = false; }
+    else { el.textContent = ''; el.hidden = true; }
   }
 
   // 顶部输入变化（inline oninput）：空→复位；4 位邮编→沿用即时搜；地址→收起下拉、等回车/按钮
@@ -774,6 +781,7 @@
       if (!det) { renderTfmAddrDetail({ error: true }); return; }
       renderTfmAddrDetail({ detail: det, placeId: pid });
       var pc = postcodeOf(det);
+      setHeroPcBadge(pc);   // 搜索框内显示解析出的邮编
       if (pc && typeof window.globalSearchPostcode === 'function') {
         window.globalSearchPostcode(pc);   // 用解析出的邮编跑原有搜索（框里仍保留地址文字）
       }
