@@ -1637,6 +1637,9 @@ def xiaobao_sheet_save(key):
                 data = json.load(f)
 
             orig_sections = data.get('sections', [])
+            # 防误清空：原表有内容却收到空 sections，拒绝保存（避免整表被清空丢数据）
+            if orig_sections and not sections:
+                return jsonify({'success': False, 'message': '拒绝保存：sections 为空会清空整个价格表'}), 400
             new_sections = []
             for sec_data in sections:
                 oidx = sec_data.get('_oidx')
@@ -1912,31 +1915,42 @@ def xiaobao_zones_bulk_import():
     return jsonify({'success': True, 'inserted': len(rows)})
 
 
+# 全局参数存在固定行 month=0（不再按自然月区分：后台设什么，前台就显示什么）。
+_XB_GLOBAL_MONTH = 0
+
+
 @api_bp.route('/xiaobao-settings')
 def xiaobao_settings_get():
-    """月度参数（单价/汇率/燃油费率），前台公开读取"""
+    """全局参数（单价/汇率/燃油费率），前台公开读取。返回扁平对象。"""
     with db.get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT month, unit_price, exchange_rate, fuel_rate, sea_unit_price FROM xiaobao_month_settings ORDER BY month')
-        data = {}
-        for r in cursor.fetchall():
-            data[str(r['month'])] = {
-                'unit_price': r['unit_price'],
-                'exchange_rate': r['exchange_rate'],
-                'fuel_rate': r['fuel_rate'],
-                'sea_unit_price': r['sea_unit_price'],
-            }
+        cursor.execute(
+            'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price FROM xiaobao_month_settings WHERE month = ?',
+            (_XB_GLOBAL_MONTH,),
+        )
+        r = cursor.fetchone()
+        if r is None:
+            # 首次未初始化：用当前自然月的历史值做初始，避免前台显示 0
+            cur_month = datetime.now().month
+            cursor.execute(
+                'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price FROM xiaobao_month_settings WHERE month = ?',
+                (cur_month,),
+            )
+            r = cursor.fetchone()
+        data = {
+            'unit_price': r['unit_price'] if r else 0,
+            'exchange_rate': r['exchange_rate'] if r else 0,
+            'fuel_rate': r['fuel_rate'] if r else 0,
+            'sea_unit_price': r['sea_unit_price'] if r else 0,
+        }
     return jsonify({'success': True, 'data': data})
 
 
 @api_bp.route('/xiaobao-settings/save', methods=['POST'])
 @admin_required
 def xiaobao_settings_save():
-    """批量保存 12 个月参数"""
+    """保存全局参数（单价/汇率/燃油费率）。接收扁平对象，写入固定行 month=0。"""
     body = request.json or {}
-    settings = body.get('settings')
-    if not isinstance(settings, list):
-        return jsonify({'success': False, 'message': '参数错误'}), 400
 
     def _num(v):
         try:
@@ -1944,27 +1958,18 @@ def xiaobao_settings_save():
         except (ValueError, TypeError):
             return 0.0
 
-    saved = 0
     with db.get_db() as conn:
         cursor = conn.cursor()
-        for item in settings:
-            try:
-                month = int(item.get('month'))
-            except (ValueError, TypeError):
-                continue
-            if month < 1 or month > 12:
-                continue
-            cursor.execute(
-                'INSERT INTO xiaobao_month_settings (month, unit_price, exchange_rate, fuel_rate, sea_unit_price) '
-                'VALUES (?, ?, ?, ?, ?) '
-                'ON CONFLICT(month) DO UPDATE SET unit_price=excluded.unit_price, '
-                'exchange_rate=excluded.exchange_rate, fuel_rate=excluded.fuel_rate, '
-                'sea_unit_price=excluded.sea_unit_price',
-                (month, _num(item.get('unit_price')), _num(item.get('exchange_rate')),
-                 _num(item.get('fuel_rate')), _num(item.get('sea_unit_price'))),
-            )
-            saved += 1
+        cursor.execute(
+            'INSERT INTO xiaobao_month_settings (month, unit_price, exchange_rate, fuel_rate, sea_unit_price) '
+            'VALUES (?, ?, ?, ?, ?) '
+            'ON CONFLICT(month) DO UPDATE SET unit_price=excluded.unit_price, '
+            'exchange_rate=excluded.exchange_rate, fuel_rate=excluded.fuel_rate, '
+            'sea_unit_price=excluded.sea_unit_price',
+            (_XB_GLOBAL_MONTH, _num(body.get('unit_price')), _num(body.get('exchange_rate')),
+             _num(body.get('fuel_rate')), _num(body.get('sea_unit_price'))),
+        )
         conn.commit()
 
-    _logger.info('xiaobao settings save count=%s', saved)
-    return jsonify({'success': True, 'saved': saved})
+    _logger.info('xiaobao settings save (global)')
+    return jsonify({'success': True})

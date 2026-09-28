@@ -729,11 +729,13 @@ body { background: #fff; }
     {% endif %}
     {% if article or is_embed %}
     <div class="wse-settings-panel">
-            <div class="wse-sp-title">月度参数设置（前台按当前月展示并参与报价计算）</div>
+            <div class="wse-sp-title">{% if article %}参数设置（保存后前台直接显示，参与报价计算）{% else %}月度参数设置（前台按当前月展示并参与报价计算）{% endif %}</div>
             <div class="wse-sp-row">
+                {% if not article %}
                 <div class="wse-sp-group"><label>月份</label>
                     <select id="wseMonth"></select>
                 </div>
+                {% endif %}
                 {% if data_dir %}
                 <div class="wse-sp-group"><label>头程费用(元/kg)</label>
                     <input id="wseUnit" type="text" inputmode="decimal" autocomplete="off">
@@ -2557,51 +2559,54 @@ function wseGoBack(e) {
 </script>
 {% if article %}
 <script>
-/* 月度参数（单价/汇率/燃油费率）内嵌编辑 */
+/* 全局参数（单价/汇率/燃油费率）内嵌编辑——无月份，保存什么前台显示什么 */
 (function () {
   'use strict';
   var el = function (id) { return document.getElementById(id); };
-  var monthSel = el('wseMonth');
-  if (!monthSel) return;
-  var data = {};
-  var curMonth = new Date().getMonth() + 1;
+  // 无月份下拉；只有 4 个参数框
+  if (!el('wseUnit')) return;
 
-  for (var m = 1; m <= 12; m++) {
-    var op = document.createElement('option');
-    op.value = m; op.textContent = m + '月' + (m === curMonth ? '（当前）' : '');
-    if (m === curMonth) op.selected = true;
-    monthSel.appendChild(op);
+  // 4 个输入框：加载完成前禁用，避免用户在数据到位前输入被迟到的回填覆盖（竞态）。
+  var settingsInputs = ['wseUnit', 'wseSeaUnit', 'wseRate', 'wseFuel'];
+  var settingsLoaded = false;
+  function setSettingsDisabled(disabled) {
+    settingsInputs.forEach(function (id) { var e = el(id); if (e) e.disabled = disabled; });
   }
+  setSettingsDisabled(true);  // 初始禁用，等 fetch 返回再启用
 
-  function fill(month) {
-    var s = data[String(month)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
+  function fill(s) {
+    s = s || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
     el('wseUnit').value = s.unit_price != null ? s.unit_price : 0;
     if (el('wseSeaUnit')) el('wseSeaUnit').value = s.sea_unit_price != null ? s.sea_unit_price : 0;
-    el('wseRate').value = s.exchange_rate;
-    el('wseFuel').value = s.fuel_rate;
+    el('wseRate').value = s.exchange_rate != null ? s.exchange_rate : 0;
+    el('wseFuel').value = s.fuel_rate != null ? s.fuel_rate : 0;
   }
 
   function msg(text, ok) { var e = el('wseSettingsMsg'); e.textContent = text; e.className = 'wse-sp-msg ' + (ok ? 'ok' : 'err'); }
 
   fetch('/api/xiaobao-settings').then(function (r) { return r.json(); }).then(function (res) {
-    data = (res && res.success) ? (res.data || {}) : {};
-    fill(parseInt(monthSel.value));
+    var s = (res && res.success) ? (res.data || {}) : {};
+    fill(s);                     // 此时用户还改不了输入框，回填安全
+    settingsLoaded = true;
+    setSettingsDisabled(false);  // 数据就位后才允许编辑
+  }).catch(function () {
+    settingsLoaded = true;
+    setSettingsDisabled(false);
+    msg('参数加载失败，请刷新后再编辑', false);
   });
 
-  monthSel.addEventListener('change', function () { fill(parseInt(monthSel.value)); });
-
-  // 供“保存全部”统一调用：保存当前月度参数，返回 Promise。
+  // 供“保存全部”统一调用：保存全局参数，返回 Promise。
   window.wseSaveSettings = function () {
-    var month = parseInt(monthSel.value);
-    var item = { month: month, unit_price: el('wseUnit').value, sea_unit_price: el('wseSeaUnit') ? el('wseSeaUnit').value : el('wseUnit').value, exchange_rate: el('wseRate').value, fuel_rate: el('wseFuel').value };
+    var payload = {
+      unit_price: el('wseUnit').value,
+      sea_unit_price: el('wseSeaUnit') ? el('wseSeaUnit').value : el('wseUnit').value,
+      exchange_rate: el('wseRate').value,
+      fuel_rate: el('wseFuel').value,
+    };
     return fetch('/api/xiaobao-settings/save', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: [item] })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
     }).then(function (r) { return r.json(); }).then(function (res) {
-      if (res.success) {
-        data[String(month)] = { unit_price: Number(item.unit_price), sea_unit_price: Number(item.sea_unit_price), exchange_rate: Number(item.exchange_rate), fuel_rate: Number(item.fuel_rate) };
-        msg(month + '月参数已保存', true);
-        return true;
-      }
+      if (res.success) { msg('参数已保存', true); return true; }
       msg(res.message || '参数保存失败', false);
       return false;
     }).catch(function () { msg('参数保存网络错误', false); return false; });

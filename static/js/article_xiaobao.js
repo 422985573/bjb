@@ -15,8 +15,7 @@
   var sheetsIndex = [];
   var currentKey = '';
   var currentData = null;
-  var settingsData = {};
-  var selectedMonth = (new Date().getMonth() + 1);
+  var settingsData = {};  // 全局参数扁平对象 {unit_price, sea_unit_price, exchange_rate, fuel_rate}
   // 搜索态：{ codes:[...], zoneByCode:{code:{found,zone,suburb,state}}, weight:Number }
   var searchState = null;
 
@@ -328,7 +327,7 @@
   }
 
   function curSettings() {
-    return settingsData[String(selectedMonth)] || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
+    return settingsData || { unit_price: 0, exchange_rate: 0, fuel_rate: 0, sea_unit_price: 0 };
   }
 
   function visiblePriceTables() {
@@ -404,18 +403,18 @@
     h += '<div class="xb-settings-col">';
     h += '<div class="xb-settings-col-title">空运小包</div>';
     h += '<div class="xb-settings-vals">';
-    h += '<div>' + selectedMonth + '月份头程运输费用单价：<b>' + esc(s.unit_price) + '</b> 元/kg</div>';
+    h += '<div>头程运输费用单价：<b>' + esc(s.unit_price) + '</b> 元/kg</div>';
     h += '</div></div>';
     h += '<div class="xb-settings-col">';
     h += '<div class="xb-settings-col-title">海运小包</div>';
     h += '<div class="xb-settings-vals">';
-    h += '<div>' + selectedMonth + '月份头程运输费用单价：<b>' + esc(s.sea_unit_price || 0) + '</b> 元/kg</div>';
+    h += '<div>头程运输费用单价：<b>' + esc(s.sea_unit_price || 0) + '</b> 元/kg</div>';
     h += '</div></div>';
     h += '</div>';
     // 燃油费率、汇率：空运/海运共用，合并为一行显示
     h += '<div class="xb-settings-vals xb-settings-common">';
-    h += '<div>' + selectedMonth + '月份澳洲邮政燃油费率：<b>' + esc(s.fuel_rate) + '</b> %</div>';
-    h += '<div>' + selectedMonth + '月份澳币换算人民币汇率：<b>' + esc(s.exchange_rate) + '</b></div>';
+    h += '<div>澳洲邮政燃油费率：<b>' + esc(s.fuel_rate) + '</b> %</div>';
+    h += '<div>澳币换算人民币汇率：<b>' + esc(s.exchange_rate) + '</b></div>';
     h += '</div>';
     h += '</div>';
     return h;
