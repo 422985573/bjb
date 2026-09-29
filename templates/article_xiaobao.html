@@ -257,5 +257,16 @@
 {% endblock %}
 
 {% block extra_js %}
+{% set xb_ns = namespace(sheet_key='') %}
+{% for m in modules %}
+  {% if (m.type or '') == 'xiaobao_sheets' %}
+    {% set _c = m.content | from_json %}
+    {% if _c.sheet_key %}{% set xb_ns.sheet_key = _c.sheet_key %}{% endif %}
+  {% endif %}
+{% endfor %}
+<script>
+  window.XB_ARTICLE_ID = {{ article.id | tojson }};
+  window.XB_SHEET_KEY = {{ xb_ns.sheet_key | tojson }};
+</script>
 <script src="{{ static_with_version('js/article_xiaobao.js') }}"></script>
 {% endblock %}

@@ -2565,6 +2565,7 @@ function wseGoBack(e) {
   var el = function (id) { return document.getElementById(id); };
   // 无月份下拉；只有 4 个参数框
   if (!el('wseUnit')) return;
+  var XB_ARTICLE_ID = {{ article.id | tojson }};  // 参数按文章隔离
 
   // 4 个输入框：加载完成前禁用，避免用户在数据到位前输入被迟到的回填覆盖（竞态）。
   var settingsInputs = ['wseUnit', 'wseSeaUnit', 'wseRate', 'wseFuel'];
@@ -2584,7 +2585,7 @@ function wseGoBack(e) {
 
   function msg(text, ok) { var e = el('wseSettingsMsg'); e.textContent = text; e.className = 'wse-sp-msg ' + (ok ? 'ok' : 'err'); }
 
-  fetch('/api/xiaobao-settings').then(function (r) { return r.json(); }).then(function (res) {
+  fetch('/api/xiaobao-settings?article_id=' + encodeURIComponent(XB_ARTICLE_ID)).then(function (r) { return r.json(); }).then(function (res) {
     var s = (res && res.success) ? (res.data || {}) : {};
     fill(s);                     // 此时用户还改不了输入框，回填安全
     settingsLoaded = true;
@@ -2598,6 +2599,7 @@ function wseGoBack(e) {
   // 供“保存全部”统一调用：保存全局参数，返回 Promise。
   window.wseSaveSettings = function () {
     var payload = {
+      article_id: XB_ARTICLE_ID,
       unit_price: el('wseUnit').value,
       sea_unit_price: el('wseSeaUnit') ? el('wseSeaUnit').value : el('wseUnit').value,
       exchange_rate: el('wseRate').value,

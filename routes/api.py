@@ -1915,28 +1915,41 @@ def xiaobao_zones_bulk_import():
     return jsonify({'success': True, 'inserted': len(rows)})
 
 
-# 全局参数存在固定行 month=0（不再按自然月区分：后台设什么，前台就显示什么）。
+# 参数（单价/汇率/燃油费率/海运单价）按文章隔离：xiaobao_article_settings.article_id 一行。
+# 旧的全局行 month=0 仅作首次兜底（新文章尚未保存过时避免前台显示 0）。
 _XB_GLOBAL_MONTH = 0
+
+
+def _xb_global_fallback(cursor):
+    """读取旧全局参数行（month=0），作为文章尚无独立行时的兜底。"""
+    cursor.execute(
+        'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price '
+        'FROM xiaobao_month_settings WHERE month = ?',
+        (_XB_GLOBAL_MONTH,),
+    )
+    return cursor.fetchone()
 
 
 @api_bp.route('/xiaobao-settings')
 def xiaobao_settings_get():
-    """全局参数（单价/汇率/燃油费率），前台公开读取。返回扁平对象。"""
+    """某篇文章的参数（单价/汇率/燃油费率/海运单价），前台公开读取。返回扁平对象。"""
+    try:
+        article_id = int(request.args.get('article_id') or 0)
+    except (ValueError, TypeError):
+        article_id = 0
     with db.get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price FROM xiaobao_month_settings WHERE month = ?',
-            (_XB_GLOBAL_MONTH,),
-        )
-        r = cursor.fetchone()
-        if r is None:
-            # 首次未初始化：用当前自然月的历史值做初始，避免前台显示 0
-            cur_month = datetime.now().month
+        r = None
+        if article_id:
             cursor.execute(
-                'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price FROM xiaobao_month_settings WHERE month = ?',
-                (cur_month,),
+                'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price '
+                'FROM xiaobao_article_settings WHERE article_id = ?',
+                (article_id,),
             )
             r = cursor.fetchone()
+        if r is None:
+            # 该文章尚未保存过独立参数：用旧全局行兜底，避免前台显示 0
+            r = _xb_global_fallback(cursor)
         data = {
             'unit_price': r['unit_price'] if r else 0,
             'exchange_rate': r['exchange_rate'] if r else 0,
@@ -1949,8 +1962,14 @@ def xiaobao_settings_get():
 @api_bp.route('/xiaobao-settings/save', methods=['POST'])
 @admin_required
 def xiaobao_settings_save():
-    """保存全局参数（单价/汇率/燃油费率）。接收扁平对象，写入固定行 month=0。"""
+    """保存某篇文章的参数（单价/汇率/燃油费率/海运单价）。body 需带 article_id。"""
     body = request.json or {}
+    try:
+        article_id = int(body.get('article_id') or 0)
+    except (ValueError, TypeError):
+        article_id = 0
+    if not article_id:
+        return jsonify({'success': False, 'message': '缺少 article_id'}), 400
 
     def _num(v):
         try:
@@ -1961,15 +1980,15 @@ def xiaobao_settings_save():
     with db.get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO xiaobao_month_settings (month, unit_price, exchange_rate, fuel_rate, sea_unit_price) '
+            'INSERT INTO xiaobao_article_settings (article_id, unit_price, exchange_rate, fuel_rate, sea_unit_price) '
             'VALUES (?, ?, ?, ?, ?) '
-            'ON CONFLICT(month) DO UPDATE SET unit_price=excluded.unit_price, '
+            'ON CONFLICT(article_id) DO UPDATE SET unit_price=excluded.unit_price, '
             'exchange_rate=excluded.exchange_rate, fuel_rate=excluded.fuel_rate, '
             'sea_unit_price=excluded.sea_unit_price',
-            (_XB_GLOBAL_MONTH, _num(body.get('unit_price')), _num(body.get('exchange_rate')),
+            (article_id, _num(body.get('unit_price')), _num(body.get('exchange_rate')),
              _num(body.get('fuel_rate')), _num(body.get('sea_unit_price'))),
         )
         conn.commit()
 
-    _logger.info('xiaobao settings save (global)')
+    _logger.info('xiaobao settings save article_id=%s', article_id)
     return jsonify({'success': True})

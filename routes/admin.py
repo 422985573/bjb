@@ -202,12 +202,113 @@ def article_copy(article_id):
                 (article_id,)
             )
             modules = cursor.fetchall()
+            new_xiaobao_module_id = None
             for module in modules:
                 m = dict(module)
                 cursor.execute('INSERT INTO modules (article_id, type, content, sort_order) VALUES (?, ?, ?, ?)',
                                (new_article_id, m['type'], m['content'], m['sort_order']))
+                if (m.get('type') or '') == 'xiaobao_sheets':
+                    new_xiaobao_module_id = cursor.lastrowid
             conn.commit()
+            # 小包文章：为副本生成一份独立的价格表 + 参数，避免与原文联动
+            if new_xiaobao_module_id is not None:
+                _xiaobao_copy_data(conn, article_id, new_article_id,
+                                   new_xiaobao_module_id, article['title'] + ' (副本)')
         return redirect(url_for('admin.articles'))
+
+
+def _xiaobao_copy_data(conn, src_article_id, new_article_id, new_module_id, new_title):
+    """复制小包文章时，给副本生成独立数据：
+    1) 复制源 sheet JSON 为新 key 文件；2) 追加 _index.json 条目；
+    3) 把新模块 content 的 sheet_key 指向新文件（并回填源模块缺失的 sheet_key）；
+    4) 复制参数行（xiaobao_article_settings）到新 article_id。
+    """
+    cursor = conn.cursor()
+    src_key = _xiaobao_article_sheet_key(conn, src_article_id)
+    if not src_key:
+        return
+    # 回填源文章模块的 sheet_key（老库单例 id 52 原本无 sheet_key），避免多表后指向歧义
+    cursor.execute(
+        "SELECT id, content FROM modules WHERE article_id = ? AND type = 'xiaobao_sheets' LIMIT 1",
+        (src_article_id,),
+    )
+    src_mod = cursor.fetchone()
+    if src_mod:
+        try:
+            src_c = json.loads(src_mod['content']) if src_mod['content'] else {}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            src_c = {}
+        if not isinstance(src_c, dict):
+            src_c = {}
+        if not src_c.get('sheet_key'):
+            src_c['sheet_key'] = src_key
+            cursor.execute('UPDATE modules SET content = ? WHERE id = ?',
+                           (json.dumps(src_c, ensure_ascii=False), src_mod['id']))
+
+    new_key = f'eparcel_{new_article_id}'
+    base = os.path.join(config._BASE_DIR, 'data', 'xiaobao')
+    src_safe = re.sub(r'[^a-zA-Z0-9_]', '', src_key)
+    new_safe = re.sub(r'[^a-zA-Z0-9_]', '', new_key)
+    src_path = os.path.join(base, f'{src_safe}.json')
+    new_path = os.path.join(base, f'{new_safe}.json')
+    index_path = os.path.join(base, '_index.json')
+
+    with data_dir_lock(base):
+        if not os.path.isfile(src_path):
+            return
+        with open(src_path, 'r', encoding='utf-8') as f:
+            sheet_data = json.load(f)
+        sheet_data['name'] = new_title
+        atomic_write_json(new_path, sheet_data, indent=2)
+
+        index = []
+        if os.path.isfile(index_path):
+            with open(index_path, 'r', encoding='utf-8') as f:
+                index = json.load(f)
+        src_entry = next((e for e in index if e.get('key') == src_key), None)
+        new_entry = dict(src_entry) if src_entry else {}
+        new_entry['key'] = new_key
+        new_entry['name'] = new_title
+        index.append(new_entry)
+        atomic_write_json(index_path, index, indent=2)
+
+    # 新模块 content 指向新 sheet_key
+    cursor.execute('SELECT content FROM modules WHERE id = ?', (new_module_id,))
+    r = cursor.fetchone()
+    try:
+        new_c = json.loads(r['content']) if r and r['content'] else {}
+    except (TypeError, ValueError, json.JSONDecodeError):
+        new_c = {}
+    if not isinstance(new_c, dict):
+        new_c = {}
+    new_c['sheet_key'] = new_key
+    cursor.execute('UPDATE modules SET content = ? WHERE id = ?',
+                   (json.dumps(new_c, ensure_ascii=False), new_module_id))
+
+    # 复制参数行到新 article_id（源无独立行则用旧全局 month=0 兜底）
+    cursor.execute(
+        'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price '
+        'FROM xiaobao_article_settings WHERE article_id = ?',
+        (src_article_id,),
+    )
+    s = cursor.fetchone()
+    if s is None:
+        cursor.execute(
+            'SELECT unit_price, exchange_rate, fuel_rate, sea_unit_price '
+            'FROM xiaobao_month_settings WHERE month = 0'
+        )
+        s = cursor.fetchone()
+    if s is not None:
+        cursor.execute(
+            'INSERT INTO xiaobao_article_settings '
+            '(article_id, unit_price, exchange_rate, fuel_rate, sea_unit_price) '
+            'VALUES (?, ?, ?, ?, ?) '
+            'ON CONFLICT(article_id) DO UPDATE SET unit_price=excluded.unit_price, '
+            'exchange_rate=excluded.exchange_rate, fuel_rate=excluded.fuel_rate, '
+            'sea_unit_price=excluded.sea_unit_price',
+            (new_article_id, s['unit_price'], s['exchange_rate'], s['fuel_rate'], s['sea_unit_price']),
+        )
+    conn.commit()
 
 
 @admin_bp.route('/article/<int:article_id>/delete')
@@ -287,12 +388,13 @@ def warehouse_sheet_edit(key):
     )
 
 
-def _xiaobao_sync_sheet_name(title):
-    """将文章标题同步为虚拟小包报价表 sheet 的 name。
+def _xiaobao_sync_sheet_name(title, sheet_key=None):
+    """将文章标题同步为该文章对应虚拟小包报价表 sheet 的 name。
 
     前台文章页大标题（H1）由 JS 取自 sheet JSON 的 name 字段，因此仅更新
-    articles.title 不会改动页面大标题。这里把标题写回 _index.json 与对应
-    sheet 文件的 name，保持后台标题与前台大标题一致。
+    articles.title 不会改动页面大标题。这里把标题写回 _index.json 中该
+    sheet_key 的条目与对应 sheet 文件的 name，保持后台标题与前台大标题一致。
+    未传 sheet_key 时回退到 _index.json 第一条（兼容老库单例）。
     """
     base = os.path.join(config._BASE_DIR, 'data', 'xiaobao')
     index_path = os.path.join(base, '_index.json')
@@ -303,16 +405,47 @@ def _xiaobao_sync_sheet_name(title):
             index = json.load(f)
         if not index:
             return
-        index[0]['name'] = title
+        entry = None
+        if sheet_key:
+            entry = next((e for e in index if e.get('key') == sheet_key), None)
+        if entry is None:
+            entry = index[0]
+        entry['name'] = title
         atomic_write_json(index_path, index, indent=2)
 
-        safe_key = re.sub(r'[^a-zA-Z0-9_]', '', index[0].get('key', ''))
+        safe_key = re.sub(r'[^a-zA-Z0-9_]', '', entry.get('key', ''))
         sheet_path = os.path.join(base, f'{safe_key}.json')
         if safe_key and os.path.isfile(sheet_path):
             with open(sheet_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             data['name'] = title
             atomic_write_json(sheet_path, data, indent=2)
+
+
+def _xiaobao_article_sheet_key(conn, article_id):
+    """取某篇小包文章对应的 sheet_key：优先读模块 content 里的 sheet_key，
+    缺失时回退到 _index.json 的唯一条目（兼容尚未迁移的旧数据）。"""
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT content FROM modules WHERE article_id = ? AND type = 'xiaobao_sheets' LIMIT 1",
+        (article_id,),
+    )
+    row = cursor.fetchone()
+    if row and row['content']:
+        try:
+            c = json.loads(row['content'])
+            if isinstance(c, dict) and c.get('sheet_key'):
+                return str(c['sheet_key'])
+        except (TypeError, ValueError, json.JSONDecodeError):
+            pass
+    # 回退：_index.json 只有一条时用它（老库单例）
+    index_path = os.path.join(config._BASE_DIR, 'data', 'xiaobao', '_index.json')
+    if os.path.isfile(index_path):
+        with open(index_path, 'r', encoding='utf-8') as f:
+            idx = json.load(f)
+        if idx:
+            return idx[0].get('key')
+    return None
 
 
 @admin_bp.route('/article/<int:article_id>/xiaobao-editor', methods=['GET', 'POST'])
@@ -330,23 +463,26 @@ def xiaobao_editor(article_id):
                 (title, category_id, is_published, article_id)
             )
             conn.commit()
-            # 标题同步到报价表 JSON 的 name（前台大标题 H1 取自 sheet.name），保持一致
+            # 标题同步到本文章报价表 JSON 的 name（前台大标题 H1 取自 sheet.name），保持一致
             if title:
-                _xiaobao_sync_sheet_name(title)
+                _xiaobao_sync_sheet_name(title, _xiaobao_article_sheet_key(conn, article_id))
         cursor.execute('SELECT * FROM articles WHERE id = ?', (article_id,))
         article = cursor.fetchone()
         if not article:
             abort(404)
         article = dict(article)
         categories = models.get_all_categories()
+        sheet_key = _xiaobao_article_sheet_key(conn, article_id)
         index_path = os.path.join(config._BASE_DIR, 'data', 'xiaobao', '_index.json')
         sheets_index = []
         if os.path.isfile(index_path):
             with open(index_path, 'r', encoding='utf-8') as f:
                 sheets_index = json.load(f)
-        if not sheets_index:
+        if not sheets_index or not sheet_key:
             abort(404)
-        sheet_meta = sheets_index[0]
+        sheet_meta = next((s for s in sheets_index if s.get('key') == sheet_key), None)
+        if sheet_meta is None:
+            abort(404)
         return render_template(
             'admin/warehouse_sheet_edit.html',
             sheet_key=sheet_meta['key'],

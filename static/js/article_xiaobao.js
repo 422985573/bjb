@@ -299,7 +299,9 @@
           return;
         }
         sheetsIndex = res.data;
-        loadSheet(sheetsIndex[0].key);
+        var wantKey = (typeof window !== 'undefined' && window.XB_SHEET_KEY) ? window.XB_SHEET_KEY : null;
+        var pick = wantKey && sheetsIndex.filter(function (s) { return s.key === wantKey; })[0];
+        loadSheet((pick && pick.key) || wantKey || sheetsIndex[0].key);
       })
       .catch(function () { $('#whNavList').innerHTML = '<li class="wh-nav-item wh-nav-loading">加载失败</li>'; });
     bindPostcodeBoxes();
@@ -307,7 +309,11 @@
   }
 
   function fetchSettings() {
-    fetch(API_SETTINGS, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (res) {
+    var url = API_SETTINGS;
+    if (typeof window !== 'undefined' && window.XB_ARTICLE_ID) {
+      url += '?article_id=' + encodeURIComponent(window.XB_ARTICLE_ID);
+    }
+    fetch(url, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (res) {
       if (res.success) { settingsData = res.data || {}; if (currentData) renderContent(); }
     }).catch(function () {});
   }
